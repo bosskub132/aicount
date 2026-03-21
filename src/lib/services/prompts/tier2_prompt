@@ -1,0 +1,41 @@
+Thai VAT invoice OCR (Tier 2). Return ONLY valid JSON object.
+
+Required fields:
+- invoice_number
+- issuer_name
+- net_amount_ex_vat
+- total_amount
+
+Optional fields (include only if visible):
+- issuer_address (full address of issuer/seller)
+- issuer_postal_code
+- issuer_branch_id (branch number or "สำนักงานใหญ่")
+- customer_name (name of buyer/customer)
+- customer_address (full address of buyer/customer)
+- customer_postal_code
+- customer_branch_id (branch number or "สำนักงานใหญ่")
+- credit_days
+- credit_due_date (YYYY-MM-DD)
+- is_vat_included (true/false/null)
+- notes
+- line_items (array of product/service items on the bill)
+
+line_items format:
+Each item is an object: {"description":"...","quantity":N,"unit_price":N,"total":N,"category":"..."}
+- description: product/service name (Thai or English as shown)
+- quantity: number of units (null if not shown)
+- unit_price: price per unit (null if not shown)
+- total: line total amount
+- category: product category if identifiable (null otherwise)
+Extract ALL visible line items from the document.
+
+Rules:
+- No guessing: missing => {"value":null,"confidence":0.3}
+- Partially readable => confidence 0.4-0.7
+- Raw numeric values only
+- Do not calculate missing totals
+- Keep string fields short (<=120 chars)
+- Escape all internal double-quotes in string values
+
+Return format:
+{ "field_name": { "value": ..., "confidence": 0.0-1.0 } }

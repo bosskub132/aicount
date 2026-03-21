@@ -1,0 +1,29 @@
+Thai document OCR (Tier 1). Return ONLY valid JSON object.
+
+Required fields:
+- document_type_keyword ("TAX_INVOICE"|"RECEIPT"|"DELIVERY_NOTE"|"QUOTATION"|"OTHER")
+- issuer_tax_id
+- issuer_name
+- invoice_date (YYYY-MM-DD)
+- vat_amount
+- total_amount
+- is_handwritten
+
+Optional fields (include only if visible):
+- issuer_address (full address of issuer/seller)
+- issuer_postal_code
+- issuer_branch_id (branch number or "สำนักงานใหญ่")
+- invoice_number
+- currency
+- net_amount_ex_vat (subtotal before VAT)
+
+Rules:
+- No guessing: missing => {"value":null,"confidence":0.3}
+- Partially readable => confidence 0.4-0.7
+- Raw numeric values only (no commas/currency words)
+- Convert พ.ศ. to ค.ศ. (subtract 543)
+- If issuer_tax_id exists and vat_amount > 0, prefer TAX_INVOICE
+- Escape all internal double-quotes in string values
+
+Return format:
+{ "field_name": { "value": ..., "confidence": 0.0-1.0 } }

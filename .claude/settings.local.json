@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls -la /c/Users/bossk/Desktop/aicount/src/app/\\\\\\(app\\\\\\)/)",
+      "Bash(find /c/Users/bossk/Desktop/aicount/supabase -name *.sql -o -name *.ts -o -name *.json)",
+      "mcp__plugin_figma_figma__create_design_system_rules",
+      "mcp__serena__activate_project",
+      "mcp__serena__check_onboarding_performed",
+      "mcp__serena__onboarding",
+      "mcp__serena__list_dir",
+      "mcp__serena__find_file",
+      "mcp__serena__write_memory",
+      "Bash(ls:*)",
+      "Bash(xargs grep:*)",
+      "Bash(cat \"/c/Users/bossk/Desktop/aicount/src/app/\\(app\\)/extractions/page.tsx\")",
+      "Bash(npx tsc:*)",
+      "Bash(npx next:*)",
+      "Bash(find /c/Users/bossk/Desktop/aicount -type f \\\\\\(-name *upload* -o -path *documents* \\\\\\))",
+      "Bash(grep -E \"\\\\.\\(ts|tsx\\)$\")",
+      "Bash(npm install:*)",
+      "Bash(xargs cat:*)",
+      "Bash(grep -r \"TODO\\\\|FIXME\\\\|XXX\\\\|HACK\\\\|BUG\" /c/Users/bossk/Desktop/aicount/src --include=*.ts --include=*.tsx)",
+      "Bash(grep:*)",
+      "Bash(find /c/Users/bossk/Desktop/aicount -name *migration* -type f)",
+      "Bash(npm run:*)",
+      "Bash(vercel --version)"
+    ]
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "github"
+  ]
+}

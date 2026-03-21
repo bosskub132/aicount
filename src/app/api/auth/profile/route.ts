@@ -1,0 +1,63 @@
+import { eq } from "drizzle-orm";
+import { NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { profiles } from "@/lib/db/schema";
+import { getRequestContext, unauthorized } from "@/lib/api/request-context";
+
+export async function GET(request: Request) {
+  const ctx = getRequestContext(request);
+  if (!ctx) return unauthorized();
+
+  const [profile] = await db
+    .select({
+      id: profiles.id,
+      email: profiles.email,
+      name: profiles.name,
+      role: profiles.role,
+      isOnboardingComplete: profiles.isOnboardingComplete,
+      isActive: profiles.isActive,
+    })
+    .from(profiles)
+    .where(eq(profiles.id, ctx.userId))
+    .limit(1);
+
+  if (!profile) {
+    return NextResponse.json({ success: false, error: "Profile not found" }, { status: 404 });
+  }
+
+  return NextResponse.json({ success: true, data: profile });
+}
+
+export async function PATCH(request: Request) {
+  try {
+    const ctx = getRequestContext(request);
+    if (!ctx) return unauthorized();
+
+    const body = (await request.json()) as {
+      name?: string;
+      isOnboardingComplete?: boolean;
+    };
+
+    const updates: Record<string, unknown> = { updatedAt: new Date() };
+    if (body.name !== undefined) updates.name = body.name;
+    if (body.isOnboardingComplete !== undefined) updates.isOnboardingComplete = body.isOnboardingComplete;
+
+    const [updated] = await db
+      .update(profiles)
+      .set(updates)
+      .where(eq(profiles.id, ctx.userId))
+      .returning({
+        id: profiles.id,
+        email: profiles.email,
+        name: profiles.name,
+        isOnboardingComplete: profiles.isOnboardingComplete,
+      });
+
+    return NextResponse.json({ success: true, data: updated });
+  } catch (error) {
+    return NextResponse.json(
+      { success: false, error: error instanceof Error ? error.message : "Update failed" },
+      { status: 500 }
+    );
+  }
+}

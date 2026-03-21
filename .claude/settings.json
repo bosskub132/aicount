@@ -1,0 +1,7 @@
+{
+  "enabledPlugins": {
+    "serena@claude-plugins-official": true,
+    "supabase@claude-plugins-official": true,
+    "firebase@claude-plugins-official": true
+  }
+}

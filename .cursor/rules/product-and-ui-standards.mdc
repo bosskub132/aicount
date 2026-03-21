@@ -1,0 +1,35 @@
+---
+description: Express-accounting product sense, UI standards, and verify-before-done for aicount
+alwaysApply: true
+---
+
+# aicount — production product & UI standards
+
+This repo ships a **real-world B2B product** framed as an **express accounting–style** app: fast document-to-books workflows, approvals, period/export-oriented tasks, and integrations (e.g. express export paths)—not a consumer toy or generic dashboard demo. Treat every change as something a finance/ops user could hit in production.
+
+## UI & UX
+
+- **Domain-appropriate**: Copy, labels, and flows should match accounting/document workflows (tenants, periods, journals, approvals, exports, locks). Avoid playground patterns: fake metrics, “lorem” hero sections, joke CTAs, gamified badges, or decorative UI that does not support a task.
+- **Honest states**: Loading, empty, and error states must explain what happened and what to do next (retry, pick a tenant, adjust period, contact admin). Do not silently fail or show success when the API returned an error.
+- **Consistency**: Reuse existing layout, navigation, and components under `src/components` and `src/app/(app)` before inventing new visual systems. Match typography, spacing, and Tailwind usage already in the file.
+- **Density & clarity**: Prefer scannable tables, clear primary actions, and obvious destructive actions. Avoid clutter that obscures compliance-critical information.
+
+## Code changes
+
+- **Minimal, purposeful diffs**: Change only what the task needs; match surrounding patterns (e.g. client `"use client"` pages + `fetch` to `/api/...`, server routes under `src/app/api`).
+- **Types & data**: Prefer explicit types; validate external input (e.g. Zod) where the codebase already does for API routes.
+- **Security & tenancy**: Respect tenant/workspace boundaries (`getWorkspaceTenantId`, tenant-scoped APIs). Never expose or merge data across tenants.
+
+## Before completing a task
+
+- **Check errors**: Run `npm run lint` (and fix issues you introduced). For non-trivial TS/React/API edits, run `npx tsc --noEmit` or `npm run build` when appropriate; do not finish with new compile/lint failures.
+- **Validate behavior**: For UI or API changes, confirm error paths (failed `fetch`, `success: false`, empty tenant) still surface clear messages—not blank screens or false success.
+- **Editor diagnostics**: Use the IDE/linter on files you edited and resolve new problems before handing off.
+
+```tsx
+// ❌ BAD — toy / misleading
+<p>🎉 You’re crushing it! Export magic engaged!</p>
+
+// ✅ GOOD — factual, actionable
+<p>Export failed: period is locked. Unlock the period in Settings or choose another range.</p>
+```

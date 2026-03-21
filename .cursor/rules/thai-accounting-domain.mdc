@@ -1,0 +1,10 @@
+---
+description: Require Thai accounting workflow skill for domain logic in aicount
+alwaysApply: true
+---
+
+# Thai express accounting domain
+
+Before implementing or reviewing **accounting business logic** — OCR-to-GL pipelines, journals (RV/SV/PV/PurV/JV), GL mapping and suspense, periods and locks, VAT/WHT, bank reconciliation, **Express Text/CSV** export and post-export lock, transaction status gates, or maker/checker flows — **read** `.cursor/skills/thai-accounting-workflow/SKILL.md` (and `reference.md` when detailing statuses or voucher layout) and align with the **OCR to GL for Express** blueprint and checklist.
+
+Purely technical changes with no impact on those domains do not require re-reading the full skill; use judgment.

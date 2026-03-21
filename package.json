@@ -1,0 +1,52 @@
+{
+  "name": "aicount",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "migrate:legacy": "node scripts/migrate-mongodb-to-supabase.mjs",
+    "reconcile:legacy": "node scripts/reconcile-legacy-vs-postgres.mjs",
+    "db:health": "node scripts/db-health-check.mjs",
+    "legacy:template": "node scripts/init-legacy-export-template.mjs",
+    "smoke:test": "node scripts/smoke-test.mjs",
+    "release:preflight": "node scripts/release-preflight.mjs"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.78.0",
+    "@line/bot-sdk": "^10.6.0",
+    "@react-pdf/renderer": "^4.3.2",
+    "@supabase/ssr": "^0.9.0",
+    "@supabase/supabase-js": "^2.99.1",
+    "@tanstack/react-query": "^5.90.21",
+    "ccstatusline": "^2.2.7",
+    "dotenv": "^17.3.1",
+    "drizzle-orm": "^0.45.1",
+    "exceljs": "^4.4.0",
+    "inngest": "^3.52.6",
+    "lucide-react": "^0.577.0",
+    "next": "16.1.6",
+    "postgres": "^3.4.8",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "recharts": "^3.8.0",
+    "resend": "^6.9.3",
+    "xlsx": "^0.18.5",
+    "zod": "^4.3.6",
+    "zustand": "^5.0.11"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20.19.37",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "drizzle-kit": "^0.31.9",
+    "eslint": "^9",
+    "eslint-config-next": "16.1.6",
+    "prettier": "^3.8.1",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}
