@@ -31,7 +31,8 @@
       "Bash(ls \"C:\\\\Users\\\\bossk\\\\Desktop\\\\aicount\\\\.superpowers\\\\brainstorm\"\" 2>/dev/null && for dir in \"C:UsersbosskDesktopaicount.superpowersbrainstorm\"\"*/)",
       "Bash(do cat:*)",
       "Bash(done)",
-      "Bash(find /c/Users/bossk/Desktop/aicount -type f \\\\\\(-name jest.config.* -o -name vitest.config.* -o -name *.test.* -o -name *.spec.* \\\\\\))"
+      "Bash(find /c/Users/bossk/Desktop/aicount -type f \\\\\\(-name jest.config.* -o -name vitest.config.* -o -name *.test.* -o -name *.spec.* \\\\\\))",
+      "mcp__serena__list_memories"
     ]
   },
   "enableAllProjectMcpServers": true,
