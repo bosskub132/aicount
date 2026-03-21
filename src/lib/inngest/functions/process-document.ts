@@ -8,14 +8,7 @@ import { classifyTransaction } from "@/lib/services/classification";
 import { extractBillData } from "@/lib/services/ocr";
 import { buildAutoJournalEntries, canPostBalanced } from "@/lib/services/tax-gl-mapping";
 import { detectWht } from "@/lib/services/wht-pdf";
-import { promises as fs } from "fs";
-import path from "path";
-
-function toAbsPublicPath(fileUrl: string | null) {
-  if (!fileUrl) return null;
-  if (!fileUrl.startsWith("/")) return null;
-  return path.join(process.cwd(), "public", fileUrl.replace(/^\//, ""));
-}
+import { downloadStorageFile } from "@/lib/services/document-intake";
 
 export const processDocument = inngest.createFunction(
   { id: "process-document", retries: 3 },
@@ -39,11 +32,6 @@ export const processDocument = inngest.createFunction(
       throw new Error(`Document ${documentId} has no fileUrl`);
     }
 
-    const filePath = toAbsPublicPath(doc.fileUrl);
-    if (!filePath) {
-      throw new Error(`Invalid fileUrl: ${doc.fileUrl}`);
-    }
-
     const [tenant] = await db
       .select({ taxId: tenants.taxId })
       .from(tenants)
@@ -51,7 +39,7 @@ export const processDocument = inngest.createFunction(
       .limit(1);
     const tenantTaxId = tenant?.taxId || "";
 
-    const imageBuffer = await fs.readFile(filePath);
+    const imageBuffer = await downloadStorageFile(doc.fileUrl);
     const mimeType = String((doc.ocrRaw as any)?.sourceMimeType || "image/jpeg");
 
     // Step 1: OCR extraction via Claude

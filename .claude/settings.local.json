@@ -23,7 +23,9 @@
       "Bash(grep:*)",
       "Bash(find /c/Users/bossk/Desktop/aicount -name *migration* -type f)",
       "Bash(npm run:*)",
-      "Bash(vercel --version)"
+      "Bash(vercel --version)",
+      "Bash(gh auth:*)",
+      "WebFetch(domain:aicount-mocha.vercel.app)"
     ]
   },
   "enableAllProjectMcpServers": true,
