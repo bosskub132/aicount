@@ -25,7 +25,13 @@
       "Bash(npm run:*)",
       "Bash(vercel --version)",
       "Bash(gh auth:*)",
-      "WebFetch(domain:aicount-mocha.vercel.app)"
+      "WebFetch(domain:aicount-mocha.vercel.app)",
+      "Bash(find /c/Users/bossk/Desktop/aicount -type f \\\\\\(-name *.png -o -name *.jpg -o -name *.jpeg -o -name *.gif -o -name *.svg -o -name *.figma \\\\\\) -not -path */node_modules/*)",
+      "Bash(bash \"C:\\\\Users\\\\bossk\\\\.claude\\\\plugins\\\\cache\\\\claude-plugins-official\\\\superpowers\\\\5.0.5\\\\skills\\\\brainstorming\\\\scripts\\\\start-server.sh\" --project-dir \"C:\\\\Users\\\\bossk\\\\Desktop\\\\aicount\")",
+      "Bash(ls \"C:\\\\Users\\\\bossk\\\\Desktop\\\\aicount\\\\.superpowers\\\\brainstorm\"\" 2>/dev/null && for dir in \"C:UsersbosskDesktopaicount.superpowersbrainstorm\"\"*/)",
+      "Bash(do cat:*)",
+      "Bash(done)",
+      "Bash(find /c/Users/bossk/Desktop/aicount -type f \\\\\\(-name jest.config.* -o -name vitest.config.* -o -name *.test.* -o -name *.spec.* \\\\\\))"
     ]
   },
   "enableAllProjectMcpServers": true,

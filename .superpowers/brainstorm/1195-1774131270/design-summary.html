@@ -1,0 +1,225 @@
+<h2>Phase 1 Design Summary — Review & Approve</h2>
+<p class="subtitle">Everything we've decided so far. Confirm this is right before we write the spec.</p>
+
+<!-- Design System -->
+<div class="section">
+  <h3>Design System</h3>
+  <div style="background: #F8FAFC; border-radius: 12px; padding: 24px; border: 1px solid #E2E8F0;">
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+      <!-- Colors -->
+      <div>
+        <div style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: #64748B; margin-bottom: 12px; font-weight: 600;">Color Palette — Trust Blue</div>
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <div style="width: 36px; height: 36px; border-radius: 8px; background: #2563EB;"></div>
+            <div><div style="font-size: 13px; font-weight: 500; color: #0F172A;">Primary — #2563EB</div><div style="font-size: 11px; color: #64748B;">Buttons, links, active states</div></div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <div style="width: 36px; height: 36px; border-radius: 8px; background: #3B82F6;"></div>
+            <div><div style="font-size: 13px; font-weight: 500; color: #0F172A;">Secondary — #3B82F6</div><div style="font-size: 11px; color: #64748B;">Hover states, secondary actions</div></div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <div style="width: 36px; height: 36px; border-radius: 8px; background: #059669;"></div>
+            <div><div style="font-size: 13px; font-weight: 500; color: #0F172A;">Success/Money — #059669</div><div style="font-size: 11px; color: #64748B;">Approved, positive amounts, growth</div></div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <div style="width: 36px; height: 36px; border-radius: 8px; background: #DC2626;"></div>
+            <div><div style="font-size: 13px; font-weight: 500; color: #0F172A;">Destructive — #DC2626</div><div style="font-size: 11px; color: #64748B;">Errors, rejected, delete</div></div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <div style="width: 36px; height: 36px; border-radius: 8px; background: #F59E0B;"></div>
+            <div><div style="font-size: 13px; font-weight: 500; color: #0F172A;">Warning — #F59E0B</div><div style="font-size: 11px; color: #64748B;">Pending, attention needed</div></div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <div style="width: 36px; height: 36px; border-radius: 8px; background: #F8FAFC; border: 1px solid #E2E8F0;"></div>
+            <div><div style="font-size: 13px; font-weight: 500; color: #0F172A;">Background — #F8FAFC</div><div style="font-size: 11px; color: #64748B;">Page background</div></div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <div style="width: 36px; height: 36px; border-radius: 8px; background: #0F172A;"></div>
+            <div><div style="font-size: 13px; font-weight: 500; color: #0F172A;">Text — #0F172A</div><div style="font-size: 11px; color: #64748B;">Primary text, headings</div></div>
+          </div>
+        </div>
+      </div>
+      <!-- Typography -->
+      <div>
+        <div style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: #64748B; margin-bottom: 12px; font-weight: 600;">Typography — Inter + Noto Sans Thai</div>
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <div>
+            <div style="font-size: 11px; color: #94A3B8;">Page Title — 24px / 700</div>
+            <div style="font-size: 24px; font-weight: 700; color: #0F172A;">Dashboard Overview</div>
+          </div>
+          <div>
+            <div style="font-size: 11px; color: #94A3B8;">Section Heading — 18px / 600</div>
+            <div style="font-size: 18px; font-weight: 600; color: #0F172A;">รายการล่าสุด</div>
+          </div>
+          <div>
+            <div style="font-size: 11px; color: #94A3B8;">Body — 14px / 400</div>
+            <div style="font-size: 14px; color: #475569; line-height: 1.6;">Regular body text for descriptions and content. ข้อความปกติสำหรับคำอธิบาย</div>
+          </div>
+          <div>
+            <div style="font-size: 11px; color: #94A3B8;">Small / Label — 12px / 500</div>
+            <div style="font-size: 12px; color: #64748B; font-weight: 500;">ACCOUNT CODE · STATUS · DATE</div>
+          </div>
+          <div>
+            <div style="font-size: 11px; color: #94A3B8;">Tabular Numbers — 14px / tabular-nums</div>
+            <div style="font-size: 14px; color: #0F172A; font-variant-numeric: tabular-nums;">฿1,234,567.89 | 4100-001 | 22/03/2569</div>
+          </div>
+        </div>
+
+        <div style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: #64748B; margin-bottom: 8px; margin-top: 24px; font-weight: 600;">Spacing Scale</div>
+        <div style="font-size: 13px; color: #475569;">4px — 8px — 12px — 16px — 24px — 32px — 48px — 64px</div>
+
+        <div style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: #64748B; margin-bottom: 8px; margin-top: 16px; font-weight: 600;">Border Radius</div>
+        <div style="font-size: 13px; color: #475569;">6px (inputs) — 8px (buttons, badges) — 10px (cards) — 12px (modals)</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- App Shell -->
+<div class="section">
+  <h3>App Shell</h3>
+  <div style="background: #F8FAFC; border-radius: 12px; padding: 24px; border: 1px solid #E2E8F0;">
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+      <div>
+        <div style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: #64748B; margin-bottom: 8px; font-weight: 600;">Layout</div>
+        <ul style="font-size: 13px; color: #334155; line-height: 1.8; padding-left: 18px; margin: 0;">
+          <li>Light white sidebar (230px) + main content area</li>
+          <li>Top header with search (Cmd+K) + user avatar</li>
+          <li>Workspace selector in sidebar (multi-tenant)</li>
+          <li>Responsive: sidebar collapses to hamburger on mobile</li>
+          <li>Background: #F8FAFC, Cards: white with #E2E8F0 border</li>
+        </ul>
+      </div>
+      <div>
+        <div style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: #64748B; margin-bottom: 8px; font-weight: 600;">Navigation Groups</div>
+        <ul style="font-size: 13px; color: #334155; line-height: 1.8; padding-left: 18px; margin: 0;">
+          <li><strong>Top:</strong> Dashboard</li>
+          <li><strong>Documents:</strong> Upload & OCR, All Documents, Approvals</li>
+          <li><strong>Accounting:</strong> General Ledger, AR, AP, Bank Recon</li>
+          <li><strong>Reports:</strong> Financial Statements, Tax Reports, WHT Certificates</li>
+          <li><strong>Bottom:</strong> Settings</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Components -->
+<div class="section">
+  <h3>Component Library (18 components)</h3>
+  <div style="background: #F8FAFC; border-radius: 12px; padding: 24px; border: 1px solid #E2E8F0;">
+    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
+      <div>
+        <div style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: #64748B; margin-bottom: 8px; font-weight: 600;">Inputs & Actions</div>
+        <ul style="font-size: 13px; color: #334155; line-height: 1.8; padding-left: 18px; margin: 0;">
+          <li>Button (primary, secondary, destructive, link, disabled)</li>
+          <li>Input (text, number, date, error state)</li>
+          <li>Select / Combobox</li>
+          <li>Checkbox / Radio</li>
+          <li>Toggle / Switch</li>
+        </ul>
+      </div>
+      <div>
+        <div style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: #64748B; margin-bottom: 8px; font-weight: 600;">Data Display</div>
+        <ul style="font-size: 13px; color: #334155; line-height: 1.8; padding-left: 18px; margin: 0;">
+          <li>Table (sortable, paginated)</li>
+          <li>Card (stat, content)</li>
+          <li>Badge / Status</li>
+          <li>Tabs (with counts)</li>
+          <li>Pagination</li>
+          <li>Empty State</li>
+        </ul>
+      </div>
+      <div>
+        <div style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: #64748B; margin-bottom: 8px; font-weight: 600;">Feedback & Overlays</div>
+        <ul style="font-size: 13px; color: #334155; line-height: 1.8; padding-left: 18px; margin: 0;">
+          <li>Modal / Dialog (confirm, form)</li>
+          <li>Toast / Alert (success, error, warning)</li>
+          <li>Tooltip</li>
+          <li>Dropdown Menu</li>
+          <li>Skeleton Loader</li>
+          <li>Breadcrumbs</li>
+          <li>Avatar</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Phasing -->
+<div class="section">
+  <h3>Phasing Plan</h3>
+  <div style="background: #F8FAFC; border-radius: 12px; padding: 24px; border: 1px solid #E2E8F0;">
+    <div style="display: flex; flex-direction: column; gap: 12px;">
+      <div style="display: flex; align-items: flex-start; gap: 12px;">
+        <div style="background: #2563EB; color: white; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; flex-shrink: 0;">1</div>
+        <div>
+          <div style="font-size: 14px; font-weight: 600; color: #0F172A;">Design System + Component Library</div>
+          <div style="font-size: 13px; color: #64748B;">CSS tokens, globals.css overhaul, 18 base components in src/components/</div>
+        </div>
+      </div>
+      <div style="display: flex; align-items: flex-start; gap: 12px;">
+        <div style="background: #E2E8F0; color: #475569; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; flex-shrink: 0;">2</div>
+        <div>
+          <div style="font-size: 14px; font-weight: 600; color: #0F172A;">App Shell + Navigation</div>
+          <div style="font-size: 13px; color: #64748B;">Light sidebar, grouped nav, responsive layout, workspace selector, global search</div>
+        </div>
+      </div>
+      <div style="display: flex; align-items: flex-start; gap: 12px;">
+        <div style="background: #E2E8F0; color: #475569; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; flex-shrink: 0;">3</div>
+        <div>
+          <div style="font-size: 14px; font-weight: 600; color: #0F172A;">Core Workflow Pages</div>
+          <div style="font-size: 13px; color: #64748B;">Upload, Documents, Extractions, Approvals, Export — the daily accounting loop</div>
+        </div>
+      </div>
+      <div style="display: flex; align-items: flex-start; gap: 12px;">
+        <div style="background: #E2E8F0; color: #475569; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; flex-shrink: 0;">4</div>
+        <div>
+          <div style="font-size: 14px; font-weight: 600; color: #0F172A;">Full Accounting Module Pages</div>
+          <div style="font-size: 13px; color: #64748B;">GL, AR, AP, Bank Recon, Financial Statements, Tax Reports, WHT — full Express replacement</div>
+        </div>
+      </div>
+      <div style="display: flex; align-items: flex-start; gap: 12px;">
+        <div style="background: #E2E8F0; color: #475569; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; flex-shrink: 0;">5</div>
+        <div>
+          <div style="font-size: 14px; font-weight: 600; color: #0F172A;">Settings, Master Data, Auth & Onboarding</div>
+          <div style="font-size: 13px; color: #64748B;">COA, vendors, customers, departments, login/signup polish, onboarding wizard</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- AI Differentiators -->
+<div class="section">
+  <h3>AI-First Differentiators (vs Express)</h3>
+  <div style="background: #F0F9FF; border: 1px solid #BAE6FD; border-radius: 12px; padding: 24px;">
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; font-size: 13px; color: #0C4A6E;">
+      <div style="display: flex; align-items: flex-start; gap: 8px;">
+        <span style="flex-shrink: 0;">→</span>
+        <div><strong>Smart OCR Upload:</strong> Drag-and-drop documents, AI extracts all data automatically</div>
+      </div>
+      <div style="display: flex; align-items: flex-start; gap: 8px;">
+        <span style="flex-shrink: 0;">→</span>
+        <div><strong>Auto Journal Entry:</strong> AI maps extracted data to GL accounts + tax codes</div>
+      </div>
+      <div style="display: flex; align-items: flex-start; gap: 8px;">
+        <span style="flex-shrink: 0;">→</span>
+        <div><strong>Confidence Scores:</strong> Visual indicators showing AI certainty on each field</div>
+      </div>
+      <div style="display: flex; align-items: flex-start; gap: 8px;">
+        <span style="flex-shrink: 0;">→</span>
+        <div><strong>Duplicate Detection:</strong> AI flags potential duplicate documents before processing</div>
+      </div>
+      <div style="display: flex; align-items: flex-start; gap: 8px;">
+        <span style="flex-shrink: 0;">→</span>
+        <div><strong>Keyboard-First:</strong> Power user shortcuts for fast approval workflows</div>
+      </div>
+      <div style="display: flex; align-items: flex-start; gap: 8px;">
+        <span style="flex-shrink: 0;">→</span>
+        <div><strong>Real-Time Processing:</strong> SSE updates show OCR progress live, no page refresh</div>
+      </div>
+    </div>
+  </div>
+</div>
