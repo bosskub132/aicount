@@ -2,14 +2,19 @@ import { and, desc, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { documents } from "@/lib/db/schema";
+import { getRequestContext, unauthorized, forbidden, ensureTenantScope } from "@/lib/api/request-context";
 
 export async function GET(request: Request) {
   try {
+    const ctx = getRequestContext(request);
+    if (!ctx) return unauthorized();
+
     const { searchParams } = new URL(request.url);
     const tenantId = searchParams.get("tenantId");
     if (!tenantId) {
       return NextResponse.json({ success: false, error: "tenantId is required" }, { status: 400 });
     }
+    if (!ensureTenantScope(ctx.tenantId, tenantId)) return forbidden("Cross-tenant access denied");
 
     const queue = await db
       .select()
@@ -19,8 +24,9 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ success: true, data: queue });
   } catch (error) {
+    console.error("[approval-queue GET]", error);
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : "Queue failed" },
+      { success: false, error: "Failed to fetch approval queue" },
       { status: 500 }
     );
   }

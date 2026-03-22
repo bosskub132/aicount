@@ -3,6 +3,7 @@ import { and, asc, desc, eq, ilike, or, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { documents } from "@/lib/db/schema";
+import { getRequestContext, unauthorized, forbidden, ensureTenantScope } from "@/lib/api/request-context";
 
 const SORT_FIELDS: Record<string, typeof documents.createdAt> = {
   createdAt: documents.createdAt,
@@ -14,18 +15,28 @@ const SORT_FIELDS: Record<string, typeof documents.createdAt> = {
 
 export async function GET(request: Request) {
   try {
+    const ctx = getRequestContext(request);
+    if (!ctx) return unauthorized();
+
     const { searchParams } = new URL(request.url);
     const tenantId = searchParams.get("tenantId");
-    const status = searchParams.get("status");
-    const search = searchParams.get("search");
-    const page = Math.max(1, Number(searchParams.get("page") || 1));
-    const limit = Math.min(100, Math.max(1, Number(searchParams.get("limit") || 20)));
-    const sort = searchParams.get("sort") || "createdAt";
-    const order = searchParams.get("order") === "asc" ? "asc" : "desc";
 
     if (!tenantId) {
       return NextResponse.json({ success: false, error: "tenantId is required" }, { status: 400 });
     }
+    if (!ensureTenantScope(ctx.tenantId, tenantId)) return forbidden("Cross-tenant access denied");
+
+    const status = searchParams.get("status");
+    const VALID_STATUSES = new Set(["DRAFT","OCR_PROCESSING","ACTION_REQUIRED","QUERY","PENDING_APPROVAL","APPROVED","EXPORTED","REJECTED","VOID"]);
+    if (status && !VALID_STATUSES.has(status)) {
+      return NextResponse.json({ success: false, error: "Invalid status" }, { status: 400 });
+    }
+    // Cap search length to prevent DB load
+    const search = (searchParams.get("search")?.trim() || "").slice(0, 200) || undefined;
+    const page = Math.max(1, Number(searchParams.get("page") || 1));
+    const limit = Math.min(100, Math.max(1, Number(searchParams.get("limit") || 20)));
+    const sort = searchParams.get("sort") || "createdAt";
+    const order = searchParams.get("order") === "asc" ? "asc" : "desc";
 
     const conditions = [eq(documents.tenantId, tenantId)];
 
@@ -75,8 +86,9 @@ export async function GET(request: Request) {
       },
     });
   } catch (error) {
+    console.error("[documents GET]", error);
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : "List failed" },
+      { success: false, error: "Failed to fetch documents" },
       { status: 500 }
     );
   }
