@@ -35,14 +35,26 @@ export async function updateSession(request: NextRequest) {
     request.nextUrl.pathname.startsWith("/login") ||
     request.nextUrl.pathname.startsWith("/signup") ||
     request.nextUrl.pathname.startsWith("/invite");
+  const isAuthCallback = request.nextUrl.pathname.startsWith("/auth/callback");
+  const isOnboardingPage = request.nextUrl.pathname.startsWith("/onboarding");
+  const isVerifyEmailPage = request.nextUrl.pathname.startsWith("/signup/verify-email");
 
-  if (!user && !isAuthPage && !isApiRoute) {
+  if (!user && !isAuthPage && !isApiRoute && !isAuthCallback) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
   }
 
   if (user) {
+    if (!user.email_confirmed_at && !isAuthPage && !isApiRoute && !isAuthCallback && !isVerifyEmailPage) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/signup/verify-email";
+      if (user.email) {
+        url.searchParams.set("email", user.email);
+      }
+      return NextResponse.redirect(url);
+    }
+
     const roleRaw = String(user.user_metadata?.role || "maker");
     const role = roleRaw === "admin" || roleRaw === "checker" ? roleRaw : "maker";
     const pathTenantIdMatch = request.nextUrl.pathname.match(/^\/api\/tenants\/([^/]+)/);
