@@ -4,7 +4,6 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { OnboardingModal } from "@/components/onboarding-modal";
 import { WorkspaceSelector } from "@/components/workspace-selector";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
@@ -82,7 +81,6 @@ const nav = [
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [showOnboarding, setShowOnboarding] = useState(false);
   const [profileLoaded, setProfileLoaded] = useState(false);
   const [userEmail, setUserEmail] = useState("");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -94,7 +92,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         if (json.success && json.data) {
           setUserEmail(json.data.email || "");
           if (!json.data.isOnboardingComplete) {
-            setShowOnboarding(true);
+            const STEP_ROUTES = [
+              "/onboarding",
+              "/onboarding/workspace",
+              "/onboarding/chart-of-accounts",
+              "/onboarding/departments",
+              "/onboarding/team",
+              "/onboarding/template",
+              "/onboarding/complete",
+            ];
+            const step = json.data.onboardingStep || 0;
+            router.push(STEP_ROUTES[step] || "/onboarding");
+            return;
           }
         }
         setProfileLoaded(true);
@@ -111,11 +120,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       // proceed to redirect even if sign-out request fails
     }
     router.push("/login");
-  }
-
-  function handleOnboardingComplete() {
-    setShowOnboarding(false);
-    window.location.reload();
   }
 
   return (
@@ -228,11 +232,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
         <div className="min-h-0 flex-1 overflow-auto p-4 md:p-6">{children}</div>
       </main>
-
-      {/* Onboarding Modal */}
-      {profileLoaded && showOnboarding && (
-        <OnboardingModal onComplete={handleOnboardingComplete} />
-      )}
     </div>
   );
 }
