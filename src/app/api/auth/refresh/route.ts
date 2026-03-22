@@ -1,7 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 import { validateCsrf } from "@/lib/api/csrf";
-import { checkRateLimit } from "@/lib/api/rate-limit";
+import { checkRateLimitAsync } from "@/lib/api/rate-limit";
 
 export async function POST(request: Request) {
   try {
@@ -9,8 +9,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: "CSRF validation failed" }, { status: 403 });
     }
 
-    const ip = request.headers.get("x-forwarded-for") || "unknown";
-    const rate = checkRateLimit({ key: `auth-refresh:${ip}`, limit: 60, windowMs: 15 * 60 * 1000 });
+    const ip = request.headers.get("x-real-ip") || request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    const rate = await checkRateLimitAsync({ key: `auth-refresh:${ip}`, limit: 60, windowMs: 15 * 60 * 1000 });
     if (!rate.ok) {
       return NextResponse.json({ success: false, error: "Too many refresh attempts" }, { status: 429 });
     }

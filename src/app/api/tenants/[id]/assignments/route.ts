@@ -1,9 +1,20 @@
 import { and, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { db } from "@/lib/db";
 import { profiles, tenantAssignments } from "@/lib/db/schema";
 import { ensureRole, forbidden, getRequestContext, unauthorized } from "@/lib/api/request-context";
 import { writeAuditLog } from "@/lib/services/audit";
+import { validateCsrf } from "@/lib/api/csrf";
+
+const CreateAssignmentSchema = z.object({
+  userId: z.string().uuid(),
+  role: z.enum(["maker", "checker"]),
+});
+
+const DeleteAssignmentSchema = z.object({
+  assignmentId: z.string().uuid(),
+});
 
 export async function GET(
   request: Request,
@@ -36,6 +47,9 @@ export async function POST(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
+    if (!validateCsrf(request)) {
+      return NextResponse.json({ success: false, error: "CSRF validation failed" }, { status: 403 });
+    }
     const ctx = getRequestContext(request);
     if (!ctx) return unauthorized();
     const { id } = await context.params;
@@ -44,10 +58,11 @@ export async function POST(
     }
     if (ctx.tenantId !== id && !ensureRole(ctx.role, ["admin"])) return forbidden("Cross-tenant access denied");
 
-    const body = (await request.json()) as {
-      userId: string;
-      role: "maker" | "checker";
-    };
+    const parsed = CreateAssignmentSchema.safeParse(await request.json());
+    if (!parsed.success) {
+      return NextResponse.json({ success: false, error: "Invalid input" }, { status: 400 });
+    }
+    const body = parsed.data;
 
     const [created] = await db
       .insert(tenantAssignments)
@@ -82,6 +97,9 @@ export async function DELETE(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
+    if (!validateCsrf(request)) {
+      return NextResponse.json({ success: false, error: "CSRF validation failed" }, { status: 403 });
+    }
     const ctx = getRequestContext(request);
     if (!ctx) return unauthorized();
     const { id } = await context.params;
@@ -90,7 +108,11 @@ export async function DELETE(
     }
     if (ctx.tenantId !== id && !ensureRole(ctx.role, ["admin"])) return forbidden("Cross-tenant access denied");
 
-    const body = (await request.json()) as { assignmentId: string };
+    const parsedDelete = DeleteAssignmentSchema.safeParse(await request.json());
+    if (!parsedDelete.success) {
+      return NextResponse.json({ success: false, error: "Invalid input" }, { status: 400 });
+    }
+    const body = parsedDelete.data;
     const [deleted] = await db
       .delete(tenantAssignments)
       .where(and(eq(tenantAssignments.id, body.assignmentId), eq(tenantAssignments.tenantId, id)))

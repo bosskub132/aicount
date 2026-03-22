@@ -1,9 +1,15 @@
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { db } from "@/lib/db";
 import { tenantAssignments, tenants } from "@/lib/db/schema";
 import { ensureRole, getRequestContext, resolveUserRole, unauthorized } from "@/lib/api/request-context";
 import { writeAuditLog } from "@/lib/services/audit";
+
+const CreateTenantSchema = z.object({
+  name: z.string().min(1).max(200),
+  taxId: z.string().regex(/^\d{13}$/),
+});
 
 export async function GET(request: Request) {
   const ctx = getRequestContext(request);
@@ -69,13 +75,13 @@ export async function POST(request: Request) {
       }
     }
 
-    const body = (await request.json()) as {
-      name: string;
-      taxId: string;
-      ownerUserId?: string;
-    };
+    const parsed = CreateTenantSchema.safeParse(await request.json());
+    if (!parsed.success) {
+      return NextResponse.json({ success: false, error: "Invalid input" }, { status: 400 });
+    }
+    const body = parsed.data;
 
-    const ownerUserId = body.ownerUserId || ctx.userId;
+    const ownerUserId = ctx.userId;
     const [created] = await db
       .insert(tenants)
       .values({

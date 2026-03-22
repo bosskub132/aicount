@@ -32,6 +32,15 @@
       "Bash(do cat:*)",
       "Bash(done)",
       "Bash(find /c/Users/bossk/Desktop/aicount -type f \\\\\\(-name jest.config.* -o -name vitest.config.* -o -name *.test.* -o -name *.spec.* \\\\\\))",
+      "mcp__plugin_supabase_supabase__execute_sql",
+      "Bash(find /c/Users/bossk/Desktop/aicount/src/app -name invite -o -name invitation*)",
+      "Bash(find:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(ls /c/Users/bossk/Desktop/aicount/src/app/\\\\\\(auth\\\\\\)/)",
+      "Bash(ls /c/Users/bossk/Desktop/aicount/src/app/\\\\\\(app\\\\\\)/)",
+      "Bash(git rm:*)",
+      "Bash(npx drizzle-kit:*)",
       "mcp__serena__list_memories"
     ]
   },
