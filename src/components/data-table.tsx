@@ -1,7 +1,7 @@
 // src/components/data-table.tsx
 "use client";
 
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
 
 export interface Column<T> {
@@ -24,6 +24,14 @@ interface DataTableProps<T> {
   emptyMessage?: string;
   footer?: React.ReactNode;
   keyField?: string;
+  /** Render function for expanded row content */
+  expandedRow?: (row: T) => React.ReactNode;
+  /** Set of row IDs that are currently expanded */
+  expandedRowIds?: Set<string>;
+  /** Callback when a row's expand state is toggled */
+  onToggleExpand?: (rowId: string) => void;
+  /** Extract a unique ID from a row (defaults to row.id) */
+  getRowId?: (row: T) => string;
 }
 
 export function DataTable<T extends Record<string, unknown>>({
@@ -37,10 +45,19 @@ export function DataTable<T extends Record<string, unknown>>({
   emptyMessage = "No data",
   footer,
   keyField = "id",
+  expandedRow,
+  expandedRowIds,
+  onToggleExpand,
+  getRowId,
 }: DataTableProps<T>) {
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  const resolveRowId = (row: T): string =>
+    getRowId ? getRowId(row) : String(row[keyField]);
+
+  const totalColSpan = columns.length + (selectable ? 1 : 0);
 
   const handleSort = (key: string) => {
     if (!sortable) return;
@@ -124,38 +141,50 @@ export function DataTable<T extends Record<string, unknown>>({
               </td>
             </tr>
           ) : (
-            data.map((row, i) => (
-              <tr
-                key={String(row[keyField]) || i}
-                onClick={() => onRowClick?.(row)}
-                className={`border-b border-[var(--muted)] last:border-0 transition-colors duration-100 ${
-                  onRowClick ? "cursor-pointer hover:bg-[var(--primary-light)]" : "hover:bg-[var(--muted)]/50"
-                } ${
-                  selected.has(String(row[keyField])) ? "bg-[var(--primary-light)]" : ""
-                }`}
-              >
-                {selectable && (
-                  <td className="w-10 px-3 py-3">
-                    <input
-                      type="checkbox"
-                      checked={selected.has(String(row[keyField]))}
-                      onChange={() => handleSelectRow(row)}
-                      className="cursor-pointer"
-                    />
-                  </td>
-                )}
-                {columns.map((col) => (
-                  <td
-                    key={col.key}
-                    className={`px-4 py-3 ${alignClass(col.align)} ${
-                      col.align === "right" ? "tabular-nums" : ""
+            data.map((row, i) => {
+              const rowId = resolveRowId(row);
+              const isExpanded = expandedRowIds?.has(rowId) ?? false;
+              return (
+                <Fragment key={rowId || i}>
+                  <tr
+                    onClick={() => onRowClick?.(row)}
+                    className={`border-b border-[var(--muted)] last:border-0 transition-colors duration-100 ${
+                      onRowClick ? "cursor-pointer hover:bg-[var(--primary-light)]" : "hover:bg-[var(--muted)]/50"
+                    } ${
+                      selected.has(String(row[keyField])) ? "bg-[var(--primary-light)]" : ""
                     }`}
                   >
-                    {col.render ? col.render(row) : String(row[col.key] ?? "")}
-                  </td>
-                ))}
-              </tr>
-            ))
+                    {selectable && (
+                      <td className="w-10 px-3 py-3">
+                        <input
+                          type="checkbox"
+                          checked={selected.has(String(row[keyField]))}
+                          onChange={() => handleSelectRow(row)}
+                          className="cursor-pointer"
+                        />
+                      </td>
+                    )}
+                    {columns.map((col) => (
+                      <td
+                        key={col.key}
+                        className={`px-4 py-3 ${alignClass(col.align)} ${
+                          col.align === "right" ? "tabular-nums" : ""
+                        }`}
+                      >
+                        {col.render ? col.render(row) : String(row[col.key] ?? "")}
+                      </td>
+                    ))}
+                  </tr>
+                  {isExpanded && expandedRow && (
+                    <tr className="bg-[var(--surface-secondary)]">
+                      <td colSpan={totalColSpan} className="px-4 py-3">
+                        {expandedRow(row)}
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
+              );
+            })
           )}
         </tbody>
         {footer && (
