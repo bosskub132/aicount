@@ -4,14 +4,11 @@ import {
   gte,
   lte,
   sql,
-  sum,
-  count,
   isNull,
 } from "drizzle-orm";
 import { documents, customers, payments } from "@/lib/db/schema";
 import {
   computeAgingBucket,
-  aggregateAging,
   type AgingBuckets,
   type AgingBucketKey,
 } from "@/lib/services/aging";

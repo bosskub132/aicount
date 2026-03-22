@@ -2,6 +2,7 @@
 
 import {
   Suspense,
+  startTransition,
   useCallback,
   useEffect,
   useMemo,
@@ -45,7 +46,6 @@ import {
   useCreateJournalEntry,
   useUpdateJournalEntry,
   usePostJournalEntry,
-  useReverseJournalEntry,
 } from "@/lib/hooks/use-journal-entries";
 import { useAccountLedger } from "@/lib/hooks/use-account-ledger";
 import { useToast } from "@/lib/stores/ui-store";
@@ -255,8 +255,6 @@ function LedgerPageContent() {
   const createMutation = useCreateJournalEntry(tenantId);
   const updateMutation = useUpdateJournalEntry(tenantId);
   const postMutation = usePostJournalEntry(tenantId);
-  const reverseMutation = useReverseJournalEntry(tenantId);
-
   const accountLedger = useAccountLedger(
     tenantId,
     accountCode ?? null,
@@ -358,25 +356,27 @@ function LedgerPageContent() {
   useEffect(() => {
     if (editEntry.data && editEntryId) {
       const entry = editEntry.data;
-      setJvDate(
-        entry.date
-          ? new Date(entry.date as string).toISOString().slice(0, 10)
-          : todayISO(),
-      );
-      setJvDescription(String(entry.description ?? ""));
-      const entryLines = (entry.lines as Array<Record<string, unknown>>) ?? [];
-      if (entryLines.length > 0) {
-        setJvLines(
-          entryLines.map((l) => ({
-            id: generateLineId(),
-            accountCode: String(l.accountCode ?? ""),
-            deptCode: String(l.deptCode ?? ""),
-            debit: l.debit ? Number(l.debit) : undefined,
-            credit: l.credit ? Number(l.credit) : undefined,
-            description: String(l.description ?? ""),
-          })),
+      startTransition(() => {
+        setJvDate(
+          entry.date
+            ? new Date(entry.date as string).toISOString().slice(0, 10)
+            : todayISO(),
         );
-      }
+        setJvDescription(String(entry.description ?? ""));
+        const entryLines = (entry.lines as Array<Record<string, unknown>>) ?? [];
+        if (entryLines.length > 0) {
+          setJvLines(
+            entryLines.map((l) => ({
+              id: generateLineId(),
+              accountCode: String(l.accountCode ?? ""),
+              deptCode: String(l.deptCode ?? ""),
+              debit: l.debit ? Number(l.debit) : undefined,
+              credit: l.credit ? Number(l.credit) : undefined,
+              description: String(l.description ?? ""),
+            })),
+          );
+        }
+      });
     }
   }, [editEntry.data, editEntryId]);
 

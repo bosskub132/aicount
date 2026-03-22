@@ -142,16 +142,24 @@ function PayablesPageContent() {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [status, setStatus] = useState(searchParams.get("status") || "");
 
-  // Debounce search
+  // Debounce search and reset page
   useEffect(() => {
-    const timer = setTimeout(() => setDebouncedSearch(search), 300);
+    const timer = setTimeout(() => {
+      setDebouncedSearch((prev) => {
+        if (prev !== search) {
+          setPage(1);
+        }
+        return search;
+      });
+    }, 300);
     return () => clearTimeout(timer);
   }, [search]);
 
-  // Reset page on filter change
-  useEffect(() => {
+  // Reset page on status filter change
+  const handleStatusChange = useCallback((val: string) => {
+    setStatus(val);
     setPage(1);
-  }, [debouncedSearch, status]);
+  }, []);
 
   // Expanded rows
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
@@ -180,7 +188,7 @@ function PayablesPageContent() {
   });
 
   const payablesData = rawData as PayablesResponse | undefined;
-  const vendors = payablesData?.data?.vendors ?? [];
+  const vendors = useMemo(() => payablesData?.data?.vendors ?? [], [payablesData?.data?.vendors]);
   const summary = payablesData?.data?.summary;
   const totalItems = payablesData?.data?.total ?? 0;
   const pageSize = payablesData?.data?.limit ?? 20;
@@ -497,7 +505,7 @@ function PayablesPageContent() {
           <Select
             options={STATUS_FILTERS}
             value={status}
-            onChange={setStatus}
+            onChange={handleStatusChange}
             placeholder="Status"
           />
         </div>

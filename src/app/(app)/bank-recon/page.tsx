@@ -6,7 +6,6 @@ import {
   Landmark,
   Check,
   CheckCheck,
-  Link2,
   Unlink,
   AlertCircle,
 } from "lucide-react";
@@ -101,22 +100,25 @@ function BankReconContent() {
 
   const data = reconData as ReconData | undefined;
 
+  // Stable reference for suggestions
+  const suggestions = data?.suggestions;
+
   // Build suggestion lookup: bankTransactionId -> suggestion
   const suggestionMap = useMemo(() => {
     const map = new Map<string, MatchSuggestion>();
-    if (data?.suggestions) {
-      for (const s of data.suggestions) {
+    if (suggestions) {
+      for (const s of suggestions) {
         map.set(s.bankTransactionId, s);
       }
     }
     return map;
-  }, [data?.suggestions]);
+  }, [suggestions]);
 
   // High-confidence suggestions (>= 0.8) that are not yet matched
   const highConfidenceSuggestions = useMemo(() => {
-    if (!data?.suggestions) return [];
-    return data.suggestions.filter((s) => s.confidence >= 0.8);
-  }, [data?.suggestions]);
+    if (!suggestions) return [];
+    return suggestions.filter((s) => s.confidence >= 0.8);
+  }, [suggestions]);
 
   // Manual match: select bank txn, then click GL entry
   const handleManualMatch = useCallback(

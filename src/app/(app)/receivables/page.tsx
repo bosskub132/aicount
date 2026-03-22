@@ -212,16 +212,34 @@ function ReceivablesPageContent() {
   const [paymentReference, setPaymentReference] = useState("");
   const [paymentNotes, setPaymentNotes] = useState("");
 
-  // Debounce search
+  // Debounce search and reset page
   useEffect(() => {
-    const timer = setTimeout(() => setDebouncedSearch(search), 300);
+    const timer = setTimeout(() => {
+      setDebouncedSearch((prev) => {
+        if (prev !== search) {
+          setPage(1);
+        }
+        return search;
+      });
+    }, 300);
     return () => clearTimeout(timer);
   }, [search]);
 
-  // Reset page when filters change
-  useEffect(() => {
+  // Reset page on filter change via handlers
+  const handleStatusFilterChange = useCallback((val: string) => {
+    setStatusFilter(val);
     setPage(1);
-  }, [debouncedSearch, statusFilter, dateFrom, dateTo]);
+  }, []);
+
+  const handleDateFromChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setDateFrom(e.target.value);
+    setPage(1);
+  }, []);
+
+  const handleDateToChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setDateTo(e.target.value);
+    setPage(1);
+  }, []);
 
   // Data fetching
   const { data, isLoading, isError } = useReceivables(tenantId, {
@@ -587,34 +605,32 @@ function ReceivablesPageContent() {
   );
 
   // Footer
-  const tableFooter = useMemo(
-    () => (
-      <tr className="bg-[var(--muted)] border-t-2 border-[var(--border)]">
-        <td className="px-4 py-3.5 font-bold text-[var(--foreground)]">
-          Total ({customers.length} customers)
-        </td>
-        <td className="px-4 py-3.5 text-right tabular-nums text-[var(--foreground)]">
-          {renderAmount(columnTotals.current)}
-        </td>
-        <td className="px-4 py-3.5 text-right tabular-nums text-[var(--foreground)]">
-          {renderAmount(columnTotals.d30)}
-        </td>
-        <td className="px-4 py-3.5 text-right tabular-nums">
-          {renderAmount(columnTotals.d60, agingCellClass("d60"))}
-        </td>
-        <td className="px-4 py-3.5 text-right tabular-nums">
-          {renderAmount(columnTotals.d90, agingCellClass("d90"))}
-        </td>
-        <td className="px-4 py-3.5 text-right tabular-nums">
-          {renderAmount(columnTotals.overdue, agingCellClass("overdue"))}
-        </td>
-        <td className="px-4 py-3.5 text-right tabular-nums font-bold text-[var(--foreground)] text-[15px]">
-          {formatCurrency(columnTotals.total)}
-        </td>
-        <td />
-      </tr>
-    ),
-    [customers.length, columnTotals],
+  const customerCount = customers.length;
+  const tableFooter = (
+    <tr className="bg-[var(--muted)] border-t-2 border-[var(--border)]">
+      <td className="px-4 py-3.5 font-bold text-[var(--foreground)]">
+        Total ({customerCount} customers)
+      </td>
+      <td className="px-4 py-3.5 text-right tabular-nums text-[var(--foreground)]">
+        {renderAmount(columnTotals.current)}
+      </td>
+      <td className="px-4 py-3.5 text-right tabular-nums text-[var(--foreground)]">
+        {renderAmount(columnTotals.d30)}
+      </td>
+      <td className="px-4 py-3.5 text-right tabular-nums">
+        {renderAmount(columnTotals.d60, agingCellClass("d60"))}
+      </td>
+      <td className="px-4 py-3.5 text-right tabular-nums">
+        {renderAmount(columnTotals.d90, agingCellClass("d90"))}
+      </td>
+      <td className="px-4 py-3.5 text-right tabular-nums">
+        {renderAmount(columnTotals.overdue, agingCellClass("overdue"))}
+      </td>
+      <td className="px-4 py-3.5 text-right tabular-nums font-bold text-[var(--foreground)] text-[15px]">
+        {formatCurrency(columnTotals.total)}
+      </td>
+      <td />
+    </tr>
   );
 
   // Trend for collected
@@ -744,7 +760,7 @@ function ReceivablesPageContent() {
               <Input
                 type="date"
                 value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
+                onChange={handleDateFromChange}
                 className="w-36 text-[13px]"
               />
             </div>
@@ -752,7 +768,7 @@ function ReceivablesPageContent() {
             <Input
               type="date"
               value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
+              onChange={handleDateToChange}
               className="w-36 text-[13px]"
             />
           </div>
@@ -774,7 +790,7 @@ function ReceivablesPageContent() {
             {STATUS_FILTERS.map((f) => (
               <button
                 key={f.value}
-                onClick={() => setStatusFilter(f.value)}
+                onClick={() => handleStatusFilterChange(f.value)}
                 className={`px-3.5 py-1.5 rounded-md text-xs font-medium cursor-pointer transition-colors ${
                   statusFilter === f.value
                     ? "bg-[var(--primary-light)] text-[var(--primary)] border border-[var(--info-light)] font-semibold"

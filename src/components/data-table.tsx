@@ -34,22 +34,22 @@ interface DataTableProps<T> {
   getRowId?: (row: T) => string;
 }
 
-export function DataTable<T extends Record<string, unknown>>({
-  columns,
-  data,
-  sortable,
-  selectable,
-  onSort,
-  onSelect,
-  onRowClick,
-  emptyMessage = "No data",
-  footer,
-  keyField = "id",
-  expandedRow,
-  expandedRowIds,
-  onToggleExpand,
-  getRowId,
-}: DataTableProps<T>) {
+export function DataTable<T extends Record<string, unknown>>(props: DataTableProps<T>) {
+  const {
+    columns,
+    data,
+    sortable,
+    selectable,
+    onSort,
+    onSelect,
+    onRowClick,
+    emptyMessage = "No data",
+    footer,
+    keyField = "id",
+    expandedRow,
+    expandedRowIds,
+    getRowId,
+  } = props;
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [selected, setSelected] = useState<Set<string>>(new Set());

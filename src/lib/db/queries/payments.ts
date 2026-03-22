@@ -2,7 +2,6 @@ import {
   and,
   eq,
   sql,
-  sum,
   desc,
   isNull,
 } from "drizzle-orm";

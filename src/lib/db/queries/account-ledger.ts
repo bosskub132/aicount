@@ -1,4 +1,4 @@
-import { and, eq, lt, gte, lte, asc, sql, sum, ne } from "drizzle-orm";
+import { and, eq, lt, gte, lte, asc, sql, ne } from "drizzle-orm";
 import { journalEntries, journalLines } from "@/lib/db/schema";
 
 // ── Types ───────────────────────────────────────────────────────────────────

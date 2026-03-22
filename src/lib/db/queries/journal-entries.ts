@@ -116,7 +116,7 @@ export async function listJournalEntries(
 
   // Fetch lines for all entries in a single query
   const entryIds = entries.map((e) => e.id);
-  let linesMap: Map<string, JournalLineRow[]> = new Map();
+  const linesMap: Map<string, JournalLineRow[]> = new Map();
 
   if (entryIds.length > 0) {
     const allLines = await db
