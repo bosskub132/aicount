@@ -10,9 +10,13 @@ import {
   departments,
   documents,
   journalLines,
+  journalEntries,
+  payments,
+  bankStatements,
+  bankTransactions,
+  bankReconMatches,
   glMappingRules,
   periodLocks,
-  bankStatements,
   expressTemplates,
   exportTemplateSelections,
   notifications,
@@ -27,6 +31,9 @@ export const tenantsRelations = relations(tenants, ({ many }) => ({
   products: many(products),
   departments: many(departments),
   documents: many(documents),
+  journalEntries: many(journalEntries),
+  payments: many(payments),
+  bankReconMatches: many(bankReconMatches),
   glMappingRules: many(glMappingRules),
   periodLocks: many(periodLocks),
   bankStatements: many(bankStatements),
@@ -63,6 +70,8 @@ export const documentsRelations = relations(documents, ({ one, many }) => ({
     references: [profiles.id],
   }),
   journalLines: many(journalLines),
+  journalEntries: many(journalEntries),
+  payments: many(payments),
   linkedPo: one(documents, {
     fields: [documents.linkedPoId],
     references: [documents.id],
@@ -79,6 +88,10 @@ export const journalLinesRelations = relations(journalLines, ({ one }) => ({
   document: one(documents, {
     fields: [journalLines.documentId],
     references: [documents.id],
+  }),
+  journalEntry: one(journalEntries, {
+    fields: [journalLines.journalEntryId],
+    references: [journalEntries.id],
   }),
 }));
 
@@ -143,6 +156,95 @@ export const exportTemplateSelectionsRelations = relations(
     }),
     exportedByUser: one(profiles, {
       fields: [exportTemplateSelections.exportedBy],
+      references: [profiles.id],
+    }),
+  })
+);
+
+export const journalEntriesRelations = relations(
+  journalEntries,
+  ({ one, many }) => ({
+    tenant: one(tenants, {
+      fields: [journalEntries.tenantId],
+      references: [tenants.id],
+    }),
+    sourceDocument: one(documents, {
+      fields: [journalEntries.sourceDocumentId],
+      references: [documents.id],
+    }),
+    reversedFrom: one(journalEntries, {
+      fields: [journalEntries.reversedFromId],
+      references: [journalEntries.id],
+      relationName: "reversal",
+    }),
+    createdByUser: one(profiles, {
+      fields: [journalEntries.createdBy],
+      references: [profiles.id],
+    }),
+    lines: many(journalLines),
+    payments: many(payments),
+    bankReconMatches: many(bankReconMatches),
+  })
+);
+
+export const paymentsRelations = relations(payments, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [payments.tenantId],
+    references: [tenants.id],
+  }),
+  document: one(documents, {
+    fields: [payments.documentId],
+    references: [documents.id],
+  }),
+  journalEntry: one(journalEntries, {
+    fields: [payments.journalEntryId],
+    references: [journalEntries.id],
+  }),
+  createdByUser: one(profiles, {
+    fields: [payments.createdBy],
+    references: [profiles.id],
+  }),
+}));
+
+export const bankTransactionsRelations = relations(
+  bankTransactions,
+  ({ one, many }) => ({
+    bankStatement: one(bankStatements, {
+      fields: [bankTransactions.bankStatementId],
+      references: [bankStatements.id],
+    }),
+    reconMatch: many(bankReconMatches),
+  })
+);
+
+export const bankStatementsRelations = relations(
+  bankStatements,
+  ({ one, many }) => ({
+    tenant: one(tenants, {
+      fields: [bankStatements.tenantId],
+      references: [tenants.id],
+    }),
+    transactions: many(bankTransactions),
+  })
+);
+
+export const bankReconMatchesRelations = relations(
+  bankReconMatches,
+  ({ one }) => ({
+    tenant: one(tenants, {
+      fields: [bankReconMatches.tenantId],
+      references: [tenants.id],
+    }),
+    bankTransaction: one(bankTransactions, {
+      fields: [bankReconMatches.bankTransactionId],
+      references: [bankTransactions.id],
+    }),
+    journalEntry: one(journalEntries, {
+      fields: [bankReconMatches.journalEntryId],
+      references: [journalEntries.id],
+    }),
+    confirmedByUser: one(profiles, {
+      fields: [bankReconMatches.confirmedBy],
       references: [profiles.id],
     }),
   })

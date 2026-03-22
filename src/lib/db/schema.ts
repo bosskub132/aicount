@@ -58,6 +58,19 @@ export const journalTypeEnum = pgEnum("journal_type", [
   "PV",
   "PurV",
   "JV",
+  "Manual",
+]);
+
+export const journalStatusEnum = pgEnum("journal_status", [
+  "draft",
+  "posted",
+  "reversed",
+]);
+
+export const matchTypeEnum = pgEnum("match_type", [
+  "auto",
+  "manual",
+  "suggested",
 ]);
 
 export const directionEnum = pgEnum("direction", ["REVENUE", "EXPENSE"]);
@@ -84,6 +97,7 @@ export const tenants = pgTable("tenants", {
   baseCurrency: varchar("base_currency", { length: 3 }).default("THB"),
   dataRetentionYears: integer("data_retention_years").default(7),
   defaultExportTemplateId: uuid("default_export_template_id"),
+  nextJvSequence: integer("next_jv_sequence").default(0).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   deletedAt: timestamp("deleted_at", { withTimezone: true }),
@@ -291,6 +305,8 @@ export const documents = pgTable(
     grandTotal: decimal("grand_total", { precision: 15, scale: 2 }),
     whtAmount: decimal("wht_amount", { precision: 15, scale: 2 }),
 
+    dueDate: date("due_date"),
+
     // Classification
     direction: directionEnum("direction"),
     docType: docTypeEnum("doc_type"),
@@ -335,9 +351,13 @@ export const journalLines = pgTable(
   "journal_lines",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    documentId: uuid("document_id")
-      .notNull()
-      .references(() => documents.id, { onDelete: "cascade" }),
+    documentId: uuid("document_id").references(() => documents.id, {
+      onDelete: "cascade",
+    }),
+    journalEntryId: uuid("journal_entry_id").references(
+      () => journalEntries.id,
+      { onDelete: "cascade" }
+    ),
     accountCode: varchar("account_code", { length: 20 }).notNull(),
     deptCode: varchar("dept_code", { length: 20 }),
     debit: decimal("debit", { precision: 15, scale: 2 })
@@ -349,7 +369,10 @@ export const journalLines = pgTable(
     description: text("description"),
     sortOrder: integer("sort_order").default(0),
   },
-  (table) => [index("jl_document_idx").on(table.documentId)]
+  (table) => [
+    index("jl_document_idx").on(table.documentId),
+    index("jl_journal_entry_idx").on(table.journalEntryId),
+  ]
 );
 
 // ── GL Mapping Rules ────────────────────────────────────────────────────────
@@ -408,6 +431,123 @@ export const bankStatements = pgTable(
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => [index("bank_stmt_tenant_idx").on(table.tenantId)]
+);
+
+// ── Journal Entries ─────────────────────────────────────────────────────────
+
+export const journalEntries = pgTable(
+  "journal_entries",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    jvNumber: varchar("jv_number", { length: 50 }).notNull(),
+    date: date("date").notNull(),
+    type: journalTypeEnum("type").notNull(),
+    description: text("description"),
+    status: journalStatusEnum("status").default("draft").notNull(),
+    sourceDocumentId: uuid("source_document_id").references(
+      () => documents.id
+    ),
+    reversedFromId: uuid("reversed_from_id"),
+    createdBy: uuid("created_by")
+      .notNull()
+      .references(() => profiles.id),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("je_tenant_jv_idx").on(table.tenantId, table.jvNumber),
+    index("je_tenant_date_idx").on(table.tenantId, table.date),
+    index("je_tenant_status_idx").on(table.tenantId, table.status),
+    index("je_source_doc_idx").on(table.sourceDocumentId),
+  ]
+);
+
+// ── Payments ────────────────────────────────────────────────────────────────
+
+export const payments = pgTable(
+  "payments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    documentId: uuid("document_id")
+      .notNull()
+      .references(() => documents.id),
+    journalEntryId: uuid("journal_entry_id").references(
+      () => journalEntries.id
+    ),
+    amount: decimal("amount", { precision: 15, scale: 2 }).notNull(),
+    whtAmount: decimal("wht_amount", { precision: 15, scale: 2 })
+      .default("0")
+      .notNull(),
+    netAmount: decimal("net_amount", { precision: 15, scale: 2 }).notNull(),
+    paymentDate: date("payment_date").notNull(),
+    paymentMethod: varchar("payment_method", { length: 50 }),
+    referenceNo: varchar("reference_no", { length: 100 }),
+    notes: text("notes"),
+    createdBy: uuid("created_by")
+      .notNull()
+      .references(() => profiles.id),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("pmt_tenant_doc_idx").on(table.tenantId, table.documentId),
+    index("pmt_tenant_date_idx").on(table.tenantId, table.paymentDate),
+  ]
+);
+
+// ── Bank Transactions ───────────────────────────────────────────────────────
+
+export const bankTransactions = pgTable(
+  "bank_transactions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    bankStatementId: uuid("bank_statement_id")
+      .notNull()
+      .references(() => bankStatements.id, { onDelete: "cascade" }),
+    transactionDate: date("transaction_date").notNull(),
+    description: text("description"),
+    debit: decimal("debit", { precision: 15, scale: 2 })
+      .default("0")
+      .notNull(),
+    credit: decimal("credit", { precision: 15, scale: 2 })
+      .default("0")
+      .notNull(),
+    referenceNo: varchar("reference_no", { length: 100 }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [index("btx_statement_idx").on(table.bankStatementId)]
+);
+
+// ── Bank Reconciliation Matches ─────────────────────────────────────────────
+
+export const bankReconMatches = pgTable(
+  "bank_recon_matches",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    bankTransactionId: uuid("bank_transaction_id")
+      .notNull()
+      .references(() => bankTransactions.id),
+    journalEntryId: uuid("journal_entry_id")
+      .notNull()
+      .references(() => journalEntries.id),
+    matchType: matchTypeEnum("match_type").notNull(),
+    confidence: decimal("confidence", { precision: 5, scale: 2 }),
+    confirmedAt: timestamp("confirmed_at"),
+    confirmedBy: uuid("confirmed_by").references(() => profiles.id),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("brm_bank_tx_idx").on(table.bankTransactionId),
+    index("brm_tenant_confirmed_idx").on(table.tenantId, table.confirmedAt),
+  ]
 );
 
 // ── Express Templates ───────────────────────────────────────────────────────

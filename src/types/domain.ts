@@ -10,6 +10,10 @@ import type {
   departments,
   documents,
   journalLines,
+  journalEntries,
+  payments,
+  bankTransactions,
+  bankReconMatches,
   glMappingRules,
   periodLocks,
   expressTemplates,
@@ -27,6 +31,10 @@ export type Product = InferSelectModel<typeof products>;
 export type Department = InferSelectModel<typeof departments>;
 export type Document = InferSelectModel<typeof documents>;
 export type JournalLine = InferSelectModel<typeof journalLines>;
+export type JournalEntry = InferSelectModel<typeof journalEntries>;
+export type Payment = InferSelectModel<typeof payments>;
+export type BankTransaction = InferSelectModel<typeof bankTransactions>;
+export type BankReconMatch = InferSelectModel<typeof bankReconMatches>;
 export type GLMappingRule = InferSelectModel<typeof glMappingRules>;
 export type PeriodLock = InferSelectModel<typeof periodLocks>;
 export type ExpressTemplate = InferSelectModel<typeof expressTemplates>;
@@ -35,4 +43,13 @@ export type Notification = InferSelectModel<typeof notifications>;
 
 export type DocumentWithLines = Document & {
   journalLines: JournalLine[];
+};
+
+export type JournalEntryWithLines = JournalEntry & {
+  lines: JournalLine[];
+};
+
+export type JournalEntryWithDetails = JournalEntry & {
+  lines: JournalLine[];
+  sourceDocument?: Document | null;
 };

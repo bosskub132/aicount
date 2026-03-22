@@ -180,6 +180,7 @@ export async function exportApprovedDocumentsToExpress({
 
   const lineMap = new Map<string, typeof linesByDoc>();
   for (const line of linesByDoc) {
+    if (!line.documentId) continue;
     const arr = lineMap.get(line.documentId) || [];
     arr.push(line);
     lineMap.set(line.documentId, arr);
