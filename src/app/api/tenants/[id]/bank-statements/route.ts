@@ -52,8 +52,9 @@ export async function POST(
 
     return NextResponse.json({ success: true, data: created }, { status: 201 });
   } catch (error) {
+    console.error("POST /api/tenants/[id]/bank-statements failed:", error);
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : "Upload statement failed" },
+      { success: false, error: "Failed to upload bank statement" },
       { status: 500 }
     );
   }
