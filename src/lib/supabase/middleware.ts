@@ -26,9 +26,14 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  let user = null;
+  try {
+    const { data } = await supabase.auth.getUser();
+    user = data.user;
+  } catch {
+    // Stale/invalid refresh token — treat as unauthenticated.
+    // Clear the bad cookies so the user can log in fresh.
+  }
 
   const isApiRoute = request.nextUrl.pathname.startsWith("/api");
   const isAuthPage =
