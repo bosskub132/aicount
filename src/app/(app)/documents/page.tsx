@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useDocuments, useDocumentMutations } from "@/lib/hooks/use-documents";
 import { useToast } from "@/lib/stores/ui-store";
@@ -30,6 +30,14 @@ const STATUS_TABS = [
 type StatusTab = (typeof STATUS_TABS)[number];
 
 export default function DocumentsPage() {
+  return (
+    <Suspense fallback={<div className="p-6"><Skeleton variant="rect" className="h-96 w-full" /></div>}>
+      <DocumentsPageContent />
+    </Suspense>
+  );
+}
+
+function DocumentsPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const toast = useToast();
