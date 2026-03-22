@@ -10,6 +10,7 @@ import {
   unauthorized,
 } from "@/lib/api/request-context";
 import { writeAuditLog } from "@/lib/services/audit";
+import { validateCsrf } from "@/lib/api/csrf";
 
 export async function GET(
   request: Request,
@@ -35,6 +36,9 @@ export async function PUT(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
+    if (!validateCsrf(request)) {
+      return NextResponse.json({ success: false, error: "CSRF validation failed" }, { status: 403 });
+    }
     const ctx = getRequestContext(request);
     if (!ctx) return unauthorized();
     const { id } = await context.params;
@@ -88,6 +92,9 @@ export async function PATCH(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
+    if (!validateCsrf(request)) {
+      return NextResponse.json({ success: false, error: "CSRF validation failed" }, { status: 403 });
+    }
     const ctx = getRequestContext(request);
     if (!ctx) return unauthorized();
     const { id } = await context.params;
@@ -148,6 +155,9 @@ export async function DELETE(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
+    if (!validateCsrf(request)) {
+      return NextResponse.json({ success: false, error: "CSRF validation failed" }, { status: 403 });
+    }
     const ctx = getRequestContext(request);
     if (!ctx) return unauthorized();
     const { id } = await context.params;

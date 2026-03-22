@@ -2,9 +2,13 @@ import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 import { checkRateLimit } from "@/lib/api/rate-limit";
 import { getAppUrl } from "@/lib/utils/app-url";
+import { validateCsrf } from "@/lib/api/csrf";
 
 export async function POST(request: Request) {
   try {
+    if (!validateCsrf(request)) {
+      return NextResponse.json({ success: false, error: "CSRF validation failed" }, { status: 403 });
+    }
     const ip = request.headers.get("x-forwarded-for") || "unknown";
     const rate = checkRateLimit({ key: `resend-verify:${ip}`, limit: 5, windowMs: 15 * 60 * 1000 });
     if (!rate.ok) {
@@ -30,14 +34,14 @@ export async function POST(request: Request) {
     });
 
     if (error) {
-      return NextResponse.json({ success: false, error: error.message }, { status: 400 });
+      console.error("[resend-verification] supabase error:", error.message);
     }
 
+    // Always return success to prevent email enumeration
     return NextResponse.json({ success: true });
   } catch (error) {
-    return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : "Resend failed" },
-      { status: 500 }
-    );
+    console.error("[resend-verification]", error);
+    // Still return success to prevent enumeration
+    return NextResponse.json({ success: true });
   }
 }

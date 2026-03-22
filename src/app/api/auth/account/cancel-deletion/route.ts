@@ -3,9 +3,13 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { profiles, tenants } from "@/lib/db/schema";
 import { getRequestContext, unauthorized } from "@/lib/api/request-context";
+import { validateCsrf } from "@/lib/api/csrf";
 
 export async function POST(request: Request) {
   try {
+    if (!validateCsrf(request)) {
+      return NextResponse.json({ success: false, error: "CSRF validation failed" }, { status: 403 });
+    }
     const ctx = getRequestContext(request);
     if (!ctx) return unauthorized();
 

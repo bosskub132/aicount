@@ -8,12 +8,20 @@ export const accountPurge = inngest.createFunction(
   { id: "account-purge", name: "Purge Expired Accounts" },
   { cron: "0 4 * * *" },
   async ({ step }) => {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!supabaseUrl || !serviceRoleKey) {
+      throw new Error("Missing Supabase admin credentials for account purge");
+    }
+    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
+
     const expiredProfiles = await step.run("find-expired-accounts", async () => {
       return db
         .select({ id: profiles.id, email: profiles.email })
         .from(profiles)
         .where(
           and(
+            isNotNull(profiles.deletedAt),
             isNotNull(profiles.deletionScheduledFor),
             lte(profiles.deletionScheduledFor, new Date())
           )
@@ -35,10 +43,6 @@ export const accountPurge = inngest.createFunction(
         await db.delete(tenantAssignments).where(eq(tenantAssignments.userId, profile.id));
         await db.delete(profiles).where(eq(profiles.id, profile.id));
 
-        const supabaseAdmin = createClient(
-          process.env.NEXT_PUBLIC_SUPABASE_URL!,
-          process.env.SUPABASE_SERVICE_ROLE_KEY!
-        );
         await supabaseAdmin.auth.admin.deleteUser(profile.id);
 
         return { purgedUserId: profile.id, email: profile.email };

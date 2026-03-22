@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { profiles } from "@/lib/db/schema";
 import { getRequestContext, unauthorized } from "@/lib/api/request-context";
+import { validateCsrf } from "@/lib/api/csrf";
 
 export async function GET(request: Request) {
   const ctx = getRequestContext(request);
@@ -31,6 +32,9 @@ export async function GET(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
+    if (!validateCsrf(request)) {
+      return NextResponse.json({ success: false, error: "CSRF validation failed" }, { status: 403 });
+    }
     const ctx = getRequestContext(request);
     if (!ctx) return unauthorized();
 
@@ -41,9 +45,16 @@ export async function PATCH(request: Request) {
     };
 
     const updates: Record<string, unknown> = { updatedAt: new Date() };
-    if (body.name !== undefined) updates.name = body.name;
-    if (body.isOnboardingComplete !== undefined) updates.isOnboardingComplete = body.isOnboardingComplete;
-    if (body.onboardingStep !== undefined) updates.onboardingStep = body.onboardingStep;
+    if (body.name !== undefined && typeof body.name === "string") {
+      updates.name = body.name.slice(0, 200);
+    }
+    if (body.isOnboardingComplete !== undefined && typeof body.isOnboardingComplete === "boolean") {
+      updates.isOnboardingComplete = body.isOnboardingComplete;
+    }
+    if (body.onboardingStep !== undefined && typeof body.onboardingStep === "number") {
+      const step = Math.floor(body.onboardingStep);
+      if (step >= 0 && step <= 6) updates.onboardingStep = step;
+    }
 
     const [updated] = await db
       .update(profiles)

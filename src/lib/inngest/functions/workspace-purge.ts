@@ -13,6 +13,7 @@ export const workspacePurge = inngest.createFunction(
         .from(tenants)
         .where(
           and(
+            isNotNull(tenants.deletedAt),
             isNotNull(tenants.deletionScheduledFor),
             lte(tenants.deletionScheduledFor, new Date())
           )

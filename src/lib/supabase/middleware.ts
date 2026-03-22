@@ -45,7 +45,11 @@ export async function updateSession(request: NextRequest) {
   }
 
   if (user) {
-    if (!user.email_confirmed_at && !isAuthPage && !isApiRoute && !isAuthCallback && !isVerifyEmailPage) {
+    const isResendVerifyRoute = request.nextUrl.pathname === "/api/auth/resend-verification";
+    if (!user.email_confirmed_at && !isAuthPage && !isAuthCallback && !isVerifyEmailPage && !isResendVerifyRoute) {
+      if (isApiRoute) {
+        return NextResponse.json({ success: false, error: "Email not verified" }, { status: 403 });
+      }
       const url = request.nextUrl.clone();
       url.pathname = "/signup/verify-email";
       if (user.email) {

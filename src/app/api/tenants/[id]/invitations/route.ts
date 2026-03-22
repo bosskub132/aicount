@@ -4,10 +4,15 @@ import { NextResponse } from "next/server";
 import { Resend } from "resend";
 import { db } from "@/lib/db";
 import { invitations, tenants } from "@/lib/db/schema";
-import { ensureRole, forbidden, getRequestContext, unauthorized } from "@/lib/api/request-context";
+import { ensureRole, ensureTenantScope, forbidden, getRequestContext, unauthorized } from "@/lib/api/request-context";
 import { getAppUrl } from "@/lib/utils/app-url";
+import { validateCsrf } from "@/lib/api/csrf";
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
+
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
 
 export async function GET(
   request: Request,
@@ -16,6 +21,10 @@ export async function GET(
   const ctx = getRequestContext(request);
   if (!ctx) return unauthorized();
   const { id: tenantId } = await context.params;
+
+  if (!ensureTenantScope(ctx.tenantId, tenantId) && !ensureRole(ctx.role, ["admin"])) {
+    return forbidden("Cross-tenant access denied");
+  }
 
   const rows = await db
     .select()
@@ -30,6 +39,9 @@ export async function POST(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
+    if (!validateCsrf(request)) {
+      return NextResponse.json({ success: false, error: "CSRF validation failed" }, { status: 403 });
+    }
     const ctx = getRequestContext(request);
     if (!ctx) return unauthorized();
     const { id: tenantId } = await context.params;
@@ -73,10 +85,10 @@ export async function POST(
       await resend.emails.send({
         from: "AiCount <noreply@aicount.app>",
         to: body.email,
-        subject: `You've been invited to ${tenant.name} on AiCount`,
+        subject: `You've been invited to ${escapeHtml(tenant.name)} on AiCount`,
         html: `
           <h2>Workspace Invitation</h2>
-          <p>You've been invited to join <strong>${tenant.name}</strong> on AiCount as a <strong>${body.role}</strong>.</p>
+          <p>You've been invited to join <strong>${escapeHtml(tenant.name)}</strong> on AiCount as a <strong>${escapeHtml(body.role)}</strong>.</p>
           <p><a href="${inviteUrl}" style="display:inline-block;padding:12px 24px;background:#1e293b;color:#fff;text-decoration:none;border-radius:6px;">Accept Invitation</a></p>
           <p style="color:#64748b;font-size:13px;">This invitation expires in 7 days. If you don't have an account, you'll be prompted to register first.</p>
         `,
@@ -97,6 +109,9 @@ export async function DELETE(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
+    if (!validateCsrf(request)) {
+      return NextResponse.json({ success: false, error: "CSRF validation failed" }, { status: 403 });
+    }
     const ctx = getRequestContext(request);
     if (!ctx) return unauthorized();
     const { id: tenantId } = await context.params;

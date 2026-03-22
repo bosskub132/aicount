@@ -43,7 +43,8 @@ export async function POST(request: Request) {
       },
     });
     if (error) {
-      return NextResponse.json({ success: false, error: error.message }, { status: 400 });
+      console.error("[register] supabase error:", error.message);
+      return NextResponse.json({ success: false, error: "Registration failed. Please try again." }, { status: 400 });
     }
 
     let profileSynced = false;
