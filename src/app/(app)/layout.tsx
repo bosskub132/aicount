@@ -155,7 +155,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
             </svg>
           </div>
-          <span className="text-sm font-semibold text-slate-800">AiCount</span>
+          <div>
+            <span className="text-sm font-semibold text-slate-800">AiCount</span>
+            <span className="ml-1.5 text-[10px] text-slate-400">v1.1.0</span>
+          </div>
         </div>
 
         {userEmail && (
