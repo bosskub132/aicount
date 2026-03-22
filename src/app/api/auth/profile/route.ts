@@ -15,6 +15,7 @@ export async function GET(request: Request) {
       name: profiles.name,
       role: profiles.role,
       isOnboardingComplete: profiles.isOnboardingComplete,
+      onboardingStep: profiles.onboardingStep,
       isActive: profiles.isActive,
     })
     .from(profiles)
@@ -36,11 +37,13 @@ export async function PATCH(request: Request) {
     const body = (await request.json()) as {
       name?: string;
       isOnboardingComplete?: boolean;
+      onboardingStep?: number;
     };
 
     const updates: Record<string, unknown> = { updatedAt: new Date() };
     if (body.name !== undefined) updates.name = body.name;
     if (body.isOnboardingComplete !== undefined) updates.isOnboardingComplete = body.isOnboardingComplete;
+    if (body.onboardingStep !== undefined) updates.onboardingStep = body.onboardingStep;
 
     const [updated] = await db
       .update(profiles)
@@ -51,6 +54,7 @@ export async function PATCH(request: Request) {
         email: profiles.email,
         name: profiles.name,
         isOnboardingComplete: profiles.isOnboardingComplete,
+        onboardingStep: profiles.onboardingStep,
       });
 
     return NextResponse.json({ success: true, data: updated });

@@ -95,6 +95,7 @@ export const profiles = pgTable("profiles", {
   role: userRoleEnum("role").default("maker").notNull(),
   isActive: boolean("is_active").default(true).notNull(),
   isOnboardingComplete: boolean("is_onboarding_complete").default(false).notNull(),
+  onboardingStep: integer("onboarding_step").default(0).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
