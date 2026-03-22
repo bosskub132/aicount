@@ -8,6 +8,19 @@ import { StatusBadge } from "@/components/badge";
 import { Button } from "@/components/button";
 import { Skeleton } from "@/components/skeleton";
 
+function isSafeFileUrl(url: string | null | undefined): boolean {
+  if (!url) return false;
+  // Allow relative paths (local uploads)
+  if (url.startsWith("/")) return true;
+  // Allow Supabase storage URLs
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "https:" || parsed.protocol === "http:";
+  } catch {
+    return false;
+  }
+}
+
 interface DocumentSidePanelProps {
   documentId: string | null;
   onClose: () => void;
@@ -43,7 +56,7 @@ export function DocumentSidePanel({ documentId, onClose, onAction }: DocumentSid
         ) : doc ? (
           <>
             {/* Preview thumbnail */}
-            {doc.fileUrl && (
+            {doc.fileUrl && isSafeFileUrl(doc.fileUrl) && (
               <div className="rounded-[var(--radius-card)] overflow-hidden border border-[var(--border)] bg-[var(--muted)] h-48 flex items-center justify-center">
                 <img src={doc.fileUrl} alt="Document" className="max-h-full max-w-full object-contain" />
               </div>

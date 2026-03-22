@@ -355,12 +355,12 @@ export default function ExportPage() {
         toast.success(`Export completed: ${data.exportedCount ?? selectedIds.length} record(s)`);
 
         if (data.id) {
-          window.open(`/api/export/download/${data.id}`, "_blank");
+          window.open(`/api/export/download/${data.id}`, "_blank", "noopener,noreferrer");
         } else if (data.filePath) {
           const url = data.filePath.startsWith("/")
             ? `${window.location.origin}${data.filePath}`
             : data.filePath;
-          window.open(url, "_blank");
+          window.open(url, "_blank", "noopener,noreferrer");
         }
         setShowPreview(false);
       } catch (err) {
@@ -371,7 +371,7 @@ export default function ExportPage() {
   );
 
   const handleHistoryDownload = useCallback((id: string) => {
-    window.open(`/api/export/download/${id}`, "_blank");
+    window.open(`/api/export/download/${id}`, "_blank", "noopener,noreferrer");
   }, []);
 
   const historyColumns = useMemo(

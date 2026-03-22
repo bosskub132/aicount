@@ -5,6 +5,19 @@ import { useState } from "react";
 import { ZoomIn, ZoomOut, RotateCw, Download } from "lucide-react";
 import { Button } from "@/components/button";
 
+function isSafeFileUrl(url: string | null | undefined): boolean {
+  if (!url) return false;
+  // Allow relative paths (local uploads)
+  if (url.startsWith("/")) return true;
+  // Allow Supabase storage URLs
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "https:" || parsed.protocol === "http:";
+  } catch {
+    return false;
+  }
+}
+
 interface DocumentImageViewerProps {
   src: string;
   alt?: string;
@@ -14,7 +27,8 @@ export function DocumentImageViewer({ src, alt = "Document" }: DocumentImageView
   const [zoom, setZoom] = useState(1);
   const [rotation, setRotation] = useState(0);
 
-  const isPdf = src.toLowerCase().endsWith(".pdf");
+  const isPdf = /\.pdf($|\?)/i.test(src);
+  const safeSrc = isSafeFileUrl(src);
 
   return (
     <div className="flex flex-col h-full">
@@ -30,15 +44,19 @@ export function DocumentImageViewer({ src, alt = "Document" }: DocumentImageView
       </div>
       {/* Viewer */}
       <div className="flex-1 overflow-auto bg-[var(--muted)] flex items-center justify-center p-4">
-        {isPdf ? (
-          <iframe src={src} className="w-full h-full border-0 rounded-[var(--radius-card)]" title={alt} />
+        {safeSrc ? (
+          isPdf ? (
+            <iframe src={src} className="w-full h-full border-0 rounded-[var(--radius-card)]" title={alt} />
+          ) : (
+            <img
+              src={src}
+              alt={alt}
+              className="max-w-full transition-transform duration-200"
+              style={{ transform: `scale(${zoom}) rotate(${rotation}deg)` }}
+            />
+          )
         ) : (
-          <img
-            src={src}
-            alt={alt}
-            className="max-w-full transition-transform duration-200"
-            style={{ transform: `scale(${zoom}) rotate(${rotation}deg)` }}
-          />
+          <p className="text-sm text-[var(--muted-foreground)]">Invalid or unsupported file URL</p>
         )}
       </div>
     </div>
