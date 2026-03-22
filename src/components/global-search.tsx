@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { startTransition, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Search, X } from "lucide-react";
 import { getWorkspaceTenantId } from "@/components/workspace-selector";
@@ -57,9 +57,11 @@ export function GlobalSearch() {
 
   useEffect(() => {
     if (!open) {
-      setQ("");
-      setRows([]);
-      setError("");
+      startTransition(() => {
+        setQ("");
+        setRows([]);
+        setError("");
+      });
     }
   }, [open]);
 

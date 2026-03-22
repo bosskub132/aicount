@@ -46,9 +46,10 @@ export default function UploadPage() {
 
   // Cleanup poll timers and preview URLs on unmount
   useEffect(() => {
+    const timers = pollTimers.current;
     return () => {
-      pollTimers.current.forEach((timer) => clearInterval(timer));
-      pollTimers.current.clear();
+      timers.forEach((timer) => clearInterval(timer));
+      timers.clear();
     };
   }, []);
 

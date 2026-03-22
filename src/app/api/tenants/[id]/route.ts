@@ -127,8 +127,6 @@ export async function PATCH(
     if (!parsedPatch.success) {
       return NextResponse.json({ success: false, error: "Invalid input" }, { status: 400 });
     }
-    const body = parsedPatch.data;
-
     const now = new Date();
     const scheduledFor = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 

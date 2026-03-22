@@ -15,7 +15,7 @@ import {
   BookOpen,
   Code,
   Copy,
-  AlertCircle,
+
 } from "lucide-react";
 import { useDocument } from "@/lib/hooks/use-documents";
 import { useToast } from "@/lib/stores/ui-store";

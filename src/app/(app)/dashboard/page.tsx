@@ -17,7 +17,7 @@ import {
   Bar,
   Legend,
 } from "recharts";
-import { FileText, AlertCircle, Clock } from "lucide-react";
+import { FileText, Clock } from "lucide-react";
 
 import { Tabs } from "@/components/tabs";
 import { StatCard } from "@/components/stat-card";
@@ -143,14 +143,14 @@ export default function DashboardPage() {
     [statusBreakdown.data]
   );
 
+  const [threeDaysAgo] = useState(() => Date.now() - 3 * 24 * 60 * 60 * 1000);
   const stuckDocs = useMemo(() => {
-    const threeDaysAgo = Date.now() - 3 * 24 * 60 * 60 * 1000;
     const items = (actionRequiredDocs.data?.data ?? []) as DocRow[];
     return items.filter((d) => {
-      const updated = d.updatedAt ? new Date(d.updatedAt as string).getTime() : Date.now();
+      const updated = d.updatedAt ? new Date(d.updatedAt as string).getTime() : threeDaysAgo + 1;
       return updated < threeDaysAgo;
     });
-  }, [actionRequiredDocs.data]);
+  }, [actionRequiredDocs.data, threeDaysAgo]);
 
   const avgDocsPerMonth = useMemo(() => {
     if (rows.length === 0) return 0;

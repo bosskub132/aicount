@@ -486,7 +486,6 @@ function extractFromGoogleVisionText(rawText: string) {
   // If Step 5 found some items but there are still product lines after the numbers, scan them.
   if (lineItems.length > 0 && lastHeaderTagIdx >= 0) {
     // Find the last number tag that was part of block-style extraction
-    const lastUsedNum = lineItems.length * (allNums.length / Math.max(lineItems.length, 1));
     const remainingTags = tagged.filter((_, i) => i > lastHeaderTagIdx);
 
     // Look for barcode → product → numbers sequences after the block section

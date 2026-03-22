@@ -27,8 +27,6 @@ const STATUS_TABS = [
   { id: "void", label: "Void", filterStatuses: ["VOID"] },
 ] as const;
 
-type StatusTab = (typeof STATUS_TABS)[number];
-
 export default function DocumentsPage() {
   return (
     <Suspense fallback={<div className="p-6"><Skeleton variant="rect" className="h-96 w-full" /></div>}>

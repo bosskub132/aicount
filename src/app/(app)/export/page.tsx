@@ -301,7 +301,10 @@ export default function ExportPage() {
   const exportMutation = useExportMutation();
 
   // Derived
-  const groups: DocGroups = templateDocs?.groups ?? { strong: [], suitable: [], manual: [] };
+  const groups: DocGroups = useMemo(
+    () => templateDocs?.groups ?? { strong: [], suitable: [], manual: [] },
+    [templateDocs?.groups],
+  );
   const visibleDocs = groups[activeGroup];
   const { revenue, expense, other } = useMemo(
     () => categoriseTemplates(templates as TemplateCard[]),

@@ -1,6 +1,7 @@
 // src/components/document-side-panel.tsx
 "use client";
 
+import Image from "next/image";
 import { X } from "lucide-react";
 import { useDocument } from "@/lib/hooks/use-documents";
 import { ConfidenceBar } from "@/components/confidence-bar";
@@ -58,7 +59,7 @@ export function DocumentSidePanel({ documentId, onClose, onAction }: DocumentSid
             {/* Preview thumbnail */}
             {doc.fileUrl && isSafeFileUrl(doc.fileUrl) && (
               <div className="rounded-[var(--radius-card)] overflow-hidden border border-[var(--border)] bg-[var(--muted)] h-48 flex items-center justify-center">
-                <img src={doc.fileUrl} alt="Document" className="max-h-full max-w-full object-contain" />
+                <Image src={doc.fileUrl} alt="Document" width={360} height={180} className="max-h-full max-w-full object-contain" unoptimized />
               </div>
             )}
 

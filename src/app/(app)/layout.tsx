@@ -9,7 +9,7 @@ import { Header } from "@/components/header";
 import { ToastProvider } from "@/components/toast";
 import { GlobalSearch } from "@/components/global-search";
 import { OfflineBanner } from "@/components/offline-banner";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+
 import { AppQueryProvider } from "@/lib/providers/query-provider";
 
 // Map pathnames to page titles
