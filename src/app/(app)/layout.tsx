@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import Link from "next/link";
@@ -82,7 +81,6 @@ const nav = [
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [profileLoaded, setProfileLoaded] = useState(false);
   const [userEmail, setUserEmail] = useState("");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [workspaceDeleted, setWorkspaceDeleted] = useState<{ name: string; scheduledFor: string } | null>(null);
@@ -112,10 +110,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             return;
           }
         }
-        setProfileLoaded(true);
+        // profile loaded
       })
-      .catch(() => setProfileLoaded(true));
-  }, []);
+      .catch(() => {});
+  }, [router]);
 
   useEffect(() => {
     const tenantId = localStorage.getItem("workspaceTenantId");

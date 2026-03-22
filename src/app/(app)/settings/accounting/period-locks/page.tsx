@@ -1,16 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 export default function AccountingPeriodLocksPage() {
-  const [tenantId, setTenantId] = useState("");
+  const [tenantId] = useState(() => (typeof window !== "undefined" ? localStorage.getItem("workspaceTenantId") || "" : ""));
   const [period, setPeriod] = useState("2026-03");
   const [message, setMessage] = useState("");
-
-  useEffect(() => {
-    const id = localStorage.getItem("workspaceTenantId") || "";
-    setTenantId(id);
-  }, []);
 
   async function lockPeriod() {
     if (!tenantId) return;

@@ -1,17 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 export default function AccountingBankReconPage() {
-  const [tenantId, setTenantId] = useState("");
+  const [tenantId] = useState(() => (typeof window !== "undefined" ? localStorage.getItem("workspaceTenantId") || "" : ""));
   const [fromDate, setFromDate] = useState("2026-03-01");
   const [toDate, setToDate] = useState("2026-03-31");
   const [result, setResult] = useState("");
-
-  useEffect(() => {
-    const id = localStorage.getItem("workspaceTenantId") || "";
-    setTenantId(id);
-  }, []);
 
   async function runRecon() {
     if (!tenantId) return;

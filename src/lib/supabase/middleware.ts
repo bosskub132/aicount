@@ -36,7 +36,6 @@ export async function updateSession(request: NextRequest) {
     request.nextUrl.pathname.startsWith("/signup") ||
     request.nextUrl.pathname.startsWith("/invite");
   const isAuthCallback = request.nextUrl.pathname.startsWith("/auth/callback");
-  const isOnboardingPage = request.nextUrl.pathname.startsWith("/onboarding");
   const isVerifyEmailPage = request.nextUrl.pathname.startsWith("/signup/verify-email");
 
   if (!user && !isAuthPage && !isApiRoute && !isAuthCallback) {

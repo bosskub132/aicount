@@ -1,17 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 export default function AccountingTaxReportsPage() {
-  const [tenantId, setTenantId] = useState("");
+  const [tenantId] = useState(() => (typeof window !== "undefined" ? localStorage.getItem("workspaceTenantId") || "" : ""));
   const [month, setMonth] = useState("2026-03");
   const [pp30, setPp30] = useState("");
   const [pnd, setPnd] = useState("");
-
-  useEffect(() => {
-    const id = localStorage.getItem("workspaceTenantId") || "";
-    setTenantId(id);
-  }, []);
 
   async function runTaxReports() {
     if (!tenantId) return;
