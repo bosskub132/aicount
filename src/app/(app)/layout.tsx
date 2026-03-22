@@ -4,6 +4,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { AlertTriangle } from "lucide-react";
 import { WorkspaceSelector } from "@/components/workspace-selector";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
@@ -84,6 +85,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [profileLoaded, setProfileLoaded] = useState(false);
   const [userEmail, setUserEmail] = useState("");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [workspaceDeleted, setWorkspaceDeleted] = useState<{ name: string; scheduledFor: string } | null>(null);
 
   useEffect(() => {
     fetch("/api/auth/profile")
@@ -91,6 +93,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       .then((json) => {
         if (json.success && json.data) {
           setUserEmail(json.data.email || "");
+          if (json.data.deletedAt) {
+            router.push("/account-deleted");
+            return;
+          }
           if (!json.data.isOnboardingComplete) {
             const STEP_ROUTES = [
               "/onboarding",
@@ -109,6 +115,25 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         setProfileLoaded(true);
       })
       .catch(() => setProfileLoaded(true));
+  }, []);
+
+  useEffect(() => {
+    const tenantId = localStorage.getItem("workspaceTenantId");
+    if (!tenantId || tenantId === "00000000-0000-0000-0000-000000000000") return;
+
+    fetch(`/api/tenants/${tenantId}`, {
+      headers: { "x-tenant-id": tenantId },
+    })
+      .then((r) => r.json())
+      .then((json) => {
+        if (json.success && json.data?.deletedAt) {
+          setWorkspaceDeleted({
+            name: json.data.name,
+            scheduledFor: json.data.deletionScheduledFor,
+          });
+        }
+      })
+      .catch(() => {});
   }, []);
 
   async function handleSignOut() {
@@ -228,6 +253,19 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               </Link>
             </div>
           </nav>
+        )}
+
+        {workspaceDeleted && (
+          <div className="flex items-center justify-between bg-amber-50 border-b border-amber-200 px-4 py-2">
+            <p className="text-sm text-amber-800">
+              <AlertTriangle className="inline h-4 w-4 mr-1" />
+              Workspace &quot;{workspaceDeleted.name}&quot; is scheduled for deletion on{" "}
+              {new Date(workspaceDeleted.scheduledFor).toLocaleDateString()}.
+            </p>
+            <Link href="/settings/workspace/delete" className="text-sm text-amber-700 hover:text-amber-900 font-medium">
+              Manage →
+            </Link>
+          </div>
         )}
 
         <div className="min-h-0 flex-1 overflow-auto p-4 md:p-6">{children}</div>
