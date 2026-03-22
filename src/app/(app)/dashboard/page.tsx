@@ -1,187 +1,596 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { getWorkspaceTenantId, isDefaultWorkspaceTenantId } from "@/components/workspace-selector";
+import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  BarChart,
+  Bar,
+  Legend,
+} from "recharts";
+import { FileText, AlertCircle, Clock } from "lucide-react";
 
-type MonthlyRow = {
-  yearMonth: string;
-  revenueAmount: number;
-  expenseAmount: number;
-  docCount: number;
+import { Tabs } from "@/components/tabs";
+import { StatCard } from "@/components/stat-card";
+import { Card } from "@/components/card";
+import { DataTable, type Column } from "@/components/data-table";
+import { StatusBadge } from "@/components/badge";
+import { Button } from "@/components/button";
+import { Skeleton } from "@/components/skeleton";
+import { EmptyState } from "@/components/empty-state";
+import {
+  getWorkspaceTenantId,
+  isDefaultWorkspaceTenantId,
+} from "@/components/workspace-selector";
+import {
+  useMonthlyComparison,
+  useStatusBreakdown,
+  useApprovalQueue,
+} from "@/lib/hooks/use-dashboard";
+import { useDocuments, useDocumentMutations } from "@/lib/hooks/use-documents";
+import { useToast } from "@/lib/stores/ui-store";
+
+const COLORS = {
+  revenue: "#059669",
+  expense: "#DC2626",
+  primary: "#2563EB",
+  draft: "#475569",
+  processing: "#1D4ED8",
+  query: "#92400E",
+  pending: "#92400E",
+  approved: "#065F46",
+  exported: "#6D28D9",
+  rejected: "#DC2626",
+  void: "#64748B",
+} as const;
+
+const STATUS_COLOR_MAP: Record<string, string> = {
+  DRAFT: COLORS.draft,
+  OCR_PROCESSING: COLORS.processing,
+  QUERY: COLORS.query,
+  ACTION_REQUIRED: COLORS.pending,
+  PENDING_APPROVAL: COLORS.pending,
+  APPROVED: COLORS.approved,
+  EXPORTED: COLORS.exported,
+  REJECTED: COLORS.rejected,
+  VOID: COLORS.void,
 };
 
+const TAB_ITEMS = [
+  { label: "Summary", value: "summary" },
+  { label: "Pipeline", value: "pipeline" },
+  { label: "Action Items", value: "actions" },
+];
+
+type DocRow = Record<string, unknown>;
+
 export default function DashboardPage() {
-  const [rows, setRows] = useState<MonthlyRow[]>([]);
-  const [error, setError] = useState("");
-  const [tab, setTab] = useState<"analytics" | "errors">("analytics");
-  const [isDefaultTenant, setIsDefaultTenant] = useState(false);
-  const [mounted, setMounted] = useState(false);
+  const [activeTab, setActiveTab] = useState("summary");
+  const router = useRouter();
+  const toast = useToast();
 
-  useEffect(() => {
-    const tenantId = getWorkspaceTenantId();
-    const isDefault = isDefaultWorkspaceTenantId(tenantId);
-    setIsDefaultTenant(isDefault);
-    setMounted(true);
-    if (isDefault) return;
-    fetch(`/api/tenants/${tenantId}/reports/monthly-comparison?months=6`)
-      .then((res) => res.json())
-      .then((json) => {
-        if (!json.success) throw new Error(json.error || "Failed");
-        setRows(json.data?.rows || []);
-      })
-      .catch((err) => setError(err instanceof Error ? err.message : "Failed to load analytics"));
-  }, []);
+  const tenantId = getWorkspaceTenantId();
+  const isDefault = isDefaultWorkspaceTenantId(tenantId);
 
-  const totals = rows.reduce(
-    (acc, r) => {
-      acc.revenue += Number(r.revenueAmount || 0);
-      acc.expense += Number(r.expenseAmount || 0);
-      acc.docs += Number(r.docCount || 0);
-      return acc;
-    },
-    { revenue: 0, expense: 0, docs: 0 }
+  const monthly = useMonthlyComparison(6);
+  const statusBreakdown = useStatusBreakdown();
+  const approvalQueue = useApprovalQueue();
+  const recentDocs = useDocuments({ limit: 10 });
+  const queryDocs = useDocuments({ status: "QUERY", limit: 50 });
+  const actionRequiredDocs = useDocuments({ status: "ACTION_REQUIRED", limit: 50 });
+  const { approve, reOcr } = useDocumentMutations();
+
+  const rows = useMemo(() => monthly.data?.rows ?? [], [monthly.data]);
+
+  const totals = useMemo(() => {
+    return rows.reduce(
+      (acc: { revenue: number; expense: number; docs: number }, r: { revenueAmount: number; expenseAmount: number; docCount: number }) => ({
+        revenue: acc.revenue + Number(r.revenueAmount || 0),
+        expense: acc.expense + Number(r.expenseAmount || 0),
+        docs: acc.docs + Number(r.docCount || 0),
+      }),
+      { revenue: 0, expense: 0, docs: 0 }
+    );
+  }, [rows]);
+
+  const pendingCount = useMemo(
+    () => approvalQueue.data?.length ?? 0,
+    [approvalQueue.data]
   );
 
-  const denom = totals.revenue + totals.expense;
-  const revenueSharePct =
-    totals.docs > 0 && denom > 0 ? Math.round((totals.revenue / denom) * 100) : null;
+  const queryCount = useMemo(
+    () =>
+      (statusBreakdown.data ?? []).find(
+        (s: { status: string }) => s.status === "QUERY"
+      )?.count ?? 0,
+    [statusBreakdown.data]
+  );
+
+  const revenueTrend = useMemo(() => {
+    if (rows.length < 2) return undefined;
+    const last = Number(rows[rows.length - 1]?.revenueAmount || 0);
+    const prev = Number(rows[rows.length - 2]?.revenueAmount || 0);
+    if (prev === 0) return undefined;
+    const pct = Math.round(((last - prev) / prev) * 100);
+    return { direction: pct >= 0 ? ("up" as const) : ("down" as const), value: `${Math.abs(pct)}% vs prev month` };
+  }, [rows]);
+
+  const expenseTrend = useMemo(() => {
+    if (rows.length < 2) return undefined;
+    const last = Number(rows[rows.length - 1]?.expenseAmount || 0);
+    const prev = Number(rows[rows.length - 2]?.expenseAmount || 0);
+    if (prev === 0) return undefined;
+    const pct = Math.round(((last - prev) / prev) * 100);
+    return { direction: pct >= 0 ? ("up" as const) : ("down" as const), value: `${Math.abs(pct)}% vs prev month` };
+  }, [rows]);
+
+  const statusData = useMemo(
+    () =>
+      (statusBreakdown.data ?? []).map((s: { status: string; count: number }) => ({
+        name: s.status.replace(/_/g, " "),
+        value: Number(s.count),
+        status: s.status,
+      })),
+    [statusBreakdown.data]
+  );
+
+  const stuckDocs = useMemo(() => {
+    const threeDaysAgo = Date.now() - 3 * 24 * 60 * 60 * 1000;
+    const items = (actionRequiredDocs.data?.data ?? []) as DocRow[];
+    return items.filter((d) => {
+      const updated = d.updatedAt ? new Date(d.updatedAt as string).getTime() : Date.now();
+      return updated < threeDaysAgo;
+    });
+  }, [actionRequiredDocs.data]);
+
+  const avgDocsPerMonth = useMemo(() => {
+    if (rows.length === 0) return 0;
+    return Math.round(totals.docs / rows.length);
+  }, [rows, totals.docs]);
+
+  const handleApprove = (docId: string) => {
+    approve.mutate(docId, {
+      onSuccess: () => toast.success("Document approved"),
+      onError: (err) => toast.error(err instanceof Error ? err.message : "Failed to approve"),
+    });
+  };
+
+  const handleReOcr = (docId: string) => {
+    reOcr.mutate(docId, {
+      onSuccess: () => toast.success("Re-OCR started"),
+      onError: (err) => toast.error(err instanceof Error ? err.message : "Re-OCR failed"),
+    });
+  };
+
+  const recentColumns: Column<DocRow>[] = [
+    { key: "title", header: "Title" },
+    {
+      key: "status",
+      header: "Status",
+      render: (row) => <StatusBadge status={String(row.status ?? "")} />,
+    },
+    {
+      key: "totalAmount",
+      header: "Amount",
+      align: "right",
+      render: (row) => {
+        const amt = Number(row.totalAmount || 0);
+        return amt > 0 ? `฿${amt.toLocaleString()}` : "—";
+      },
+    },
+    {
+      key: "createdAt",
+      header: "Created",
+      render: (row) => {
+        const d = row.createdAt ? new Date(row.createdAt as string) : null;
+        return d ? d.toLocaleDateString() : "—";
+      },
+    },
+  ];
+
+  const approvalColumns: Column<DocRow>[] = [
+    { key: "title", header: "Title" },
+    {
+      key: "totalAmount",
+      header: "Amount",
+      align: "right",
+      render: (row) => {
+        const amt = Number(row.totalAmount || 0);
+        return amt > 0 ? `฿${amt.toLocaleString()}` : "—";
+      },
+    },
+    {
+      key: "createdAt",
+      header: "Created",
+      render: (row) => {
+        const d = row.createdAt ? new Date(row.createdAt as string) : null;
+        return d ? d.toLocaleDateString() : "—";
+      },
+    },
+    {
+      key: "actions",
+      header: "Action",
+      render: (row) => (
+        <Button
+          size="sm"
+          variant="primary"
+          loading={approve.isPending}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleApprove(String(row.id));
+          }}
+        >
+          Approve
+        </Button>
+      ),
+    },
+  ];
+
+  const queryColumns: Column<DocRow>[] = [
+    { key: "title", header: "Title" },
+    {
+      key: "status",
+      header: "Status",
+      render: (row) => <StatusBadge status={String(row.status ?? "")} />,
+    },
+    {
+      key: "createdAt",
+      header: "Created",
+      render: (row) => {
+        const d = row.createdAt ? new Date(row.createdAt as string) : null;
+        return d ? d.toLocaleDateString() : "—";
+      },
+    },
+    {
+      key: "actions",
+      header: "Action",
+      render: (row) => (
+        <Button
+          size="sm"
+          variant="secondary"
+          loading={reOcr.isPending}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleReOcr(String(row.id));
+          }}
+        >
+          Re-OCR
+        </Button>
+      ),
+    },
+  ];
+
+  const stuckColumns: Column<DocRow>[] = [
+    { key: "title", header: "Title" },
+    {
+      key: "updatedAt",
+      header: "Last Updated",
+      render: (row) => {
+        const d = row.updatedAt ? new Date(row.updatedAt as string) : null;
+        return d ? d.toLocaleDateString() : "—";
+      },
+    },
+    {
+      key: "totalAmount",
+      header: "Amount",
+      align: "right",
+      render: (row) => {
+        const amt = Number(row.totalAmount || 0);
+        return amt > 0 ? `฿${amt.toLocaleString()}` : "—";
+      },
+    },
+  ];
+
+  const isLoading = monthly.isLoading || statusBreakdown.isLoading;
+
+  if (isDefault) {
+    return (
+      <section className="space-y-5">
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          Select a client from the workspace menu in the header to load dashboard data.
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="space-y-5">
-      {mounted && isDefaultTenant && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          Select a client from the workspace menu in the header to load overview figures for that tenant.
-        </div>
-      )}
-      {/* Tab bar */}
-      <div className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white p-1 w-fit">
-        <button
-          type="button"
-          onClick={() => setTab("analytics")}
-          className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
-            tab === "analytics" ? "bg-blue-50 text-blue-700" : "text-slate-500 hover:bg-slate-50"
-          }`}
-        >
-          <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75z" />
-          </svg>
-          Summary
-        </button>
-        <button
-          type="button"
-          onClick={() => setTab("errors")}
-          className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
-            tab === "errors" ? "bg-blue-50 text-blue-700" : "text-slate-500 hover:bg-slate-50"
-          }`}
-        >
-          <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
-          </svg>
-          Errors
-        </button>
-      </div>
+      <Tabs tabs={TAB_ITEMS} activeTab={activeTab} onChange={setActiveTab} />
 
-      {tab === "analytics" && (
+      {activeTab === "summary" && (
         <div className="space-y-5">
-          {/* Metrics header */}
-          <div className="rounded-xl border border-slate-200 bg-white p-5">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-base font-semibold text-slate-800">Workspace summary</h2>
-                <p className="text-xs text-slate-500">
-                  From the monthly comparison report (last 6 months). Amounts reflect approved documents in that window—not OCR model scores.
-                </p>
-              </div>
+          {/* Stat Cards */}
+          {isLoading ? (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={i} variant="rect" height="100px" />
+              ))}
             </div>
-
-            <div className="mt-4 grid gap-4 sm:grid-cols-4">
-              <MetricCard
-                label="Revenue share"
-                value={revenueSharePct !== null ? `${revenueSharePct}%` : "—"}
-                hint={
-                  revenueSharePct !== null
-                    ? "Revenue ÷ (revenue + expense). Mix of amounts, not extraction quality."
-                    : "No amounts in range"
-                }
-                color="text-slate-800"
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <StatCard
+                title="Pending Approvals"
+                value={String(pendingCount)}
+                href="/documents?tab=pending"
+                trend={pendingCount > 0 ? "up" : "neutral"}
+                trendValue={pendingCount > 0 ? `${pendingCount} awaiting review` : "All clear"}
               />
-              <MetricCard
-                label="Documents"
-                value={String(totals.docs)}
-                hint="Document count in report window"
-                color="text-slate-800"
+              <StatCard
+                title="Queries"
+                value={String(queryCount)}
+                href="/documents?tab=query"
+                trend={queryCount > 0 ? "up" : "neutral"}
+                trendValue={queryCount > 0 ? `${queryCount} need attention` : "None"}
               />
-              <MetricCard label="Revenue (6m)" value={`฿${totals.revenue.toLocaleString()}`} hint="Approved revenue" color="text-emerald-600" />
-              <MetricCard label="Expense (6m)" value={`฿${totals.expense.toLocaleString()}`} hint="Approved expense" color="text-red-600" />
+              <StatCard
+                title="Revenue (6mo)"
+                value={`฿${totals.revenue.toLocaleString()}`}
+                trend={revenueTrend?.direction}
+                trendValue={revenueTrend?.value}
+              />
+              <StatCard
+                title="Expense (6mo)"
+                value={`฿${totals.expense.toLocaleString()}`}
+                trend={expenseTrend?.direction}
+                trendValue={expenseTrend?.value}
+              />
             </div>
-          </div>
+          )}
 
-          {/* Trend */}
-          <div className="rounded-xl border border-slate-200 bg-white p-5">
-            <h3 className="text-sm font-semibold text-slate-700">Monthly trend (last 6 months)</h3>
-            <div className="mt-4">
+          {/* Charts Row */}
+          <div className="grid gap-5 lg:grid-cols-2">
+            {/* Revenue vs Expense Line Chart */}
+            <Card title="Revenue vs Expense Trend">
               {rows.length > 0 ? (
-                <div className="flex items-end gap-2" style={{ height: 120 }}>
-                  {rows.map((r) => {
-                    const maxVal = Math.max(...rows.map((x) => Number(x.revenueAmount || 0) + Number(x.expenseAmount || 0)), 1);
-                    const h = ((Number(r.revenueAmount || 0) + Number(r.expenseAmount || 0)) / maxVal) * 100;
-                    return (
-                      <div key={r.yearMonth} className="flex flex-1 flex-col items-center gap-1">
-                        <div className="w-full rounded-t bg-blue-200" style={{ height: `${h}%`, minHeight: 4 }} />
-                        <span className="text-[10px] text-slate-400">{r.yearMonth.slice(5)}</span>
-                      </div>
-                    );
-                  })}
-                </div>
+                <ResponsiveContainer width="100%" height={260}>
+                  <LineChart data={rows}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
+                    <XAxis
+                      dataKey="yearMonth"
+                      tickFormatter={(v: string) => v.slice(5)}
+                      tick={{ fontSize: 12 }}
+                    />
+                    <YAxis tick={{ fontSize: 12 }} tickFormatter={(v: number) => `฿${(v / 1000).toFixed(0)}k`} />
+                    <Tooltip
+                      formatter={(value, name) => [
+                        `฿${Number(value).toLocaleString()}`,
+                        name === "revenueAmount" ? "Revenue" : "Expense",
+                      ]}
+                      labelFormatter={(label) => `Month: ${String(label)}`}
+                    />
+                    <Legend formatter={(value: string) => (value === "revenueAmount" ? "Revenue" : "Expense")} />
+                    <Line
+                      type="monotone"
+                      dataKey="revenueAmount"
+                      stroke={COLORS.revenue}
+                      strokeWidth={2}
+                      dot={{ r: 4 }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="expenseAmount"
+                      stroke={COLORS.expense}
+                      strokeWidth={2}
+                      dot={{ r: 4 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
               ) : (
-                <p className="py-8 text-center text-xs text-slate-400">No data yet</p>
+                <EmptyState
+                  icon={<FileText className="h-8 w-8" />}
+                  title="No trend data"
+                  description="Upload documents to see revenue and expense trends"
+                />
               )}
-            </div>
+            </Card>
+
+            {/* Status Donut Chart */}
+            <Card title="Document Status Breakdown">
+              {statusData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={260}>
+                  <PieChart>
+                    <Pie
+                      data={statusData}
+                      dataKey="value"
+                      nameKey="name"
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={80}
+                      paddingAngle={2}
+                    >
+                      {statusData.map((entry: { status: string }, idx: number) => (
+                        <Cell
+                          key={idx}
+                          fill={STATUS_COLOR_MAP[entry.status] || COLORS.draft}
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value, name) => [Number(value), String(name)]} />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <EmptyState
+                  icon={<FileText className="h-8 w-8" />}
+                  title="No status data"
+                  description="Document statuses will appear here"
+                />
+              )}
+            </Card>
           </div>
 
-          {error && <p className="text-sm text-red-600">{error}</p>}
+          {/* Recent Documents */}
+          <Card title="Recent Documents">
+            {recentDocs.isLoading ? (
+              <div className="space-y-2">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Skeleton key={i} variant="text" height="20px" />
+                ))}
+              </div>
+            ) : (
+              <DataTable
+                columns={recentColumns}
+                data={(recentDocs.data?.data ?? []) as DocRow[]}
+                onRowClick={(row) => router.push(`/documents/${row.id}`)}
+                emptyMessage="No documents yet"
+              />
+            )}
+          </Card>
         </div>
       )}
 
-      {tab === "errors" && (
-        <div className="space-y-4">
-          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
-            Developer Section - This page displays technical error logs and is intended for developers/technical staff only.
+      {activeTab === "pipeline" && (
+        <div className="space-y-5">
+          {/* Docs per month bar chart */}
+          <Card title="Documents per Month">
+            {rows.length > 0 ? (
+              <ResponsiveContainer width="100%" height={280}>
+                <BarChart data={rows}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
+                  <XAxis
+                    dataKey="yearMonth"
+                    tickFormatter={(v: string) => v.slice(5)}
+                    tick={{ fontSize: 12 }}
+                  />
+                  <YAxis tick={{ fontSize: 12 }} />
+                  <Tooltip
+                    formatter={(value) => [Number(value), "Documents"]}
+                    labelFormatter={(label) => `Month: ${String(label)}`}
+                  />
+                  <Bar dataKey="docCount" fill={COLORS.primary} radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <EmptyState
+                icon={<FileText className="h-8 w-8" />}
+                title="No pipeline data"
+                description="Document volume will appear once you start uploading"
+              />
+            )}
+          </Card>
+
+          {/* Average docs stat */}
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <StatCard
+              title="Avg Documents / Month"
+              value={String(avgDocsPerMonth)}
+              trend="neutral"
+              trendValue={`Over ${rows.length} months`}
+            />
           </div>
-          <div className="rounded-xl border border-slate-200 bg-white p-5">
-            <h2 className="text-base font-semibold text-slate-800">Error Monitoring</h2>
-            <p className="text-xs text-slate-500">Track and manage application errors across all sources</p>
-            <div className="mt-4 overflow-auto rounded-lg border">
-              <table className="w-full text-xs">
-                <thead className="bg-slate-50 text-left">
-                  <tr>
-                    <th className="px-3 py-2">Severity</th>
-                    <th className="px-3 py-2">Timestamp</th>
-                    <th className="px-3 py-2">Source</th>
-                    <th className="px-3 py-2">Message</th>
-                    <th className="px-3 py-2">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td colSpan={5} className="px-3 py-8 text-center text-slate-400">No errors found</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
+
+          {/* Status funnel */}
+          <Card title="Status Funnel">
+            {statusData.length > 0 ? (
+              <div className="space-y-3">
+                {statusData.map((entry: { name: string; value: number; status: string }) => {
+                  const maxCount = Math.max(...statusData.map((s: { value: number }) => s.value), 1);
+                  const widthPct = Math.max((entry.value / maxCount) * 100, 4);
+                  return (
+                    <div key={entry.status} className="flex items-center gap-3">
+                      <span className="w-32 shrink-0 text-xs text-[var(--muted-foreground)] text-right">
+                        {entry.name}
+                      </span>
+                      <div className="flex-1">
+                        <div
+                          className="h-6 rounded"
+                          style={{
+                            width: `${widthPct}%`,
+                            backgroundColor: STATUS_COLOR_MAP[entry.status] || COLORS.draft,
+                          }}
+                        />
+                      </div>
+                      <span className="w-10 text-xs font-medium tabular-nums text-[var(--foreground)]">
+                        {entry.value}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <EmptyState
+                icon={<FileText className="h-8 w-8" />}
+                title="No status data"
+                description="Status breakdown will appear here"
+              />
+            )}
+          </Card>
+        </div>
+      )}
+
+      {activeTab === "actions" && (
+        <div className="space-y-5">
+          {/* Pending approvals */}
+          <Card title="Pending Approvals">
+            {approvalQueue.isLoading ? (
+              <div className="space-y-2">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <Skeleton key={i} variant="text" height="20px" />
+                ))}
+              </div>
+            ) : (
+              <DataTable
+                columns={approvalColumns}
+                data={(approvalQueue.data ?? []) as DocRow[]}
+                onRowClick={(row) => router.push(`/documents/${row.id}`)}
+                emptyMessage="No pending approvals"
+              />
+            )}
+          </Card>
+
+          {/* Query documents */}
+          <Card title="Query Documents">
+            {queryDocs.isLoading ? (
+              <div className="space-y-2">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <Skeleton key={i} variant="text" height="20px" />
+                ))}
+              </div>
+            ) : (
+              <DataTable
+                columns={queryColumns}
+                data={(queryDocs.data?.data ?? []) as DocRow[]}
+                onRowClick={(row) => router.push(`/documents/${row.id}`)}
+                emptyMessage="No query documents"
+              />
+            )}
+          </Card>
+
+          {/* Stuck action required */}
+          <Card title="Stuck Documents (Action Required > 3 days)">
+            {actionRequiredDocs.isLoading ? (
+              <div className="space-y-2">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <Skeleton key={i} variant="text" height="20px" />
+                ))}
+              </div>
+            ) : stuckDocs.length > 0 ? (
+              <DataTable
+                columns={stuckColumns}
+                data={stuckDocs}
+                onRowClick={(row) => router.push(`/documents/${row.id}`)}
+                emptyMessage="No stuck documents"
+              />
+            ) : (
+              <EmptyState
+                icon={<Clock className="h-8 w-8" />}
+                title="No stuck documents"
+                description="All action-required documents are being handled promptly"
+              />
+            )}
+          </Card>
         </div>
       )}
     </section>
-  );
-}
-
-function MetricCard({ label, value, hint, color }: { label: string; value: string; hint: string; color: string }) {
-  return (
-    <div className="rounded-lg border border-slate-100 p-3">
-      <p className="text-[10px] font-medium uppercase tracking-wider text-slate-400">{label}</p>
-      <p className={`mt-1 text-xl font-bold ${color}`}>{value}</p>
-      <p className="mt-0.5 text-[10px] text-slate-400">{hint}</p>
-    </div>
   );
 }
