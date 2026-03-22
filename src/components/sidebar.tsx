@@ -10,7 +10,7 @@ import {
   BookOpen,
   ArrowDownToLine,
   ArrowUpFromLine,
-  Landmark,
+  ArrowLeftRight,
   BarChart3,
   ClipboardList,
   FileCheck,
@@ -40,7 +40,7 @@ const navGroups = [
       { href: "/ledger", label: "General Ledger", icon: BookOpen },
       { href: "/receivables", label: "Accounts Receivable", icon: ArrowDownToLine },
       { href: "/payables", label: "Accounts Payable", icon: ArrowUpFromLine },
-      { href: "/bank-recon", label: "Bank Recon", icon: Landmark },
+      { href: "/bank-recon", label: "Bank Recon", icon: ArrowLeftRight },
     ],
   },
   {
