@@ -1,8 +1,14 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { validateCsrf } from "@/lib/api/csrf";
-import { checkRateLimit } from "@/lib/api/rate-limit";
+import { checkRateLimitAsync } from "@/lib/api/rate-limit";
+
+const LoginSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(1),
+});
 
 export async function POST(request: Request) {
   try {
@@ -10,16 +16,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: "CSRF validation failed" }, { status: 403 });
     }
 
-    const ip = request.headers.get("x-forwarded-for") || "unknown";
-    const rate = checkRateLimit({ key: `auth-login:${ip}`, limit: 30, windowMs: 15 * 60 * 1000 });
+    const ip = request.headers.get("x-real-ip") || request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    const rate = await checkRateLimitAsync({ key: `auth-login:${ip}`, limit: 30, windowMs: 15 * 60 * 1000 });
     if (!rate.ok) {
       return NextResponse.json({ success: false, error: "Too many login attempts" }, { status: 429 });
     }
 
-    const body = (await request.json()) as { email: string; password: string };
-    if (!body.email || !body.password) {
-      return NextResponse.json({ success: false, error: "email and password required" }, { status: 400 });
+    const parsed = LoginSchema.safeParse(await request.json());
+    if (!parsed.success) {
+      return NextResponse.json({ success: false, error: "Invalid input" }, { status: 400 });
     }
+    const body = parsed.data;
 
     const cookieStore = await cookies();
     const supabase = createServerClient(

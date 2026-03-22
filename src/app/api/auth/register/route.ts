@@ -1,10 +1,18 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { db } from "@/lib/db";
 import { profiles } from "@/lib/db/schema";
 import { validateCsrf } from "@/lib/api/csrf";
-import { checkRateLimit } from "@/lib/api/rate-limit";
+import { checkRateLimitAsync } from "@/lib/api/rate-limit";
 import { getAppUrl } from "@/lib/utils/app-url";
+
+const RegisterSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(6),
+  name: z.string().max(200).optional(),
+  role: z.enum(["admin", "maker", "checker"]).optional(),
+});
 
 export async function POST(request: Request) {
   try {
@@ -12,21 +20,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: "CSRF validation failed" }, { status: 403 });
     }
 
-    const ip = request.headers.get("x-forwarded-for") || "unknown";
-    const rate = checkRateLimit({ key: `auth-register:${ip}`, limit: 20, windowMs: 15 * 60 * 1000 });
+    const ip = request.headers.get("x-real-ip") || request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    const rate = await checkRateLimitAsync({ key: `auth-register:${ip}`, limit: 20, windowMs: 15 * 60 * 1000 });
     if (!rate.ok) {
       return NextResponse.json({ success: false, error: "Too many register attempts" }, { status: 429 });
     }
 
-    const body = (await request.json()) as {
-      email: string;
-      password: string;
-      name?: string;
-      role?: "admin" | "maker" | "checker";
-    };
-    if (!body.email || !body.password) {
-      return NextResponse.json({ success: false, error: "email and password required" }, { status: 400 });
+    const parsed = RegisterSchema.safeParse(await request.json());
+    if (!parsed.success) {
+      return NextResponse.json({ success: false, error: "Invalid input" }, { status: 400 });
     }
+    const body = parsed.data;
 
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,

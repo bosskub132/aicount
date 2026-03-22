@@ -1,5 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { db } from "@/lib/db";
 import { tenantAssignments, tenants } from "@/lib/db/schema";
 import {
@@ -9,6 +10,10 @@ import {
 } from "@/lib/api/request-context";
 import { writeAuditLog } from "@/lib/services/audit";
 import { validateCsrf } from "@/lib/api/csrf";
+
+const TransferOwnershipSchema = z.object({
+  newOwnerId: z.string().uuid(),
+});
 
 export async function POST(
   request: Request,
@@ -35,10 +40,11 @@ export async function POST(
       return forbidden("Only workspace owner can transfer ownership");
     }
 
-    const body = (await request.json()) as { newOwnerId: string };
-    if (!body.newOwnerId) {
-      return NextResponse.json({ success: false, error: "newOwnerId is required" }, { status: 400 });
+    const parsed = TransferOwnershipSchema.safeParse(await request.json());
+    if (!parsed.success) {
+      return NextResponse.json({ success: false, error: "Invalid input" }, { status: 400 });
     }
+    const body = parsed.data;
     if (body.newOwnerId === ctx.userId) {
       return NextResponse.json(
         { success: false, error: "New owner must be a different user" },

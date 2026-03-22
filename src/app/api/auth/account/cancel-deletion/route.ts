@@ -30,29 +30,33 @@ export async function POST(request: Request) {
       );
     }
 
-    await db
-      .update(profiles)
-      .set({
-        deletedAt: null,
-        deletionScheduledFor: null,
-        updatedAt: new Date(),
-      })
-      .where(eq(profiles.id, ctx.userId));
+    const now = new Date();
 
-    await db
-      .update(tenants)
-      .set({
-        deletedAt: null,
-        deletionScheduledFor: null,
-        deletionReason: null,
-        updatedAt: new Date(),
-      })
-      .where(
-        and(
-          eq(tenants.ownerUserId, ctx.userId),
-          eq(tenants.deletionReason, "account_deletion")
-        )
-      );
+    await db.transaction(async (tx) => {
+      await tx
+        .update(profiles)
+        .set({
+          deletedAt: null,
+          deletionScheduledFor: null,
+          updatedAt: now,
+        })
+        .where(eq(profiles.id, ctx.userId));
+
+      await tx
+        .update(tenants)
+        .set({
+          deletedAt: null,
+          deletionScheduledFor: null,
+          deletionReason: null,
+          updatedAt: now,
+        })
+        .where(
+          and(
+            eq(tenants.ownerUserId, ctx.userId),
+            eq(tenants.deletionReason, "account_deletion")
+          )
+        );
+    });
 
     return NextResponse.json({ success: true, data: { cancelled: true } });
   } catch (error) {

@@ -1,12 +1,22 @@
 import { randomBytes } from "crypto";
 import { and, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { Resend } from "resend";
 import { db } from "@/lib/db";
 import { invitations, tenants } from "@/lib/db/schema";
 import { ensureRole, ensureTenantScope, forbidden, getRequestContext, unauthorized } from "@/lib/api/request-context";
 import { getAppUrl } from "@/lib/utils/app-url";
 import { validateCsrf } from "@/lib/api/csrf";
+
+const CreateInvitationSchema = z.object({
+  email: z.string().email(),
+  role: z.enum(["maker", "checker"]),
+});
+
+const DeleteInvitationSchema = z.object({
+  invitationId: z.string().uuid(),
+});
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
@@ -50,10 +60,11 @@ export async function POST(
       return forbidden("Only admin/checker can invite users");
     }
 
-    const body = (await request.json()) as { email: string; role: "maker" | "checker" };
-    if (!body.email) {
-      return NextResponse.json({ success: false, error: "Email is required" }, { status: 400 });
+    const parsed = CreateInvitationSchema.safeParse(await request.json());
+    if (!parsed.success) {
+      return NextResponse.json({ success: false, error: "Invalid input" }, { status: 400 });
     }
+    const body = parsed.data;
 
     const [tenant] = await db
       .select({ id: tenants.id, name: tenants.name })
@@ -120,7 +131,11 @@ export async function DELETE(
       return forbidden("Only admin/checker can revoke invitations");
     }
 
-    const body = (await request.json()) as { invitationId: string };
+    const parsedDelete = DeleteInvitationSchema.safeParse(await request.json());
+    if (!parsedDelete.success) {
+      return NextResponse.json({ success: false, error: "Invalid input" }, { status: 400 });
+    }
+    const body = parsedDelete.data;
     const [deleted] = await db
       .delete(invitations)
       .where(and(eq(invitations.id, body.invitationId), eq(invitations.tenantId, tenantId)))

@@ -1,24 +1,30 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
-import { checkRateLimit } from "@/lib/api/rate-limit";
+import { z } from "zod";
+import { checkRateLimitAsync } from "@/lib/api/rate-limit";
 import { getAppUrl } from "@/lib/utils/app-url";
 import { validateCsrf } from "@/lib/api/csrf";
+
+const ResendVerificationSchema = z.object({
+  email: z.string().email(),
+});
 
 export async function POST(request: Request) {
   try {
     if (!validateCsrf(request)) {
       return NextResponse.json({ success: false, error: "CSRF validation failed" }, { status: 403 });
     }
-    const ip = request.headers.get("x-forwarded-for") || "unknown";
-    const rate = checkRateLimit({ key: `resend-verify:${ip}`, limit: 5, windowMs: 15 * 60 * 1000 });
+    const ip = request.headers.get("x-real-ip") || request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    const rate = await checkRateLimitAsync({ key: `resend-verify:${ip}`, limit: 5, windowMs: 15 * 60 * 1000 });
     if (!rate.ok) {
       return NextResponse.json({ success: false, error: "Too many attempts" }, { status: 429 });
     }
 
-    const body = (await request.json()) as { email: string };
-    if (!body.email) {
-      return NextResponse.json({ success: false, error: "Email is required" }, { status: 400 });
+    const parsed = ResendVerificationSchema.safeParse(await request.json());
+    if (!parsed.success) {
+      return NextResponse.json({ success: false, error: "Invalid input" }, { status: 400 });
     }
+    const body = parsed.data;
 
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,

@@ -1,9 +1,20 @@
 import { and, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { db } from "@/lib/db";
 import { profiles, tenants, tenantAssignments } from "@/lib/db/schema";
 import { getRequestContext, unauthorized, forbidden } from "@/lib/api/request-context";
 import { validateCsrf } from "@/lib/api/csrf";
+
+const DeleteAccountSchema = z.object({
+  workspaceActions: z.array(
+    z.object({
+      tenantId: z.string().uuid(),
+      action: z.enum(["transfer", "delete"]),
+      newOwnerId: z.string().uuid().optional(),
+    })
+  ),
+});
 
 export async function DELETE(request: Request) {
   try {
@@ -14,18 +25,16 @@ export async function DELETE(request: Request) {
     const ctx = getRequestContext(request);
     if (!ctx) return unauthorized();
 
-    const body = (await request.json()) as {
-      workspaceActions: Array<{
-        tenantId: string;
-        action: "transfer" | "delete";
-        newOwnerId?: string;
-      }>;
-    };
+    const parsed = DeleteAccountSchema.safeParse(await request.json());
+    if (!parsed.success) {
+      return NextResponse.json({ success: false, error: "Invalid input" }, { status: 400 });
+    }
+    const body = parsed.data;
 
     const now = new Date();
     const deletionScheduledFor = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
-    // Verify ownership of every tenant before acting
+    // Verify ownership of every tenant before acting (outside transaction — read-only checks)
     for (const wa of body.workspaceActions ?? []) {
       const [tenant] = await db
         .select({ ownerUserId: tenants.ownerUserId })
@@ -54,32 +63,38 @@ export async function DELETE(request: Request) {
             { status: 400 }
           );
         }
-
-        await db
-          .update(tenants)
-          .set({ ownerUserId: wa.newOwnerId, updatedAt: now })
-          .where(eq(tenants.id, wa.tenantId));
-      } else if (wa.action === "delete") {
-        await db
-          .update(tenants)
-          .set({
-            deletedAt: now,
-            deletionScheduledFor,
-            deletionReason: "account_deletion",
-            updatedAt: now,
-          })
-          .where(eq(tenants.id, wa.tenantId));
       }
     }
 
-    await db
-      .update(profiles)
-      .set({
-        deletedAt: now,
-        deletionScheduledFor,
-        updatedAt: now,
-      })
-      .where(eq(profiles.id, ctx.userId));
+    await db.transaction(async (tx) => {
+      for (const wa of body.workspaceActions ?? []) {
+        if (wa.action === "transfer" && wa.newOwnerId) {
+          await tx
+            .update(tenants)
+            .set({ ownerUserId: wa.newOwnerId, updatedAt: now })
+            .where(eq(tenants.id, wa.tenantId));
+        } else if (wa.action === "delete") {
+          await tx
+            .update(tenants)
+            .set({
+              deletedAt: now,
+              deletionScheduledFor,
+              deletionReason: "account_deletion",
+              updatedAt: now,
+            })
+            .where(eq(tenants.id, wa.tenantId));
+        }
+      }
+
+      await tx
+        .update(profiles)
+        .set({
+          deletedAt: now,
+          deletionScheduledFor,
+          updatedAt: now,
+        })
+        .where(eq(profiles.id, ctx.userId));
+    });
 
     return NextResponse.json({
       success: true,

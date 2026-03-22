@@ -1,9 +1,16 @@
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { db } from "@/lib/db";
 import { profiles } from "@/lib/db/schema";
 import { getRequestContext, unauthorized } from "@/lib/api/request-context";
 import { validateCsrf } from "@/lib/api/csrf";
+
+const PatchProfileSchema = z.object({
+  name: z.string().min(1).max(200).optional(),
+  isOnboardingComplete: z.boolean().optional(),
+  onboardingStep: z.number().int().min(0).max(6).optional(),
+});
 
 export async function GET(request: Request) {
   const ctx = getRequestContext(request);
@@ -38,22 +45,21 @@ export async function PATCH(request: Request) {
     const ctx = getRequestContext(request);
     if (!ctx) return unauthorized();
 
-    const body = (await request.json()) as {
-      name?: string;
-      isOnboardingComplete?: boolean;
-      onboardingStep?: number;
-    };
+    const parsed = PatchProfileSchema.safeParse(await request.json());
+    if (!parsed.success) {
+      return NextResponse.json({ success: false, error: "Invalid input" }, { status: 400 });
+    }
+    const body = parsed.data;
 
     const updates: Record<string, unknown> = { updatedAt: new Date() };
-    if (body.name !== undefined && typeof body.name === "string") {
-      updates.name = body.name.slice(0, 200);
+    if (body.name !== undefined) {
+      updates.name = body.name;
     }
-    if (body.isOnboardingComplete !== undefined && typeof body.isOnboardingComplete === "boolean") {
+    if (body.isOnboardingComplete !== undefined) {
       updates.isOnboardingComplete = body.isOnboardingComplete;
     }
-    if (body.onboardingStep !== undefined && typeof body.onboardingStep === "number") {
-      const step = Math.floor(body.onboardingStep);
-      if (step >= 0 && step <= 6) updates.onboardingStep = step;
+    if (body.onboardingStep !== undefined) {
+      updates.onboardingStep = body.onboardingStep;
     }
 
     const [updated] = await db
