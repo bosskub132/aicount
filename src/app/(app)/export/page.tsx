@@ -1,7 +1,34 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import {
+  Download,
+  FileSpreadsheet,
+  History,
+  PackageOpen,
+} from "lucide-react";
 import { getWorkspaceTenantId } from "@/components/workspace-selector";
+import {
+  useExportTemplates,
+  useExportHistory,
+  useExportMutation,
+} from "@/lib/hooks/use-export";
+import { useToast } from "@/lib/stores/ui-store";
+import { Tabs } from "@/components/tabs";
+import { Card } from "@/components/card";
+import { DataTable, type Column } from "@/components/data-table";
+import { RadioGroup } from "@/components/radio-group";
+import { Button } from "@/components/button";
+import { Badge } from "@/components/badge";
+import { Modal } from "@/components/modal";
+import { StatCard } from "@/components/stat-card";
+import { Skeleton } from "@/components/skeleton";
+import { EmptyState } from "@/components/empty-state";
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
 
 type TemplateCard = {
   id: string;
@@ -22,295 +49,578 @@ type ExportDoc = {
   grandTotal: string | null;
 };
 
-const GROUP_COLORS: Record<string, { bg: string; icon: string }> = {
-  revenue: { bg: "border-emerald-200 bg-emerald-50", icon: "text-emerald-500" },
-  expense: { bg: "border-red-200 bg-red-50", icon: "text-red-500" },
-  master: { bg: "border-blue-200 bg-blue-50", icon: "text-blue-500" },
-  journal: { bg: "border-purple-200 bg-purple-50", icon: "text-purple-500" },
+type DocGroups = {
+  strong: ExportDoc[];
+  suitable: ExportDoc[];
+  manual: ExportDoc[];
 };
 
+type HistoryRow = {
+  id: string;
+  createdAt: string;
+  templateName: string;
+  recordCount: number;
+};
+
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+const GROUP_COLORS: Record<string, { ring: string; bg: string }> = {
+  revenue: { ring: "ring-emerald-300", bg: "border-emerald-200 bg-emerald-50" },
+  expense: { ring: "ring-red-300", bg: "border-red-200 bg-red-50" },
+  other: { ring: "ring-purple-300", bg: "border-purple-200 bg-purple-50" },
+};
+
+const MATCH_TABS = [
+  { label: "Strong", value: "strong" },
+  { label: "Suitable", value: "suitable" },
+  { label: "Other", value: "manual" },
+] as const;
+
+const EXPORT_MODE_OPTIONS = [
+  { label: "Document Level - 1 document = 1 row", value: "document" },
+  { label: "Item Level - 1 item = 1 row", value: "item" },
+];
+
+const PAGE_TABS = [
+  { label: "Export", value: "export" },
+  { label: "History", value: "history" },
+];
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function formatDate(iso: string): string {
+  try {
+    return new Date(iso).toLocaleDateString("th-TH", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  } catch {
+    return iso;
+  }
+}
+
+function categoriseTemplates(templates: TemplateCard[]) {
+  const revenue: TemplateCard[] = [];
+  const expense: TemplateCard[] = [];
+  const other: TemplateCard[] = [];
+
+  for (const t of templates) {
+    if (t.direction === "REVENUE" || t.templateGroup === "revenue") {
+      revenue.push(t);
+    } else if (t.direction === "EXPENSE" || t.templateGroup === "expense") {
+      expense.push(t);
+    } else {
+      other.push(t);
+    }
+  }
+  return { revenue, expense, other };
+}
+
+// ---------------------------------------------------------------------------
+// Sub-components
+// ---------------------------------------------------------------------------
+
+function TemplateSection({
+  title,
+  items,
+  colorKey,
+  selectedId,
+  onSelect,
+}: {
+  title: string;
+  items: TemplateCard[];
+  colorKey: string;
+  selectedId: string;
+  onSelect: (id: string) => void;
+}) {
+  if (!items.length) return null;
+  const colors = GROUP_COLORS[colorKey] ?? GROUP_COLORS.other;
+
+  return (
+    <div>
+      <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-[var(--muted-foreground)]">
+        {title}
+      </h3>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {items.map((t) => {
+          const isSelected = selectedId === t.id;
+          return (
+            <Card
+              key={t.id}
+              className={`cursor-pointer transition-all ${
+                isSelected
+                  ? `ring-2 ${colors.ring} border-[var(--primary)]`
+                  : `${colors.bg} hover:shadow-[var(--shadow-sm)]`
+              }`}
+            >
+              <button
+                className="w-full text-left"
+                onClick={() => onSelect(t.id)}
+              >
+                <p className="text-sm font-semibold text-[var(--foreground)]">
+                  {t.name}
+                </p>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {t.strong > 0 && (
+                    <Badge variant="approved">{t.strong} strong</Badge>
+                  )}
+                  {t.suitable > 0 && (
+                    <Badge variant="pending">{t.suitable} suitable</Badge>
+                  )}
+                </div>
+                <p className="mt-1.5 text-[11px] text-[var(--muted-foreground)]">
+                  {t.approvedCandidates} approved candidates
+                </p>
+              </button>
+            </Card>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Document columns for DataTable
+// ---------------------------------------------------------------------------
+
+const DOC_COLUMNS: Column<ExportDoc & Record<string, unknown>>[] = [
+  {
+    key: "documentDate",
+    header: "Date",
+    render: (row) => (row.documentDate ? formatDate(String(row.documentDate)) : "-"),
+  },
+  {
+    key: "documentNumber",
+    header: "Document",
+    render: (row) => row.documentNumber || "-",
+  },
+  {
+    key: "issuerName",
+    header: "Counterparty",
+    render: (row) => row.issuerName || "-",
+  },
+  {
+    key: "grandTotal",
+    header: "Amount",
+    align: "right",
+    render: (row) => `฿${Number(row.grandTotal || 0).toLocaleString()}`,
+  },
+];
+
+// ---------------------------------------------------------------------------
+// History columns
+// ---------------------------------------------------------------------------
+
+function makeHistoryColumns(
+  onDownload: (id: string) => void,
+): Column<HistoryRow & Record<string, unknown>>[] {
+  return [
+    {
+      key: "createdAt",
+      header: "Date",
+      render: (row) => formatDate(String(row.createdAt)),
+    },
+    { key: "templateName", header: "Template" },
+    {
+      key: "recordCount",
+      header: "Records",
+      align: "right",
+      render: (row) => String(row.recordCount ?? 0),
+    },
+    {
+      key: "actions",
+      header: "",
+      align: "right",
+      sortable: false,
+      render: (row) => (
+        <Button
+          variant="ghost"
+          size="sm"
+          icon={<Download className="h-3.5 w-3.5" />}
+          onClick={() => onDownload(String(row.id))}
+        >
+          Download
+        </Button>
+      ),
+    },
+  ];
+}
+
+// ---------------------------------------------------------------------------
+// Page component
+// ---------------------------------------------------------------------------
+
 export default function ExportPage() {
-  const [templates, setTemplates] = useState<TemplateCard[]>([]);
+  const toast = useToast();
+
+  // Page-level state
+  const [activePageTab, setActivePageTab] = useState("export");
+
+  // Export tab state
   const [selectedTemplateId, setSelectedTemplateId] = useState("");
-  const [groups, setGroups] = useState<{ strong: ExportDoc[]; suitable: ExportDoc[]; manual: ExportDoc[] }>({
-    strong: [], suitable: [], manual: [],
-  });
   const [activeGroup, setActiveGroup] = useState<"strong" | "suitable" | "manual">("strong");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [exportMode, setExportMode] = useState<"document" | "item">("document");
-  const [result, setResult] = useState("");
-  const [loading, setLoading] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
 
-  useEffect(() => {
-    const tenantId = getWorkspaceTenantId();
-    fetch(`/api/export/templates?tenantId=${tenantId}`, { credentials: "same-origin" })
-      .then((res) => res.json())
-      .then((json) => {
-        if (!json.success) throw new Error(json.error || "Failed");
-        setTemplates(json.data || []);
-      })
-      .catch((err) => setResult(err instanceof Error ? err.message : "Failed to load templates"));
+  // Data fetching
+  const {
+    data: templates = [] as TemplateCard[],
+    isLoading: templatesLoading,
+  } = useExportTemplates();
+
+  const tenantId = getWorkspaceTenantId();
+
+  const {
+    data: templateDocs,
+    isLoading: docsLoading,
+  } = useQuery<{ groups: DocGroups }>({
+    queryKey: ["export-template-docs", tenantId, selectedTemplateId],
+    queryFn: async () => {
+      const res = await fetch(
+        `/api/export/templates?tenantId=${tenantId}&templateId=${selectedTemplateId}`,
+      );
+      const json = await res.json();
+      if (!json.success) throw new Error(json.error);
+      return json.data;
+    },
+    enabled: !!selectedTemplateId && !!tenantId,
+  });
+
+  const {
+    data: historyData = [] as HistoryRow[],
+    isLoading: historyLoading,
+  } = useExportHistory();
+
+  const exportMutation = useExportMutation();
+
+  // Derived
+  const groups: DocGroups = templateDocs?.groups ?? { strong: [], suitable: [], manual: [] };
+  const visibleDocs = groups[activeGroup];
+  const { revenue, expense, other } = useMemo(
+    () => categoriseTemplates(templates as TemplateCard[]),
+    [templates],
+  );
+
+  const stats = useMemo(() => {
+    const allDocs = [...groups.strong, ...groups.suitable, ...groups.manual];
+    const picked = allDocs.filter((d) => selectedIds.includes(d.id));
+    const total = picked.reduce((s, d) => s + Number(d.grandTotal || 0), 0);
+    const dates = picked
+      .map((d) => d.documentDate)
+      .filter(Boolean)
+      .sort();
+    return {
+      records: picked.length,
+      total,
+      from: dates[0] || "-",
+      to: dates[dates.length - 1] || "-",
+    };
+  }, [selectedIds, groups]);
+
+  // Handlers
+  const handleTemplateSelect = useCallback((id: string) => {
+    setSelectedTemplateId(id);
+    setSelectedIds([]);
+    setActiveGroup("strong");
   }, []);
 
-  async function loadTemplateDocuments(templateId: string) {
-    const tenantId = getWorkspaceTenantId();
-    setSelectedTemplateId(templateId);
-    setSelectedIds([]);
-    const res = await fetch(`/api/export/templates?tenantId=${tenantId}&templateId=${templateId}`, {
-      credentials: "same-origin",
-    });
-    const json = await res.json();
-    if (json.success) setGroups(json.data.groups);
-    else setResult(json.error || "Failed");
-  }
+  const handleSelectAll = useCallback(() => {
+    setSelectedIds(visibleDocs.map((d) => d.id));
+  }, [visibleDocs]);
 
-  async function runExport(): Promise<{ filePath?: string; fileName?: string } | null> {
-    setLoading(true);
-    setResult("");
-    try {
-      const selectedTemplate = templates.find((t) => t.id === selectedTemplateId);
-      const res = await fetch("/api/export/express", {
-        method: "POST",
-        credentials: "same-origin",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          tenantId: getWorkspaceTenantId(),
-          period: "month",
-          journalType: selectedTemplate?.journalTypes?.[0] || "",
-          returnContent: false,
-          exportMode,
+  const handleDocSelect = useCallback((selected: (ExportDoc & Record<string, unknown>)[]) => {
+    setSelectedIds(selected.map((d) => String(d.id)));
+  }, []);
+
+  const handleDownloadExport = useCallback(
+    async () => {
+      const selectedTemplate = (templates as TemplateCard[]).find(
+        (t) => t.id === selectedTemplateId,
+      );
+      try {
+        const data = await exportMutation.mutateAsync({
+          tenantId,
+          templateId: selectedTemplateId,
           selectedDocumentIds: selectedIds,
-          templateId: selectedTemplateId || null,
-        }),
-      });
-      const json = await res.json();
-      if (!json.success) throw new Error(json.error || "Export failed");
-      setResult(`Export completed: ${json.data.exportedCount ?? "done"} record(s)`);
-      return {
-        filePath: json.data?.filePath,
-        fileName: json.data?.filePath?.split("/").pop() || "express-export.xlsx",
-      };
-    } catch (err) {
-      setResult(err instanceof Error ? err.message : "Export failed");
-      return null;
-    } finally {
-      setLoading(false);
-    }
-  }
+          exportMode,
+          journalType: selectedTemplate?.journalTypes?.[0] || "",
+        });
+        toast.success(`Export completed: ${data.exportedCount ?? selectedIds.length} record(s)`);
 
-  function triggerBrowserDownload(filePath: string, fileName: string) {
-    const url = filePath.startsWith("/") ? `${window.location.origin}${filePath}` : filePath;
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = fileName;
-    a.rel = "noopener noreferrer";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-  }
+        if (data.id) {
+          window.open(`/api/export/download/${data.id}`, "_blank");
+        } else if (data.filePath) {
+          const url = data.filePath.startsWith("/")
+            ? `${window.location.origin}${data.filePath}`
+            : data.filePath;
+          window.open(url, "_blank");
+        }
+        setShowPreview(false);
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Export failed");
+      }
+    },
+    [tenantId, selectedTemplateId, selectedIds, exportMode, templates, exportMutation, toast],
+  );
 
-  const visibleDocs = groups[activeGroup];
-  const stats = useMemo(() => {
-    const picked = visibleDocs.filter((d) => selectedIds.includes(d.id));
-    const total = picked.reduce((s, d) => s + Number(d.grandTotal || 0), 0);
-    const dates = picked.map((d) => d.documentDate).filter(Boolean).sort();
-    return { records: picked.length, total, from: dates[0] || "-", to: dates[dates.length - 1] || "-" };
-  }, [selectedIds, visibleDocs]);
+  const handleHistoryDownload = useCallback((id: string) => {
+    window.open(`/api/export/download/${id}`, "_blank");
+  }, []);
 
-  // Group templates by direction/group
-  const revenueTemplates = templates.filter((t) => t.direction === "REVENUE" || t.templateGroup === "revenue");
-  const expenseTemplates = templates.filter((t) => t.direction === "EXPENSE" || t.templateGroup === "expense");
-  const otherTemplates = templates.filter((t) => !revenueTemplates.includes(t) && !expenseTemplates.includes(t));
+  const historyColumns = useMemo(
+    () => makeHistoryColumns(handleHistoryDownload),
+    [handleHistoryDownload],
+  );
 
-  function TemplateSection({ title, items, colorKey }: { title: string; items: TemplateCard[]; colorKey: string }) {
-    if (!items.length) return null;
-    const colors = GROUP_COLORS[colorKey] || GROUP_COLORS.journal;
-    return (
-      <div>
-        <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">{title}</h3>
-        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-          {items.map((t) => (
-            <button
-              key={t.id}
-              onClick={() => loadTemplateDocuments(t.id)}
-              className={`rounded-xl border p-4 text-left transition-all ${
-                selectedTemplateId === t.id ? "border-blue-400 ring-2 ring-blue-100" : colors.bg
-              }`}
-            >
-              <p className="text-sm font-semibold text-slate-800">{t.name}</p>
-              <div className="mt-2 flex gap-2">
-                {t.strong > 0 && <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700">{t.strong} strong</span>}
-                {t.suitable > 0 && <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700">{t.suitable} suitable</span>}
-              </div>
-              <p className="mt-1 text-[10px] text-slate-400">{t.approvedCandidates} candidates</p>
-            </button>
-          ))}
-        </div>
-      </div>
-    );
-  }
+  // Match-strength tabs with counts
+  const matchTabs = MATCH_TABS.map((t) => ({
+    label: t.label,
+    value: t.value,
+    count: groups[t.value].length,
+  }));
+
+  // Preview selected docs
+  const previewDocs = useMemo(() => {
+    const allDocs = [...groups.strong, ...groups.suitable, ...groups.manual];
+    return allDocs.filter((d) => selectedIds.includes(d.id));
+  }, [groups, selectedIds]);
+
+  // Cast helpers for DataTable (which expects Record<string, unknown>)
+  const visibleDocsForTable = visibleDocs as (ExportDoc & Record<string, unknown>)[];
+  const historyForTable = (historyData as HistoryRow[]) as (HistoryRow & Record<string, unknown>)[];
+  const previewDocsForTable = previewDocs as (ExportDoc & Record<string, unknown>)[];
+
+  // -------------------------------------------------------------------------
+  // Render
+  // -------------------------------------------------------------------------
 
   return (
     <section className="space-y-6">
+      {/* Header */}
       <div>
-        <h1 className="text-2xl font-semibold text-slate-800">Select Export Template</h1>
-        <p className="text-sm text-slate-500">
-          Choose a template that matches your documents. The download is an Excel file (.xlsx) formatted for Express Accounting Software.
+        <h1 className="text-2xl font-semibold text-[var(--foreground)]">
+          Export to Express
+        </h1>
+        <p className="text-sm text-[var(--muted-foreground)]">
+          Generate Excel files (.xlsx) formatted for import into Express Accounting Software.
         </p>
       </div>
 
-      <div className="space-y-5">
-        <TemplateSection title="Revenue" items={revenueTemplates} colorKey="revenue" />
-        <TemplateSection title="Expense" items={expenseTemplates} colorKey="expense" />
-        <TemplateSection title="Other Templates" items={otherTemplates} colorKey="journal" />
-        {!templates.length && <p className="text-sm text-slate-400">No templates configured yet.</p>}
-      </div>
+      {/* Page tabs */}
+      <Tabs tabs={PAGE_TABS} activeTab={activePageTab} onChange={setActivePageTab} />
 
-      {selectedTemplateId && (
-        <div className="rounded-xl border border-slate-200 bg-white p-5">
-          <div className="flex flex-wrap items-center gap-2 border-b pb-3">
-            {(["strong", "suitable", "manual"] as const).map((g) => (
-              <button
-                key={g}
-                onClick={() => setActiveGroup(g)}
-                className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
-                  activeGroup === g ? "bg-slate-800 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                }`}
-              >
-                {g === "strong" ? "Strong" : g === "suitable" ? "Suitable" : "Other"} ({groups[g].length})
-              </button>
-            ))}
-            <button
-              onClick={() => setSelectedIds(visibleDocs.map((d) => d.id))}
-              className="ml-auto text-xs text-blue-600 hover:underline"
-            >
-              Select all matched ({visibleDocs.length})
-            </button>
-          </div>
-
-          <div className="mt-3 grid gap-3 sm:grid-cols-3">
-            <div>
-              <label className="text-[10px] font-medium uppercase text-slate-500">Export Mode</label>
-              <select
-                value={exportMode}
-                onChange={(e) => setExportMode(e.target.value as "document" | "item")}
-                className="mt-1 w-full rounded-lg border px-2 py-1.5 text-xs"
-              >
-                <option value="document">Document Level - 1 document = 1 row</option>
-                <option value="item">Item Level - 1 item = 1 row</option>
-              </select>
+      {/* ================================================================= */}
+      {/* EXPORT TAB                                                        */}
+      {/* ================================================================= */}
+      {activePageTab === "export" && (
+        <div className="space-y-6">
+          {/* Loading skeleton */}
+          {templatesLoading && (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <Skeleton key={i} variant="rect" height="100px" />
+              ))}
             </div>
-            <div className="rounded-lg bg-slate-50 p-2 text-xs text-slate-600">Records: {stats.records}</div>
-            <div className="rounded-lg bg-slate-50 p-2 text-xs text-slate-600">
-              Total: ฿{stats.total.toLocaleString()} ({stats.from} to {stats.to})
-            </div>
-          </div>
+          )}
 
-          <div className="mt-3 max-h-64 overflow-auto rounded-lg border">
-            <table className="w-full text-xs">
-              <thead className="sticky top-0 bg-slate-50 text-left">
-                <tr>
-                  <th className="px-3 py-2">Select</th>
-                  <th className="px-3 py-2">Date</th>
-                  <th className="px-3 py-2">Document Name</th>
-                  <th className="px-3 py-2">Counterparty</th>
-                  <th className="px-3 py-2 text-right">Amount</th>
-                </tr>
-              </thead>
-              <tbody>
-                {visibleDocs.map((doc) => (
-                  <tr key={doc.id} className="border-t hover:bg-slate-50">
-                    <td className="px-3 py-2">
-                      <input
-                        type="checkbox"
-                        checked={selectedIds.includes(doc.id)}
-                        onChange={(e) =>
-                          setSelectedIds((prev) => e.target.checked ? [...prev, doc.id] : prev.filter((id) => id !== doc.id))
-                        }
-                      />
-                    </td>
-                    <td className="px-3 py-2">{doc.documentDate || "-"}</td>
-                    <td className="px-3 py-2">{doc.documentNumber || "-"}</td>
-                    <td className="px-3 py-2">{doc.issuerName || "-"}</td>
-                    <td className="px-3 py-2 text-right">฿{Number(doc.grandTotal || 0).toLocaleString()}</td>
-                  </tr>
-                ))}
-                {!visibleDocs.length && (
-                  <tr><td colSpan={5} className="px-3 py-6 text-center text-slate-400">No documents in this group.</td></tr>
+          {/* Empty state */}
+          {!templatesLoading && !(templates as TemplateCard[]).length && (
+            <EmptyState
+              icon={<PackageOpen className="h-10 w-10" />}
+              title="No export templates"
+              description="Templates will appear here once configured for your workspace."
+            />
+          )}
+
+          {/* Template cards grouped by direction */}
+          {!templatesLoading && (templates as TemplateCard[]).length > 0 && (
+            <div className="space-y-5">
+              <TemplateSection
+                title="Revenue"
+                items={revenue}
+                colorKey="revenue"
+                selectedId={selectedTemplateId}
+                onSelect={handleTemplateSelect}
+              />
+              <TemplateSection
+                title="Expense"
+                items={expense}
+                colorKey="expense"
+                selectedId={selectedTemplateId}
+                onSelect={handleTemplateSelect}
+              />
+              <TemplateSection
+                title="Other"
+                items={other}
+                colorKey="other"
+                selectedId={selectedTemplateId}
+                onSelect={handleTemplateSelect}
+              />
+            </div>
+          )}
+
+          {/* Document selection panel */}
+          {selectedTemplateId && (
+            <Card>
+              {/* Match-strength sub-tabs + select all */}
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--border)] pb-3">
+                <Tabs tabs={matchTabs} activeTab={activeGroup} onChange={(v) => setActiveGroup(v as "strong" | "suitable" | "manual")} />
+                <Button variant="link" size="sm" onClick={handleSelectAll}>
+                  Select all matched ({visibleDocs.length})
+                </Button>
+              </div>
+
+              {/* Export mode + stats */}
+              <div className="mt-4 grid gap-4 sm:grid-cols-4">
+                <div className="sm:col-span-1">
+                  <p className="mb-1.5 text-xs font-semibold uppercase text-[var(--muted-foreground)]">
+                    Export Mode
+                  </p>
+                  <RadioGroup
+                    name="exportMode"
+                    options={EXPORT_MODE_OPTIONS}
+                    value={exportMode}
+                    onChange={(v) => setExportMode(v as "document" | "item")}
+                  />
+                </div>
+                <StatCard title="Selected Records" value={String(stats.records)} />
+                <StatCard
+                  title="Total Amount"
+                  value={`฿${stats.total.toLocaleString()}`}
+                />
+                <StatCard
+                  title="Date Range"
+                  value={`${stats.from} - ${stats.to}`}
+                />
+              </div>
+
+              {/* Document table */}
+              <div className="mt-4">
+                {docsLoading ? (
+                  <div className="space-y-2">
+                    {Array.from({ length: 4 }).map((_, i) => (
+                      <Skeleton key={i} variant="text" height="36px" />
+                    ))}
+                  </div>
+                ) : (
+                  <DataTable
+                    columns={DOC_COLUMNS}
+                    data={visibleDocsForTable}
+                    selectable
+                    onSelect={handleDocSelect}
+                    emptyMessage="No documents in this group."
+                  />
                 )}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="mt-4 flex items-center justify-between border-t pt-4">
-            <p className="text-xs text-slate-500">{selectedIds.length} selected</p>
-            <div className="flex gap-2">
-              <button onClick={() => setSelectedIds([])} className="rounded-lg border px-3 py-2 text-xs text-slate-600 hover:bg-slate-50">
-                Cancel
-              </button>
-              <button
-                onClick={() => setShowPreview(true)}
-                disabled={!selectedIds.length}
-                className="rounded-lg bg-blue-600 px-4 py-2 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-              >
-                Preview export ({selectedIds.length})
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Export preview modal */}
-      {showPreview && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="mx-4 w-full max-w-lg rounded-xl bg-white p-6 shadow-xl">
-            <div className="flex items-center justify-between">
-              <h2 className="text-base font-semibold">Express export preview</h2>
-              <button onClick={() => setShowPreview(false)} className="text-slate-400 hover:text-slate-600">
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-
-            <div className="mt-4 space-y-3">
-              <div className="flex gap-4 text-xs text-slate-600">
-                <span>Records: {stats.records}</span>
-                <span>Total: ฿{stats.total.toLocaleString()}</span>
               </div>
 
-              <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
-                <p className="text-xs font-medium text-emerald-800">Ready to Download</p>
-                <p className="mt-1 text-[10px] text-emerald-600">
-                  The generated file is an Excel spreadsheet (.xlsx) for import into Express.
+              {/* Action buttons */}
+              <div className="mt-4 flex items-center justify-between border-t border-[var(--border)] pt-4">
+                <p className="text-sm text-[var(--muted-foreground)]">
+                  {selectedIds.length} document{selectedIds.length !== 1 ? "s" : ""} selected
                 </p>
+                <div className="flex gap-2">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => setSelectedIds([])}
+                  >
+                    Clear Selection
+                  </Button>
+                  <Button
+                    size="sm"
+                    disabled={!selectedIds.length}
+                    icon={<FileSpreadsheet className="h-4 w-4" />}
+                    onClick={() => setShowPreview(true)}
+                  >
+                    Preview ({selectedIds.length})
+                  </Button>
+                </div>
               </div>
-
-              <div className="flex gap-2 pt-2">
-                <button onClick={() => setShowPreview(false)} className="flex-1 rounded-lg border px-3 py-2 text-xs text-slate-600 hover:bg-slate-50">
-                  Back to Selection
-                </button>
-                <button
-                  onClick={async () => {
-                    const data = await runExport();
-                    if (data?.filePath && data?.fileName) {
-                      triggerBrowserDownload(data.filePath, data.fileName);
-                    }
-                    setShowPreview(false);
-                  }}
-                  disabled={loading}
-                  className="flex-1 rounded-lg bg-blue-600 px-3 py-2 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-                >
-                  {loading ? "Exporting..." : "Download Excel file"}
-                </button>
-              </div>
-            </div>
-          </div>
+            </Card>
+          )}
         </div>
       )}
 
-      {result && <p className="text-sm text-slate-600">{result}</p>}
+      {/* ================================================================= */}
+      {/* HISTORY TAB                                                       */}
+      {/* ================================================================= */}
+      {activePageTab === "history" && (
+        <div>
+          {historyLoading ? (
+            <div className="space-y-2">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Skeleton key={i} variant="text" height="40px" />
+              ))}
+            </div>
+          ) : !(historyData as HistoryRow[]).length ? (
+            <EmptyState
+              icon={<History className="h-10 w-10" />}
+              title="No export history"
+              description="Past exports will appear here after your first download."
+            />
+          ) : (
+            <DataTable
+              columns={historyColumns}
+              data={historyForTable}
+              emptyMessage="No export history yet."
+            />
+          )}
+        </div>
+      )}
+
+      {/* ================================================================= */}
+      {/* PREVIEW MODAL                                                     */}
+      {/* ================================================================= */}
+      <Modal
+        open={showPreview}
+        onClose={() => setShowPreview(false)}
+        title="Export Preview"
+        size="lg"
+        actions={
+          <>
+            <Button variant="secondary" onClick={() => setShowPreview(false)}>
+              Back to Selection
+            </Button>
+            <Button
+              loading={exportMutation.isPending}
+              icon={<Download className="h-4 w-4" />}
+              onClick={handleDownloadExport}
+            >
+              Download Excel
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          {/* Summary stats */}
+          <div className="grid grid-cols-3 gap-3">
+            <StatCard title="Records" value={String(stats.records)} />
+            <StatCard title="Total" value={`฿${stats.total.toLocaleString()}`} />
+            <StatCard title="Date Range" value={`${stats.from} - ${stats.to}`} />
+          </div>
+
+          {/* Summary table */}
+          <DataTable
+            columns={DOC_COLUMNS}
+            data={previewDocsForTable}
+            emptyMessage="No documents selected."
+          />
+
+          <div className="rounded-[var(--radius-card)] border border-emerald-200 bg-emerald-50 p-3">
+            <p className="text-xs font-medium text-emerald-800">Ready to Download</p>
+            <p className="mt-1 text-[11px] text-emerald-600">
+              The generated file is an Excel spreadsheet (.xlsx) formatted for Express Accounting Software.
+            </p>
+          </div>
+        </div>
+      </Modal>
     </section>
   );
 }
