@@ -86,6 +86,9 @@ export const tenants = pgTable("tenants", {
   defaultExportTemplateId: uuid("default_export_template_id"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  deletedAt: timestamp("deleted_at", { withTimezone: true }),
+  deletionScheduledFor: timestamp("deletion_scheduled_for", { withTimezone: true }),
+  deletionReason: text("deletion_reason"),
 });
 
 export const profiles = pgTable("profiles", {
@@ -98,6 +101,8 @@ export const profiles = pgTable("profiles", {
   onboardingStep: integer("onboarding_step").default(0).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  deletedAt: timestamp("deleted_at", { withTimezone: true }),
+  deletionScheduledFor: timestamp("deletion_scheduled_for", { withTimezone: true }),
 });
 
 export const tenantAssignments = pgTable(
