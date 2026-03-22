@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { Search, X } from "lucide-react";
 import { getWorkspaceTenantId } from "@/components/workspace-selector";
 
 type SearchRow = {
@@ -54,56 +55,78 @@ export function GlobalSearch() {
     return () => clearTimeout(timeout);
   }, [open, q]);
 
+  useEffect(() => {
+    if (!open) {
+      setQ("");
+      setRows([]);
+      setError("");
+    }
+  }, [open]);
+
   const help = useMemo(
     () => (
-      <p className="text-xs text-slate-500">
-        Shortcut: <kbd className="rounded border px-1">Ctrl/Cmd + K</kbd> or{" "}
-        <kbd className="rounded border px-1">/</kbd>
+      <p className="text-xs text-[var(--muted-foreground)]">
+        Shortcut: <kbd className="rounded-[var(--radius-input)] border border-[var(--border)] bg-[var(--muted)] px-1 py-0.5 text-[11px]">Ctrl/Cmd + K</kbd> or{" "}
+        <kbd className="rounded-[var(--radius-input)] border border-[var(--border)] bg-[var(--muted)] px-1 py-0.5 text-[11px]">/</kbd>
       </p>
     ),
     []
   );
 
+  if (!open) return null;
+
   return (
-    <div className="relative">
-      <button
-        className="rounded border px-2 py-1 text-xs text-slate-700 hover:bg-slate-50"
-        onClick={() => setOpen((v) => !v)}
-      >
-        Search
-      </button>
-      {open ? (
-        <div className="absolute right-0 z-20 mt-2 w-[340px] rounded border bg-white p-3 shadow-lg">
+    <div className="fixed inset-0 z-[var(--z-modal)] flex items-start justify-center pt-[20vh]">
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/40" onClick={() => setOpen(false)} />
+
+      {/* Search panel */}
+      <div className="relative z-10 w-full max-w-lg rounded-[var(--radius-modal)] bg-white shadow-[var(--shadow-lg)]">
+        {/* Search input */}
+        <div className="flex items-center gap-2 border-b border-[var(--border)] px-4 py-3">
+          <Search className="h-4 w-4 text-[var(--muted-foreground)]" />
           <input
             autoFocus
             value={q}
             onChange={(event) => setQ(event.target.value)}
-            placeholder="Search documents/vendors/customers..."
-            className="w-full rounded border px-2 py-1 text-sm"
+            placeholder="Search documents, vendors, customers..."
+            className="flex-1 bg-transparent text-sm text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] outline-none"
           />
-          <div className="mt-2">{help}</div>
-          {q.trim().length >= 2 && error ? <p className="mt-2 text-xs text-red-600">{error}</p> : null}
-          <div className="mt-2 max-h-60 overflow-auto text-sm">
-            {q.trim().length >= 2
-              ? rows.map((row) => (
+          <button
+            onClick={() => setOpen(false)}
+            className="p-1 text-[var(--muted-foreground)] hover:text-[var(--foreground)] cursor-pointer"
+            aria-label="Close search"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* Results */}
+        <div className="max-h-80 overflow-y-auto p-2">
+          {q.trim().length < 2 && (
+            <div className="px-2 py-3">{help}</div>
+          )}
+          {q.trim().length >= 2 && error && (
+            <p className="px-2 py-2 text-xs text-[var(--destructive)]">{error}</p>
+          )}
+          {q.trim().length >= 2 && !error && rows.length === 0 && (
+            <p className="px-2 py-3 text-center text-xs text-[var(--muted-foreground)]">No results found</p>
+          )}
+          {q.trim().length >= 2 &&
+            !error &&
+            rows.map((row) => (
               <Link
                 key={`${row.type}-${row.id}`}
                 href={row.type === "document" ? "/documents" : "/settings"}
-                className="block rounded px-2 py-1 hover:bg-slate-100"
+                className="flex items-center gap-2 rounded-[var(--radius-input)] px-2 py-2 text-sm hover:bg-[var(--muted)] transition-colors"
                 onClick={() => setOpen(false)}
               >
-                <span className="font-medium">{row.label || "(no label)"}</span>
-                <span className="ml-2 text-xs text-slate-500">{row.type}</span>
+                <span className="font-medium text-[var(--foreground)]">{row.label || "(no label)"}</span>
+                <span className="text-xs text-[var(--muted-foreground)]">{row.type}</span>
               </Link>
-                ))
-              : null}
-            {!rows.length && q.trim().length >= 2 ? (
-              <p className="px-2 py-1 text-xs text-slate-500">No results</p>
-            ) : null}
-          </div>
+            ))}
         </div>
-      ) : null}
+      </div>
     </div>
   );
 }
-

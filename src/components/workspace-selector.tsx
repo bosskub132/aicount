@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Building2, ChevronDown } from "lucide-react";
 
 export const DEFAULT_WORKSPACE_TENANT_ID = "00000000-0000-0000-0000-000000000000";
 
@@ -72,18 +73,16 @@ export function WorkspaceSelector() {
         type="button"
         onClick={() => setOpen(!open)}
         title={loadError || undefined}
-        className={`flex items-center gap-2 rounded-lg border bg-white px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50 ${
+        className={`flex w-full items-center gap-2 rounded-[var(--radius-input)] border bg-[var(--muted)] px-3 py-1.5 text-xs text-[var(--foreground)] hover:bg-[var(--border)] transition-colors cursor-pointer ${
           loadError
-            ? "border-red-300"
+            ? "border-[var(--destructive)]"
             : unsetClient
-              ? "border-amber-400 ring-1 ring-amber-200"
-              : "border-slate-200"
+              ? "border-[var(--warning)] ring-1 ring-[var(--warning-light)]"
+              : "border-[var(--border)]"
         }`}
       >
-        <svg className="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-        </svg>
-        <span className="max-w-[180px] truncate">
+        <Building2 className="h-4 w-4 text-[var(--muted-foreground)]" />
+        <span className="flex-1 truncate text-left">
           {loadError
             ? "Workspace load failed"
             : current
@@ -92,30 +91,28 @@ export function WorkspaceSelector() {
                 ? "Select client"
                 : "Select Client"}
         </span>
-        <svg className="h-3 w-3 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-        </svg>
+        <ChevronDown className="h-3 w-3 text-[var(--muted-foreground)]" />
       </button>
 
       {open && (
         <>
-          <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 z-40 mt-1 w-72 max-w-[calc(100vw-2rem)] rounded-lg border bg-white py-1 shadow-lg">
-            {loading && <p className="px-3 py-2 text-xs text-slate-500">Loading workspaces…</p>}
+          <div className="fixed inset-0 z-[var(--z-dropdown)]" onClick={() => setOpen(false)} />
+          <div className="absolute left-0 right-0 z-[calc(var(--z-dropdown)+1)] mt-1 rounded-[var(--radius-card)] border border-[var(--border)] bg-white py-1 shadow-[var(--shadow-md)]">
+            {loading && <p className="px-3 py-2 text-xs text-[var(--muted-foreground)]">Loading workspaces…</p>}
             {!loading && loadError && (
               <div className="space-y-2 px-3 py-2">
-                <p className="text-xs text-red-700">{loadError}</p>
+                <p className="text-xs text-[var(--destructive)]">{loadError}</p>
                 <button
                   type="button"
                   onClick={() => void loadWorkspaces()}
-                  className="rounded border border-slate-200 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                  className="rounded-[var(--radius-button)] border border-[var(--border)] px-2 py-1 text-xs font-medium text-[var(--foreground)] hover:bg-[var(--muted)] cursor-pointer"
                 >
                   Retry
                 </button>
               </div>
             )}
             {!loading && !loadError && workspaces.length === 0 && (
-              <p className="px-3 py-2 text-xs text-slate-500">
+              <p className="px-3 py-2 text-xs text-[var(--muted-foreground)]">
                 No workspaces yet. Create a client in Settings or ask an admin to invite you.
               </p>
             )}
@@ -126,16 +123,16 @@ export function WorkspaceSelector() {
                   key={w.tenantId}
                   type="button"
                   onClick={() => selectWorkspace(w.tenantId)}
-                  className={`flex w-full items-center gap-2 px-3 py-2 text-left text-xs hover:bg-slate-50 ${
-                    w.tenantId === tenantId ? "bg-slate-50 font-medium" : ""
+                  className={`flex w-full items-center gap-2 px-3 py-2 text-left text-xs hover:bg-[var(--muted)] cursor-pointer ${
+                    w.tenantId === tenantId ? "bg-[var(--muted)] font-medium" : ""
                   }`}
                 >
-                  <div className="h-6 w-6 flex-shrink-0 rounded bg-slate-200 flex items-center justify-center text-[10px] font-semibold text-slate-600">
+                  <div className="h-6 w-6 flex-shrink-0 rounded-[var(--radius-input)] bg-[var(--primary-light)] flex items-center justify-center text-[10px] font-semibold text-[var(--primary)]">
                     {w.tenantName.charAt(0).toUpperCase()}
                   </div>
                   <div className="min-w-0">
-                    <p className="truncate text-slate-800">{w.tenantName}</p>
-                    <p className="truncate text-slate-400">{w.taxId}</p>
+                    <p className="truncate text-[var(--foreground)]">{w.tenantName}</p>
+                    <p className="truncate text-[var(--muted-foreground)]">{w.taxId}</p>
                   </div>
                 </button>
               ))}

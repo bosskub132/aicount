@@ -42,6 +42,21 @@
 
 ---
 
+## UI/UX Pro Max Audit Additions (2026-03-23)
+
+> Validated against UI/UX Pro Max design intelligence (Accessible & Ethical style, fintech/SaaS pattern).
+> Plan is well-aligned. The following minor additions were made:
+
+1. **Z-index scale** added to Task 1 globals.css tokens (`--z-dropdown` through `--z-tooltip`)
+2. **Dark mode** — deferred to Phase 1.5. Light-only tokens are correct for now; dark variant needs desaturated tonal values tested separately.
+3. **`tabular-nums`** — already present on StatCard; DataTable columns with numeric data should also apply it via column config.
+4. **`cursor-pointer`** — already in Button. Verified.
+5. **`aria-live="polite"`** — already on Toast container. Verified.
+6. **`overflow-x-auto`** — already on DataTable wrapper. Verified.
+7. **`autocomplete` attributes** — pass through `...props` on Input. No change needed.
+
+---
+
 ## File Structure
 
 ### New Files
@@ -162,6 +177,13 @@ Replace the entire contents of `src/app/globals.css` with:
     --radius-button: 8px;
     --radius-card: 10px;
     --radius-modal: 12px;
+
+    /* Z-index scale */
+    --z-dropdown: 50;
+    --z-sticky: 100;
+    --z-modal: 200;
+    --z-toast: 300;
+    --z-tooltip: 400;
   }
 }
 
