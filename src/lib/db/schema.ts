@@ -70,7 +70,6 @@ export const journalStatusEnum = pgEnum("journal_status", [
 export const matchTypeEnum = pgEnum("match_type", [
   "auto",
   "manual",
-  "suggested",
 ]);
 
 export const directionEnum = pgEnum("direction", ["REVENUE", "EXPENSE"]);
@@ -445,7 +444,7 @@ export const journalEntries = pgTable(
     jvNumber: varchar("jv_number", { length: 50 }).notNull(),
     date: date("date").notNull(),
     type: journalTypeEnum("type").notNull(),
-    description: text("description"),
+    description: text("description").notNull(),
     status: journalStatusEnum("status").default("draft").notNull(),
     sourceDocumentId: uuid("source_document_id").references(
       () => documents.id
@@ -510,7 +509,7 @@ export const bankTransactions = pgTable(
       .notNull()
       .references(() => bankStatements.id, { onDelete: "cascade" }),
     transactionDate: date("transaction_date").notNull(),
-    description: text("description"),
+    description: text("description").notNull(),
     debit: decimal("debit", { precision: 15, scale: 2 })
       .default("0")
       .notNull(),
@@ -534,7 +533,7 @@ export const bankReconMatches = pgTable(
       .references(() => tenants.id, { onDelete: "cascade" }),
     bankTransactionId: uuid("bank_transaction_id")
       .notNull()
-      .references(() => bankTransactions.id),
+      .references(() => bankTransactions.id, { onDelete: "cascade" }),
     journalEntryId: uuid("journal_entry_id")
       .notNull()
       .references(() => journalEntries.id),
