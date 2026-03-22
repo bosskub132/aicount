@@ -33,8 +33,11 @@ src/
   lib/
     api/            # API utilities (rate limiting, etc.)
     db/             # Drizzle schema, relations, queries
+    hooks/          # React Query hooks (use-documents, use-dashboard, use-export)
     inngest/        # Background job definitions
+    providers/      # React Query provider wrapper
     services/       # Business logic (OCR, confidence, VAT, WHT, audit, etc.)
+    stores/         # Zustand stores (ui-store for sidebar, toasts, mobile menu)
     supabase/       # Supabase client + middleware
     utils/          # Constants, formatters
   types/            # Domain and API type definitions
@@ -46,6 +49,8 @@ scripts/            # Utility scripts (migration, health checks, smoke tests)
 
 ## Coding Conventions
 
+- IMPORTANT: Next.js 16 uses `src/proxy.ts` for middleware, NOT `middleware.ts`. Do NOT create a `middleware.ts` file — it will conflict.
+- IMPORTANT: Pages using `useSearchParams()` MUST wrap the component in `<Suspense>` or the production build will fail
 - Components are `"use client"` where needed; prefer Server Components by default
 - Components use named exports (`export function ComponentName`)
 - Types are defined inline or in `src/types/` (domain.ts, api.ts)
@@ -58,16 +63,43 @@ scripts/            # Utility scripts (migration, health checks, smoke tests)
 ## Design Tokens & Styling
 
 - Tailwind CSS v4 with `@theme inline` in `globals.css`
-- CSS variables: `--background`, `--foreground` defined in `:root`
-- Fonts: Geist Sans (`--font-geist-sans`) and Geist Mono (`--font-geist-mono`)
+- Full CSS variable system: colors (--primary, --secondary, --success, --destructive, --warning), surfaces, document status, shadows, radius, z-index scale
+- Fonts: Inter (`--font-inter`), Noto Sans Thai (`--font-noto-thai`), Geist Mono (`--font-geist-mono`)
 - IMPORTANT: Use Tailwind utility classes for all styling
 - IMPORTANT: Never hardcode colors - use CSS variables or Tailwind theme tokens
+- IMPORTANT: Use `tabular-nums` class on all financial amount displays
+- Recharts cannot read CSS variables — hardcode hex values matching the CSS vars with a comment noting which var they map to
 
 ## Icon System
 
 - IMPORTANT: Use `lucide-react` for all icons
 - IMPORTANT: DO NOT install or import any other icon libraries
 - Import icons individually: `import { IconName } from "lucide-react"`
+
+## API Route Auth Pattern
+
+All API routes MUST use this auth pattern at the start of the handler:
+```tsx
+import { getRequestContext, unauthorized, forbidden, ensureTenantScope } from "@/lib/api/request-context";
+
+const ctx = getRequestContext(request);
+if (!ctx) return unauthorized();
+// For tenant-scoped routes:
+if (!ensureTenantScope(ctx.tenantId, tenantId)) return forbidden("Cross-tenant access denied");
+```
+- NEVER expose raw `error.message` to clients — log it server-side, return generic message
+- Validate `status` params against allowlist, cap `search` input length
+
+## Design System Components (Phase 1)
+
+All in `src/components/` (flat structure). Use these instead of inline markup:
+- **Primitives:** Button, Input, Badge/StatusBadge, Avatar
+- **Feedback:** Toast/ToastProvider, Modal, Tooltip, DropdownMenu
+- **Data:** Tabs, DataTable (with onRowClick), Pagination, StatCard (with href), Card, EmptyState, Skeleton
+- **Forms:** Select, Checkbox, RadioGroup, Toggle
+- **Navigation:** Breadcrumbs, Sidebar, Header
+- **Document:** DocumentSidePanel, DocumentImageViewer, ConfidenceBar, StatusTimeline, UploadQueue
+- **Toast hook:** `import { useToast } from "@/lib/stores/ui-store"`
 
 ## Asset Handling
 
