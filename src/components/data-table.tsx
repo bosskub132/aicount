@@ -20,6 +20,7 @@ interface DataTableProps<T> {
   selectable?: boolean;
   onSort?: (key: string, direction: "asc" | "desc") => void;
   onSelect?: (selected: T[]) => void;
+  onRowClick?: (row: T) => void;
   emptyMessage?: string;
   footer?: React.ReactNode;
   keyField?: string;
@@ -32,6 +33,7 @@ export function DataTable<T extends Record<string, unknown>>({
   selectable,
   onSort,
   onSelect,
+  onRowClick,
   emptyMessage = "No data",
   footer,
   keyField = "id",
@@ -125,7 +127,10 @@ export function DataTable<T extends Record<string, unknown>>({
             data.map((row, i) => (
               <tr
                 key={String(row[keyField]) || i}
-                className={`border-b border-[var(--muted)] last:border-0 transition-colors duration-100 hover:bg-[var(--muted)]/50 ${
+                onClick={() => onRowClick?.(row)}
+                className={`border-b border-[var(--muted)] last:border-0 transition-colors duration-100 ${
+                  onRowClick ? "cursor-pointer hover:bg-[var(--primary-light)]" : "hover:bg-[var(--muted)]/50"
+                } ${
                   selected.has(String(row[keyField])) ? "bg-[var(--primary-light)]" : ""
                 }`}
               >
