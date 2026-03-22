@@ -1,12 +1,26 @@
-import { and, eq, gte, lte } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { bankStatements, documents } from "@/lib/db/schema";
-import { ensureTenantScope, forbidden, getRequestContext, unauthorized } from "@/lib/api/request-context";
+import {
+  ensureTenantScope,
+  forbidden,
+  getRequestContext,
+  unauthorized,
+} from "@/lib/api/request-context";
+import {
+  getAllBankTransactions,
+  getUnmatchedGLEntries,
+  getReconSummary,
+} from "@/lib/db/queries/bank-recon";
+import { autoMatch } from "@/lib/services/bank-matching";
+import type { BankTransaction, GLEntry } from "@/lib/services/bank-matching";
 
+/**
+ * GET /api/tenants/[id]/bank-recon?bankStatementId=...
+ * Returns bank transactions, unmatched GL entries, auto-match suggestions, and summary.
+ */
 export async function GET(
   request: Request,
-  context: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> },
 ) {
   const ctx = getRequestContext(request);
   if (!ctx) return unauthorized();
@@ -14,59 +28,94 @@ export async function GET(
   if (!ensureTenantScope(ctx.tenantId, id)) return forbidden("Cross-tenant access denied");
 
   const url = new URL(request.url);
-  const from = url.searchParams.get("from") || new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10);
-  const to = url.searchParams.get("to") || new Date().toISOString().slice(0, 10);
+  const bankStatementId = url.searchParams.get("bankStatementId");
 
-  const [statements, journalDocs] = await Promise.all([
-    db
-      .select()
-      .from(bankStatements)
-      .where(and(eq(bankStatements.tenantId, id), gte(bankStatements.statementDate, from), lte(bankStatements.statementDate, to))),
-    db
-      .select()
-      .from(documents)
-      .where(
-        and(
-          eq(documents.tenantId, id),
-          eq(documents.status, "EXPORTED"),
-          gte(documents.documentDate, from),
-          lte(documents.documentDate, to)
-        )
-      ),
-  ]);
-
-  const statementAmounts = statements.flatMap((s) =>
-    Array.isArray(s.lineItems)
-      ? (s.lineItems as Array<Record<string, unknown>>).map((i) => Number(i.amount || 0))
-      : []
-  );
-  const docAmounts = journalDocs.map((d) => Number(d.grandTotal || 0));
-
-  const matched: Array<{ statementAmount: number; docAmount: number }> = [];
-  const unmatchedStatements: number[] = [];
-  const unmatchedDocs = [...docAmounts];
-
-  for (const sAmount of statementAmounts) {
-    const idx = unmatchedDocs.findIndex((dAmount) => Math.abs(dAmount - sAmount) <= 0.05);
-    if (idx >= 0) {
-      matched.push({ statementAmount: sAmount, docAmount: unmatchedDocs[idx] });
-      unmatchedDocs.splice(idx, 1);
-    } else {
-      unmatchedStatements.push(sAmount);
-    }
+  if (!bankStatementId) {
+    return NextResponse.json(
+      { success: false, error: "bankStatementId query parameter is required" },
+      { status: 400 },
+    );
   }
 
-  return NextResponse.json({
-    success: true,
-    data: {
-      period: { from, to },
-      matchedCount: matched.length,
-      unmatchedStatementCount: unmatchedStatements.length,
-      unmatchedDocCount: unmatchedDocs.length,
-      matched,
-      unmatchedStatements,
-      unmatchedDocs,
-    },
-  });
-}
+  try {
+    // Fetch all bank transactions (with match status)
+    const allTxns = await getAllBankTransactions(db, id, bankStatementId);
 
+    // Determine date range from transactions for GL lookup
+    const txnDates = allTxns.map((t) => t.transactionDate);
+    if (txnDates.length === 0) {
+      return NextResponse.json({
+        success: true,
+        data: {
+          bankTransactions: [],
+          unmatchedGLEntries: [],
+          suggestions: [],
+          summary: { statementBalance: 0, glBalance: 0, difference: 0, matchedCount: 0, unmatchedCount: 0 },
+        },
+      });
+    }
+
+    const sortedDates = [...txnDates].sort();
+    const dateFrom = sortedDates[0];
+    const dateTo = sortedDates[sortedDates.length - 1];
+
+    // Extend date range by 3 days for matching window
+    const extendedFrom = new Date(dateFrom);
+    extendedFrom.setDate(extendedFrom.getDate() - 3);
+    const extendedTo = new Date(dateTo);
+    extendedTo.setDate(extendedTo.getDate() + 3);
+
+    const bankAccountCode = "1102"; // Default bank account code
+
+    // Fetch unmatched GL entries and summary in parallel
+    const [unmatchedGL, summary] = await Promise.all([
+      getUnmatchedGLEntries(
+        db,
+        id,
+        bankAccountCode,
+        extendedFrom.toISOString().slice(0, 10),
+        extendedTo.toISOString().slice(0, 10),
+      ),
+      getReconSummary(db, id, bankStatementId),
+    ]);
+
+    // Prepare data for auto-matching
+    const unmatchedBankTxns: BankTransaction[] = allTxns
+      .filter((t) => !t.matchId)
+      .map((t) => ({
+        id: t.id,
+        transactionDate: t.transactionDate,
+        description: t.description,
+        debit: t.debit,
+        credit: t.credit,
+        referenceNo: t.referenceNo,
+      }));
+
+    const glEntries: GLEntry[] = unmatchedGL.map((g) => ({
+      journalEntryId: g.journalEntryId,
+      date: g.date,
+      jvNumber: g.jvNumber,
+      description: g.description,
+      debit: g.debit,
+      credit: g.credit,
+    }));
+
+    const suggestions = autoMatch(unmatchedBankTxns, glEntries);
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        bankTransactions: allTxns,
+        unmatchedGLEntries: unmatchedGL,
+        suggestions,
+        summary,
+      },
+    });
+  } catch (error) {
+    console.error("Failed to fetch bank reconciliation data:", error);
+    return NextResponse.json(
+      { success: false, error: "Failed to fetch bank reconciliation data" },
+      { status: 500 },
+    );
+  }
+}
