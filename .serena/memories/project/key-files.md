@@ -1,44 +1,83 @@
-# Key Files Reference (updated v1.1.0)
+# Key Files Reference (updated Phase 3)
 
-## Auth
-- `src/lib/supabase/middleware.ts` — Auth middleware: session, email verification, role/tenant headers
-- `src/app/auth/callback/route.ts` — Supabase email verification callback (outside route groups)
-- `src/app/api/auth/register/route.ts` — Registration with Zod, CSRF, rate limiting
-- `src/app/api/auth/profile/route.ts` — GET/PATCH profile (includes onboardingStep)
-- `src/app/api/auth/resend-verification/route.ts` — Resend email verification
-- `src/app/api/auth/account/route.ts` — DELETE account (soft delete with workspace actions)
-- `src/app/api/auth/account/cancel-deletion/route.ts` — Cancel account deletion
-- `src/lib/api/request-context.ts` — RequestContext extraction, ensureTenantScope, ensureRole
+## Auth & Security
+- `src/proxy.ts` — Next.js 16 middleware entry point (NOT middleware.ts)
+- `src/lib/supabase/middleware.ts` — Session, email verification, role/tenant headers
+- `src/lib/api/request-context.ts` — getRequestContext, ensureTenantScope, ensureRole
 - `src/lib/api/csrf.ts` — Origin-based CSRF validation
 - `src/lib/api/rate-limit.ts` — Upstash Redis rate limiter with in-process fallback
 
-## Onboarding
-- `src/app/(onboarding)/layout.tsx` — Stepper layout
-- `src/app/(onboarding)/onboarding/*/page.tsx` — 7 step pages (welcome, workspace, coa, departments, team, template, complete)
-
-## Settings
-- `src/app/(app)/settings/layout.tsx` — Sidebar navigation (4 groups: Account, Workspace, Master Data, Accounting)
-- `src/app/(app)/settings/profile/page.tsx` — Profile settings
-- `src/app/(app)/settings/security/page.tsx` — Password change
-- `src/app/(app)/settings/workspace/*/page.tsx` — General, members, invitations, delete
-- `src/app/(app)/settings/masterdata/*/page.tsx` — COA, vendors, customers, products, departments
-- `src/app/(app)/settings/accounting/*/page.tsx` — Templates, period-locks, bank-recon, tax-reports
-- `src/app/(app)/settings/delete-account/page.tsx` — Account deletion flow
-
-## Tenant/Workspace APIs
-- `src/app/api/tenants/[id]/route.ts` — GET/PUT/PATCH(soft delete)/DELETE
-- `src/app/api/tenants/[id]/cancel-deletion/route.ts` — Cancel workspace deletion
-- `src/app/api/tenants/[id]/transfer-ownership/route.ts` — Transfer workspace ownership
-- `src/app/api/tenants/[id]/invitations/route.ts` — CRUD invitations
-- `src/app/api/tenants/[id]/assignments/route.ts` — CRUD member assignments
-
-## Background Jobs
-- `src/lib/inngest/functions/workspace-purge.ts` — Daily cron, hard-deletes expired workspaces
-- `src/lib/inngest/functions/account-purge.ts` — Daily cron, hard-deletes expired accounts + Supabase auth user
-- `src/app/api/inngest/route.ts` — Inngest serve handler (all functions registered here)
-
-## Schema
-- `src/lib/db/schema.ts` — Drizzle schema (profiles has onboardingStep, deletedAt, deletionScheduledFor; tenants has deletedAt, deletionScheduledFor, deletionReason)
+## Design System
+- `src/app/globals.css` — Full design token set (colors, shadows, radius, z-index, badge colors, aging colors)
+- `src/app/layout.tsx` — Root layout with Inter + Noto Sans Thai + Geist Mono fonts
+- `src/components/` — 30+ components (flat structure)
+- `src/lib/stores/ui-store.ts` — Zustand: sidebar, toasts, mobile menu + useToast()
+- `src/lib/providers/query-provider.tsx` — React Query provider
 
 ## App Shell
-- `src/app/(app)/layout.tsx` — Main layout: sidebar, header, onboarding redirect, deletion banner, version badge (v1.1.0)
+- `src/app/(app)/layout.tsx` — Sidebar + Header + QueryProvider + auth redirects + deletion banner
+- `src/components/sidebar.tsx` — 230px grouped nav (Workflow + Accounting + Settings)
+- `src/components/header.tsx` — 56px sticky, search trigger, avatar
+
+## Core Pages (Phase 2)
+- `src/app/(app)/dashboard/page.tsx` — 3-tab dashboard with Recharts
+- `src/app/(app)/documents/page.tsx` — DataTable + side panel + tabs + pagination
+- `src/app/(app)/extractions/page.tsx` — Two-column editing (image + fields)
+- `src/app/(app)/upload/page.tsx` — Drag-drop + live OCR status polling
+- `src/app/(app)/export/page.tsx` — Template selection + history + preview modal
+
+## Accounting Pages (Phase 3)
+- `src/app/(app)/ledger/page.tsx` — GL with Journal Entries + Account Ledger tabs, JV modal
+- `src/app/(app)/receivables/page.tsx` — AR aging table, customer drill-down, payment recording
+- `src/app/(app)/payables/page.tsx` — AP aging table, vendor drill-down, WHT in payments
+- `src/app/(app)/bank-recon/page.tsx` — Split view, auto-matching, confirm/unmatch
+
+## Accounting Components (Phase 3)
+- `src/components/currency-input.tsx` — ฿ prefix, thousand separators, tabular-nums
+- `src/components/account-select.tsx` — Searchable COA dropdown grouped by category
+- `src/components/journal-line-editor.tsx` — Editable JV lines with balance check
+- `src/components/aging-mini-bar.tsx` — Horizontal stacked aging bar
+- `src/components/data-table.tsx` — Enhanced with expandedRow render prop
+
+## React Query Hooks
+- `src/lib/hooks/use-documents.ts` — useDocuments, useDocument, useDocumentMutations
+- `src/lib/hooks/use-dashboard.ts` — useMonthlyComparison, useStatusBreakdown, useApprovalQueue
+- `src/lib/hooks/use-export.ts` — useExportTemplates, useExportHistory, useExportMutation
+- `src/lib/hooks/use-journal-entries.ts` — useJournalEntries, useCreateJournalEntry, usePostJournalEntry
+- `src/lib/hooks/use-account-ledger.ts` — useAccountLedger
+- `src/lib/hooks/use-receivables.ts` — useReceivables
+- `src/lib/hooks/use-payables.ts` — usePayables
+- `src/lib/hooks/use-payments.ts` — useRecordPayment
+- `src/lib/hooks/use-bank-recon.ts` — useBankRecon, useConfirmMatch, useBulkConfirm
+
+## Services (Phase 3)
+- `src/lib/services/jv-number.ts` — Tenant-scoped JV number generation (JV-YYYY-NNNN)
+- `src/lib/services/payment-status.ts` — Compute open/partial/paid/overdue
+- `src/lib/services/aging.ts` — Overdue-based aging bucket calculation
+- `src/lib/services/bank-matching.ts` — Auto-match bank txns to GL entries
+- `src/lib/utils/csv-export.ts` — Client-side CSV with UTF-8 BOM for Thai
+
+## DB Queries (Phase 3)
+- `src/lib/db/queries/journal-entries.ts` — CRUD, list, post, reverse, stats
+- `src/lib/db/queries/account-ledger.ts` — Running balance, opening/closing
+- `src/lib/db/queries/receivables.ts` — AR aging by customer
+- `src/lib/db/queries/payables.ts` — AP aging by vendor
+- `src/lib/db/queries/payments.ts` — Record payment + offsetting JE
+- `src/lib/db/queries/bank-recon.ts` — Match/unmatch/confirm
+
+## API Routes (Phase 3)
+- `GET/POST /api/tenants/{id}/journal-entries` — List + create
+- `GET/PUT/PATCH /api/tenants/{id}/journal-entries/{entryId}` — Single + edit + status
+- `GET /api/tenants/{id}/account-ledger` — Account transactions
+- `GET /api/tenants/{id}/receivables` — AR aging
+- `GET /api/tenants/{id}/payables` — AP aging
+- `POST /api/tenants/{id}/payments` — Record payment
+- `GET /api/tenants/{id}/bank-recon` — Bank recon data
+- `POST/DELETE /api/tenants/{id}/bank-recon/matches` — Confirm/unmatch
+
+## Specs & Plans
+- `docs/superpowers/specs/2026-03-23-phase3-accounting-modules-design.md`
+- `docs/superpowers/plans/2026-03-23-phase3-accounting-modules.md`
+- `docs/superpowers/specs/2026-03-23-phase2-core-workflows-design.md`
+- `docs/superpowers/plans/2026-03-23-phase2-core-workflows.md`
+- `docs/superpowers/plans/2026-03-22-design-system-phase1.md`

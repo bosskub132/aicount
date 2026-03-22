@@ -1,0 +1,206 @@
+<h2>Extractions Editing — Which Approach?</h2>
+<p class="subtitle">How should users edit extracted document data?</p>
+
+<div class="cards">
+  <!-- Option A: Side panel expands -->
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding: 16px; background: #F8FAFC;">
+      <!-- Before state -->
+      <div style="font-size: 9px; color: #64748B; margin-bottom: 4px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Step 1: Click doc → side panel</div>
+      <div style="border: 1px solid #E2E8F0; border-radius: 8px; overflow: hidden; background: white; display: flex; min-height: 100px; margin-bottom: 10px;">
+        <!-- Table (compressed) -->
+        <div style="flex: 1; font-size: 9px; opacity: 0.6;">
+          <div style="padding: 6px 10px; background: #F8FAFC; border-bottom: 1px solid #E2E8F0; color: #64748B; display: flex;">
+            <div style="flex: 2;">Issuer</div><div style="flex: 1;">Amount</div><div style="flex: 1;">Status</div>
+          </div>
+          <div style="padding: 6px 10px; background: #EFF6FF; border-bottom: 1px solid #E2E8F0; border-left: 3px solid #2563EB; display: flex;">
+            <div style="flex: 2; color: #0F172A;">บจก. สยาม</div><div style="flex: 1;">฿45,200</div><div style="flex: 1;"><span style="padding: 1px 4px; background: #DBEAFE; color: #1D4ED8; border-radius: 3px; font-size: 8px;">Draft</span></div>
+          </div>
+        </div>
+        <!-- Small side panel -->
+        <div style="width: 180px; border-left: 1px solid #E2E8F0; padding: 8px; font-size: 9px;">
+          <div style="font-weight: 600; margin-bottom: 6px;">บจก. สยาม</div>
+          <div style="background: #F1F5F9; height: 40px; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #94A3B8; font-size: 8px; margin-bottom: 6px;">📄</div>
+          <div style="padding: 4px 8px; background: #2563EB; color: white; border-radius: 4px; font-size: 8px; text-align: center; cursor: pointer;">Edit Details →</div>
+        </div>
+      </div>
+      <!-- After state: expanded -->
+      <div style="font-size: 9px; color: #64748B; margin-bottom: 4px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Step 2: "Edit Details" → panel expands to overlay</div>
+      <div style="border: 1px solid #2563EB; border-radius: 8px; overflow: hidden; background: white; min-height: 140px; box-shadow: 0 4px 12px rgba(37,99,235,0.1);">
+        <!-- Header bar -->
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border-bottom: 1px solid #E2E8F0; background: #F8FAFC;">
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <span style="font-size: 9px; color: #2563EB; cursor: pointer;">← Back to list</span>
+            <span style="font-size: 10px; font-weight: 600; color: #0F172A;">Editing: บจก. สยาม</span>
+          </div>
+          <div style="display: flex; gap: 4px;">
+            <div style="padding: 3px 8px; background: white; border: 1px solid #E2E8F0; border-radius: 4px; font-size: 8px; color: #475569;">Cancel</div>
+            <div style="padding: 3px 8px; background: #2563EB; color: white; border-radius: 4px; font-size: 8px;">Save</div>
+          </div>
+        </div>
+        <!-- Two column: preview + fields -->
+        <div style="display: flex; min-height: 110px;">
+          <div style="flex: 1; padding: 10px; display: flex; align-items: center; justify-content: center; background: #F8FAFC; color: #94A3B8; font-size: 9px; border-right: 1px solid #E2E8F0;">
+            📄 Document Image (full size)
+          </div>
+          <div style="flex: 1; padding: 10px; font-size: 9px;">
+            <div style="font-weight: 600; margin-bottom: 6px; color: #0F172A;">Issuer Information</div>
+            <div style="display: flex; flex-direction: column; gap: 4px;">
+              <div><span style="color: #64748B; font-size: 8px;">Company Name</span><div style="border: 1px solid #E2E8F0; border-radius: 3px; padding: 3px 6px; margin-top: 2px; color: #0F172A;">บจก. สยาม</div></div>
+              <div><span style="color: #64748B; font-size: 8px;">Tax ID</span><div style="border: 1px solid #E2E8F0; border-radius: 3px; padding: 3px 6px; margin-top: 2px; color: #0F172A;">0105548123456</div></div>
+              <div><span style="color: #64748B; font-size: 8px;">Amount</span><div style="border: 1px solid #E2E8F0; border-radius: 3px; padding: 3px 6px; margin-top: 2px; color: #0F172A;">฿45,200.00</div></div>
+            </div>
+            <div style="font-weight: 600; margin: 8px 0 4px; color: #0F172A;">Line Items (3)</div>
+            <div style="border: 1px solid #E2E8F0; border-radius: 3px; font-size: 8px; color: #64748B; padding: 4px 6px;">Editable table rows...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A. Side Panel Expands</h3>
+      <p>Click "Edit" in side panel → it expands to full-width overlay with document image + all editable fields. "Back" collapses. Never leaves the Documents page.</p>
+      <div class="pros-cons" style="margin-top: 8px;">
+        <div class="pros"><h4>Pros</h4><ul><li>Never lose document list context</li><li>Smooth expand/collapse transition</li><li>Single page for everything</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Complex panel state management</li><li>URL doesn't change (no deep linking to edit)</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Option B: Separate page -->
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding: 16px; background: #F8FAFC;">
+      <!-- Documents page with side panel -->
+      <div style="font-size: 9px; color: #64748B; margin-bottom: 4px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Documents page — read-only side panel</div>
+      <div style="border: 1px solid #E2E8F0; border-radius: 8px; overflow: hidden; background: white; display: flex; min-height: 100px; margin-bottom: 10px;">
+        <div style="flex: 1; font-size: 9px; opacity: 0.5; padding: 8px;">
+          <div style="background: #F8FAFC; padding: 6px; border-radius: 4px; color: #64748B; text-align: center;">Document list...</div>
+        </div>
+        <div style="width: 200px; border-left: 1px solid #E2E8F0; padding: 8px; font-size: 9px;">
+          <div style="font-weight: 600; margin-bottom: 4px;">บจก. สยาม</div>
+          <div style="color: #64748B; font-size: 8px; margin-bottom: 4px;">Quick preview, key fields (read-only)</div>
+          <div style="display: flex; flex-direction: column; gap: 3px; margin-bottom: 8px;">
+            <div style="display: flex; justify-content: space-between;"><span style="color: #64748B;">Amount</span><span>฿45,200</span></div>
+            <div style="display: flex; justify-content: space-between;"><span style="color: #64748B;">Status</span><span style="color: #1D4ED8;">Draft</span></div>
+          </div>
+          <div style="display: flex; gap: 4px;">
+            <div style="flex: 1; padding: 4px; text-align: center; background: #EFF6FF; color: #2563EB; border-radius: 4px; font-size: 8px; font-weight: 500;">Edit Details →</div>
+          </div>
+        </div>
+      </div>
+      <!-- Extractions page -->
+      <div style="font-size: 9px; color: #64748B; margin-bottom: 4px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Navigates to → /extractions?docId=xxx</div>
+      <div style="border: 1px solid #E2E8F0; border-radius: 8px; overflow: hidden; background: white; min-height: 130px;">
+        <!-- Breadcrumb -->
+        <div style="padding: 8px 12px; border-bottom: 1px solid #E2E8F0; font-size: 9px; color: #64748B;">
+          <span style="color: #2563EB; cursor: pointer;">Documents</span> <span style="margin: 0 4px;">›</span> <span style="color: #0F172A; font-weight: 500;">บจก. สยาม — Edit Extraction</span>
+        </div>
+        <!-- Full page editing -->
+        <div style="display: flex; min-height: 110px;">
+          <div style="flex: 1; padding: 10px; background: #F8FAFC; display: flex; align-items: center; justify-content: center; color: #94A3B8; font-size: 9px; border-right: 1px solid #E2E8F0;">
+            📄 Full document image with zoom
+          </div>
+          <div style="flex: 1.2; padding: 10px; font-size: 9px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <span style="font-weight: 600; color: #0F172A;">All Fields Editable</span>
+              <div style="display: flex; gap: 4px;">
+                <span style="padding: 2px 6px; background: #D1FAE5; color: #065F46; border-radius: 3px; font-size: 8px;">92% confidence</span>
+              </div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px;">
+              <div><span style="color: #64748B; font-size: 8px;">Issuer</span><div style="border: 1px solid #E2E8F0; border-radius: 3px; padding: 3px 6px; margin-top: 1px;">บจก. สยาม</div></div>
+              <div><span style="color: #64748B; font-size: 8px;">Tax ID</span><div style="border: 1px solid #E2E8F0; border-radius: 3px; padding: 3px 6px; margin-top: 1px;">0105548123456</div></div>
+              <div><span style="color: #64748B; font-size: 8px;">Amount</span><div style="border: 1px solid #E2E8F0; border-radius: 3px; padding: 3px 6px; margin-top: 1px;">฿45,200.00</div></div>
+              <div><span style="color: #64748B; font-size: 8px;">Date</span><div style="border: 1px solid #E2E8F0; border-radius: 3px; padding: 3px 6px; margin-top: 1px;">15/03/2026</div></div>
+            </div>
+            <div style="margin-top: 6px; font-weight: 600; color: #0F172A;">Line Items</div>
+            <div style="border: 1px solid #E2E8F0; border-radius: 3px; padding: 4px 6px; margin-top: 2px; font-size: 8px; color: #64748B;">Full editable table with add/delete rows</div>
+            <div style="margin-top: 6px; font-weight: 600; color: #0F172A;">Journal Entries</div>
+            <div style="border: 1px solid #E2E8F0; border-radius: 3px; padding: 4px 6px; margin-top: 2px; font-size: 8px; color: #64748B;">Auto-generated debit/credit lines</div>
+          </div>
+        </div>
+        <!-- Action bar -->
+        <div style="display: flex; justify-content: flex-end; gap: 6px; padding: 8px 12px; border-top: 1px solid #E2E8F0; background: #F8FAFC;">
+          <div style="padding: 4px 10px; background: white; border: 1px solid #E2E8F0; border-radius: 4px; font-size: 9px; color: #475569;">Cancel</div>
+          <div style="padding: 4px 10px; background: white; border: 1px solid #E2E8F0; border-radius: 4px; font-size: 9px; color: #475569;">Save Draft</div>
+          <div style="padding: 4px 10px; background: #2563EB; color: white; border-radius: 4px; font-size: 9px;">Submit for Approval</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B. Keep Separate Extractions Page</h3>
+      <p>Side panel shows read-only preview. "Edit Details" navigates to full Extractions page with breadcrumb back. Dedicated URL per document.</p>
+      <div class="pros-cons" style="margin-top: 8px;">
+        <div class="pros"><h4>Pros</h4><ul><li>Full screen space for complex editing</li><li>Deep-linkable URL per document</li><li>Clean separation of concerns</li><li>Room for line items + journal entries</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Page navigation (context switch)</li><li>Two pages to maintain</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Option C: No extractions page -->
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding: 16px; background: #F8FAFC;">
+      <div style="border: 1px solid #E2E8F0; border-radius: 8px; overflow: hidden; background: white; display: flex; min-height: 260px;">
+        <!-- Table (narrow) -->
+        <div style="width: 200px; font-size: 9px; border-right: 1px solid #E2E8F0;">
+          <div style="padding: 6px 10px; background: #F8FAFC; border-bottom: 1px solid #E2E8F0; color: #64748B; font-weight: 500; display: flex;">
+            <div style="flex: 2;">Issuer</div><div style="flex: 1;">Amount</div>
+          </div>
+          <div style="padding: 6px 10px; background: #EFF6FF; border-bottom: 1px solid #E2E8F0; border-left: 3px solid #2563EB; display: flex;">
+            <div style="flex: 2; color: #0F172A; font-weight: 500;">บจก. สยาม</div><div style="flex: 1;">฿45.2K</div>
+          </div>
+          <div style="padding: 6px 10px; border-bottom: 1px solid #E2E8F0; display: flex;">
+            <div style="flex: 2; color: #0F172A;">Thai Watsadu</div><div style="flex: 1;">฿12.8K</div>
+          </div>
+          <div style="padding: 6px 10px; border-bottom: 1px solid #E2E8F0; display: flex;">
+            <div style="flex: 2; color: #0F172A;">Lotus's</div><div style="flex: 1;">฿8.4K</div>
+          </div>
+        </div>
+        <!-- Wide side panel with everything -->
+        <div style="flex: 1; display: flex; flex-direction: column; font-size: 9px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border-bottom: 1px solid #E2E8F0;">
+            <span style="font-weight: 600; color: #0F172A; font-size: 10px;">บจก. สยาม</span>
+            <div style="display: flex; gap: 4px;">
+              <div style="padding: 2px 6px; background: white; border: 1px solid #E2E8F0; border-radius: 4px; font-size: 8px;">Cancel</div>
+              <div style="padding: 2px 6px; background: #2563EB; color: white; border-radius: 4px; font-size: 8px;">Save</div>
+            </div>
+          </div>
+          <!-- Scrollable sections -->
+          <div style="flex: 1; overflow-y: auto; padding: 10px 12px;">
+            <!-- Collapsible: Issuer -->
+            <div style="margin-bottom: 8px;">
+              <div style="font-weight: 600; color: #0F172A; padding: 4px 0; border-bottom: 1px solid #E2E8F0; margin-bottom: 4px;">▾ Issuer Info</div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 3px;">
+                <div><span style="color: #64748B; font-size: 8px;">Name</span><div style="border: 1px solid #E2E8F0; border-radius: 3px; padding: 2px 5px; margin-top: 1px;">บจก. สยาม</div></div>
+                <div><span style="color: #64748B; font-size: 8px;">Tax ID</span><div style="border: 1px solid #E2E8F0; border-radius: 3px; padding: 2px 5px; margin-top: 1px;">01055481234</div></div>
+              </div>
+            </div>
+            <!-- Collapsible: Transaction -->
+            <div style="margin-bottom: 8px;">
+              <div style="font-weight: 600; color: #0F172A; padding: 4px 0; border-bottom: 1px solid #E2E8F0; margin-bottom: 4px;">▾ Transaction</div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 3px;">
+                <div><span style="color: #64748B; font-size: 8px;">Amount</span><div style="border: 1px solid #E2E8F0; border-radius: 3px; padding: 2px 5px; margin-top: 1px;">฿45,200</div></div>
+                <div><span style="color: #64748B; font-size: 8px;">Date</span><div style="border: 1px solid #E2E8F0; border-radius: 3px; padding: 2px 5px; margin-top: 1px;">15/03/26</div></div>
+              </div>
+            </div>
+            <!-- Line items -->
+            <div style="margin-bottom: 8px;">
+              <div style="font-weight: 600; color: #0F172A; padding: 4px 0; border-bottom: 1px solid #E2E8F0; margin-bottom: 4px;">▾ Line Items (3)</div>
+              <div style="border: 1px solid #E2E8F0; border-radius: 3px; padding: 4px; color: #64748B; font-size: 8px; text-align: center;">
+                Cramped table in side panel...<br>
+                <span style="color: #DC2626;">⚠ Limited space for 10+ column items</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C. Everything in Side Panel</h3>
+      <p>Remove Extractions page entirely. All fields, line items, and journal entries editable in the side panel with collapsible sections.</p>
+      <div class="pros-cons" style="margin-top: 8px;">
+        <div class="pros"><h4>Pros</h4><ul><li>One page for everything</li><li>No navigation at all</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Cramped for line items & journals</li><li>No document image preview space</li><li>Scroll fatigue with many fields</li><li>Bad UX for complex edits</li></ul></div>
+      </div>
+    </div>
+  </div>
+</div>

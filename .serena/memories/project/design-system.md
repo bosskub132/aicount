@@ -1,44 +1,33 @@
-# Design System — Phase 1
+# Design System — Phase 1 ✅ COMPLETE
 
-## Spec & Plan
-- Spec: `docs/superpowers/specs/2026-03-22-ui-ux-design-system-design.md`
-- Plan: `docs/superpowers/plans/2026-03-22-design-system-phase1.md`
+## Status: Implemented and committed on feature/app-v2 (2026-03-23)
 
 ## Color Palette (Trust Blue)
-- Primary: #2563EB (buttons, links, active states)
-- Primary Hover: #1D4ED8
-- Primary Light: #EFF6FF (active nav bg)
-- Secondary: #475569 (secondary buttons, slate-600)
-- Success: #059669 (approved, positive amounts)
-- Destructive: #DC2626 (errors, rejected)
-- Warning: #F59E0B (pending, attention)
-- Background: #F8FAFC (page bg, replaces #ffffff)
-- Foreground: #0F172A (text, replaces #171717)
-- Border: #E2E8F0
-- Muted: #F1F5F9
+- Primary: #2563EB, Hover: #1D4ED8, Light: #EFF6FF
+- Secondary: #475569, Hover: #334155
+- Success: #059669, Destructive: #DC2626, Warning: #F59E0B
+- Background: #F8FAFC, Foreground: #0F172A
+- Border: #E2E8F0, Muted: #F1F5F9
+- 9 document status color pairs (draft, processing, query, action, pending, rejected, approved, exported, void)
+- Z-index scale: dropdown(50), sticky(100), modal(200), toast(300), tooltip(400)
 
 ## Typography
-- Primary: Inter (Latin) + Noto Sans Thai — loaded via next/font/google
-- Monospace: Geist Mono (kept from original)
-- Geist Sans is REMOVED
-- Type scale: 24px (title), 18px (section), 16px (subheading), 14px (body), 12px (label), 11px (caption)
-- Financial amounts use font-variant-numeric: tabular-nums
+- Primary: Inter (Latin) + Noto Sans Thai — via next/font/google
+- Monospace: Geist Mono
+- Geist Sans REMOVED
+- Financial amounts: tabular-nums class
 
-## Component Library (20 components)
-All in src/components/ (flat structure):
-Button, Input, Select, Checkbox, RadioGroup, Toggle, Badge/StatusBadge, DataTable, Card, StatCard, Tabs, Modal, Toast, Tooltip, DropdownMenu, Skeleton, Pagination, Breadcrumbs, Avatar, EmptyState
+## Component Library (25+ components)
+src/components/ (flat):
+- Primitives: Button, Input, Badge/StatusBadge, Avatar
+- Feedback: Toast/ToastProvider, Modal, Tooltip, DropdownMenu
+- Data: Tabs, DataTable (onRowClick), Pagination, StatCard (href), Card, EmptyState, Skeleton
+- Forms: Select, Checkbox, RadioGroup, Toggle
+- Navigation: Breadcrumbs, Sidebar, Header
+- Document: DocumentSidePanel, DocumentImageViewer, ConfidenceBar, StatusTimeline, UploadQueue
 
 ## App Shell
-- Sidebar (sidebar.tsx): 230px, white, grouped nav (Documents, Accounting, Reports)
-- Header (header.tsx): 56px sticky, page title + search (Cmd+K) + avatar
-- WorkspaceSelector moved from header to sidebar
-- UI state via Zustand store: src/lib/stores/ui-store.ts
-
-## Navigation Groups
-- Dashboard
-- DOCUMENTS: Upload & OCR, All Documents, Approvals
-- ACCOUNTING: General Ledger, AR, AP, Bank Recon
-- REPORTS: Financial Statements, Tax Reports, WHT Certificates
-- Settings (bottom)
-
-## Status: Not yet implemented (plan ready for execution)
+- Sidebar (230px): grouped nav, workspace selector, mobile overlay
+- Header (56px sticky): page title + Cmd+K search + avatar
+- UI state: src/lib/stores/ui-store.ts (Zustand)
+- React Query: src/lib/providers/query-provider.tsx wraps app layout

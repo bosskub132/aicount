@@ -1,0 +1,196 @@
+<h2>Approvals Workflow — Which Layout?</h2>
+<p class="subtitle">Pick the approach that fits your accounting team's review process</p>
+
+<div class="cards">
+  <!-- Option A: Queue-based -->
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding: 16px; background: #F8FAFC;">
+      <div style="border: 1px solid #E2E8F0; border-radius: 10px; overflow: hidden; background: white;">
+        <!-- Header -->
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid #E2E8F0; background: #F8FAFC;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 11px; color: #64748B;">Document 3 of 12</span>
+            <div style="width: 80px; height: 4px; background: #E2E8F0; border-radius: 2px;">
+              <div style="width: 25%; height: 100%; background: #2563EB; border-radius: 2px;"></div>
+            </div>
+          </div>
+          <div style="display: flex; gap: 6px;">
+            <div style="padding: 4px 8px; font-size: 10px; background: #F1F5F9; border-radius: 4px; color: #64748B;">← Prev</div>
+            <div style="padding: 4px 8px; font-size: 10px; background: #F1F5F9; border-radius: 4px; color: #64748B;">Next →</div>
+          </div>
+        </div>
+        <!-- Full width content -->
+        <div style="display: flex; gap: 0; min-height: 220px;">
+          <!-- Doc preview -->
+          <div style="flex: 1; padding: 16px; border-right: 1px solid #E2E8F0;">
+            <div style="background: #F1F5F9; height: 180px; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #94A3B8; font-size: 11px;">
+              📄 Document Preview (full width)
+            </div>
+          </div>
+          <!-- Fields -->
+          <div style="width: 280px; padding: 16px; font-size: 11px;">
+            <div style="font-weight: 600; margin-bottom: 8px; color: #0F172A;">Extracted Data</div>
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+              <div style="display: flex; justify-content: space-between;"><span style="color: #64748B;">Issuer</span><span style="color: #0F172A;">บจก. สยาม</span></div>
+              <div style="display: flex; justify-content: space-between;"><span style="color: #64748B;">Amount</span><span style="color: #0F172A; font-weight: 600;">฿45,200.00</span></div>
+              <div style="display: flex; justify-content: space-between;"><span style="color: #64748B;">VAT</span><span style="color: #0F172A;">฿3,164.00</span></div>
+              <div style="display: flex; justify-content: space-between;"><span style="color: #64748B;">Date</span><span style="color: #0F172A;">15 Mar 2026</span></div>
+              <div style="display: flex; justify-content: space-between;"><span style="color: #64748B;">Confidence</span><span style="color: #059669; font-weight: 500;">92%</span></div>
+            </div>
+          </div>
+        </div>
+        <!-- Action bar -->
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-top: 1px solid #E2E8F0; background: #F8FAFC;">
+          <div style="padding: 6px 16px; background: #FEE2E2; color: #DC2626; border-radius: 6px; font-size: 11px; font-weight: 500; cursor: pointer;">Reject</div>
+          <div style="display: flex; gap: 8px;">
+            <div style="padding: 6px 16px; background: white; border: 1px solid #E2E8F0; border-radius: 6px; font-size: 11px; color: #475569;">Skip</div>
+            <div style="padding: 6px 16px; background: #2563EB; color: white; border-radius: 6px; font-size: 11px; font-weight: 500;">Approve & Next →</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A. Queue-Based</h3>
+      <p>One at a time, full screen. Progress bar shows position. "Approve & Next" auto-advances. Like processing a stack of papers.</p>
+      <div class="pros-cons" style="margin-top: 8px;">
+        <div class="pros"><h4>Pros</h4><ul><li>Focused, fast processing</li><li>Clear progress tracking</li><li>Keyboard shortcuts friendly</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Can't jump to specific doc</li><li>Less context of full queue</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Option B: Split view -->
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding: 16px; background: #F8FAFC;">
+      <div style="border: 1px solid #E2E8F0; border-radius: 10px; overflow: hidden; background: white; display: flex; min-height: 280px;">
+        <!-- Left: Queue list -->
+        <div style="width: 220px; border-right: 1px solid #E2E8F0; font-size: 10px;">
+          <div style="padding: 10px 12px; border-bottom: 1px solid #E2E8F0; font-weight: 600; color: #0F172A; font-size: 11px;">
+            Pending (12)
+          </div>
+          <!-- Queue items -->
+          <div style="padding: 8px; display: flex; flex-direction: column; gap: 2px;">
+            <div style="padding: 8px; background: #EFF6FF; border-radius: 6px; border-left: 3px solid #2563EB;">
+              <div style="font-weight: 600; color: #0F172A;">บจก. สยาม</div>
+              <div style="color: #64748B; margin-top: 2px;">฿45,200 · 15 Mar</div>
+            </div>
+            <div style="padding: 8px; border-radius: 6px;">
+              <div style="color: #0F172A;">Thai Watsadu</div>
+              <div style="color: #64748B; margin-top: 2px;">฿12,800 · 14 Mar</div>
+            </div>
+            <div style="padding: 8px; border-radius: 6px;">
+              <div style="color: #0F172A;">Lotus's</div>
+              <div style="color: #64748B; margin-top: 2px;">฿8,400 · 14 Mar</div>
+            </div>
+            <div style="padding: 8px; border-radius: 6px;">
+              <div style="color: #94A3B8;">+ 9 more</div>
+            </div>
+          </div>
+        </div>
+        <!-- Right: Selected detail -->
+        <div style="flex: 1; display: flex; flex-direction: column;">
+          <div style="padding: 12px 16px; border-bottom: 1px solid #E2E8F0; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <div style="font-weight: 600; font-size: 12px; color: #0F172A;">บจก. สยาม</div>
+              <div style="font-size: 10px; color: #64748B;">INV-2026-0342 · Expense</div>
+            </div>
+            <span style="padding: 2px 8px; background: #D1FAE5; color: #065F46; border-radius: 4px; font-size: 9px; font-weight: 500;">92% confidence</span>
+          </div>
+          <div style="flex: 1; padding: 12px 16px; display: flex; gap: 12px;">
+            <div style="flex: 1; background: #F1F5F9; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #94A3B8; font-size: 10px;">
+              📄 Preview
+            </div>
+            <div style="width: 160px; font-size: 10px;">
+              <div style="display: flex; flex-direction: column; gap: 5px;">
+                <div><span style="color: #64748B;">Amount</span><br><span style="font-weight: 600;">฿45,200</span></div>
+                <div><span style="color: #64748B;">VAT</span><br><span>฿3,164</span></div>
+                <div><span style="color: #64748B;">Date</span><br><span>15 Mar 2026</span></div>
+              </div>
+            </div>
+          </div>
+          <!-- Actions -->
+          <div style="display: flex; gap: 6px; padding: 10px 16px; border-top: 1px solid #E2E8F0; justify-content: flex-end;">
+            <div style="padding: 5px 12px; background: #FEE2E2; color: #DC2626; border-radius: 6px; font-size: 10px;">Reject</div>
+            <div style="padding: 5px 12px; background: #2563EB; color: white; border-radius: 6px; font-size: 10px;">Approve</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B. Split View</h3>
+      <p>Queue list on left, selected document detail on right. Click any doc to review. Actions stay in-context.</p>
+      <div class="pros-cons" style="margin-top: 8px;">
+        <div class="pros"><h4>Pros</h4><ul><li>See full queue at glance</li><li>Jump to any document</li><li>Familiar email-client UX</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Less preview space</li><li>More visual complexity</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Option C: Inline in Documents -->
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding: 16px; background: #F8FAFC;">
+      <div style="border: 1px solid #E2E8F0; border-radius: 10px; overflow: hidden; background: white; min-height: 280px;">
+        <!-- Tab bar -->
+        <div style="display: flex; gap: 0; border-bottom: 1px solid #E2E8F0; font-size: 10px;">
+          <div style="padding: 8px 14px; color: #64748B;">All (47)</div>
+          <div style="padding: 8px 14px; color: #64748B;">Action (3)</div>
+          <div style="padding: 8px 14px; color: #2563EB; font-weight: 600; border-bottom: 2px solid #2563EB;">Pending (12)</div>
+          <div style="padding: 8px 14px; color: #64748B;">Approved (28)</div>
+        </div>
+        <!-- Table + Side panel -->
+        <div style="display: flex; min-height: 230px;">
+          <!-- Table -->
+          <div style="flex: 1; font-size: 10px;">
+            <div style="display: flex; padding: 6px 12px; background: #F8FAFC; border-bottom: 1px solid #E2E8F0; color: #64748B; font-weight: 500;">
+              <div style="flex: 2;">Issuer</div>
+              <div style="flex: 1;">Amount</div>
+              <div style="flex: 1;">Status</div>
+            </div>
+            <div style="display: flex; padding: 8px 12px; background: #EFF6FF; border-bottom: 1px solid #E2E8F0; border-left: 3px solid #2563EB; cursor: pointer;">
+              <div style="flex: 2; font-weight: 500; color: #0F172A;">บจก. สยาม</div>
+              <div style="flex: 1;">฿45,200</div>
+              <div style="flex: 1;"><span style="padding: 1px 6px; background: #FEF3C7; color: #92400E; border-radius: 3px; font-size: 9px;">Pending</span></div>
+            </div>
+            <div style="display: flex; padding: 8px 12px; border-bottom: 1px solid #E2E8F0; cursor: pointer;">
+              <div style="flex: 2; color: #0F172A;">Thai Watsadu</div>
+              <div style="flex: 1;">฿12,800</div>
+              <div style="flex: 1;"><span style="padding: 1px 6px; background: #FEF3C7; color: #92400E; border-radius: 3px; font-size: 9px;">Pending</span></div>
+            </div>
+            <div style="display: flex; padding: 8px 12px; border-bottom: 1px solid #E2E8F0; cursor: pointer;">
+              <div style="flex: 2; color: #0F172A;">Lotus's</div>
+              <div style="flex: 1;">฿8,400</div>
+              <div style="flex: 1;"><span style="padding: 1px 6px; background: #FEF3C7; color: #92400E; border-radius: 3px; font-size: 9px;">Pending</span></div>
+            </div>
+          </div>
+          <!-- Side panel -->
+          <div style="width: 240px; border-left: 1px solid #E2E8F0; padding: 12px; font-size: 10px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+              <span style="font-weight: 600; color: #0F172A; font-size: 11px;">บจก. สยาม</span>
+              <span style="color: #64748B; cursor: pointer; font-size: 10px;">✕</span>
+            </div>
+            <div style="background: #F1F5F9; height: 80px; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #94A3B8; font-size: 9px; margin-bottom: 10px;">
+              📄 Preview
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px;">
+              <div style="display: flex; justify-content: space-between;"><span style="color: #64748B;">Amount</span><span style="font-weight: 600;">฿45,200</span></div>
+              <div style="display: flex; justify-content: space-between;"><span style="color: #64748B;">VAT</span><span>฿3,164</span></div>
+              <div style="display: flex; justify-content: space-between;"><span style="color: #64748B;">Confidence</span><span style="color: #059669;">92%</span></div>
+            </div>
+            <div style="display: flex; gap: 6px;">
+              <div style="flex: 1; padding: 5px; text-align: center; background: #FEE2E2; color: #DC2626; border-radius: 6px; font-size: 10px;">Reject</div>
+              <div style="flex: 1; padding: 5px; text-align: center; background: #2563EB; color: white; border-radius: 6px; font-size: 10px;">Approve</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C. Inline in Documents</h3>
+      <p>No separate Approvals page. "Approvals" nav pre-filters Documents to "Pending" tab. Side panel has approve/reject actions.</p>
+      <div class="pros-cons" style="margin-top: 8px;">
+        <div class="pros"><h4>Pros</h4><ul><li>Single source of truth</li><li>No page duplication</li><li>Consistent UX everywhere</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Side panel space limited</li><li>Less focused than dedicated page</li></ul></div>
+      </div>
+    </div>
+  </div>
+</div>
