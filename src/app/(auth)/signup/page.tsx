@@ -41,7 +41,7 @@ function SignupForm() {
       if (inviteToken) {
         router.push(`/login?invite=${inviteToken}`);
       } else {
-        router.push("/login");
+        router.push(`/signup/verify-email?email=${encodeURIComponent(email)}`);
       }
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Network error. Please try again.");

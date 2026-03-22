@@ -1022,7 +1022,6 @@ function ExtractionsContent() {
         </button>
       </div>
 
-    
       {/* Detail view */}
       <div className="mt-4 min-h-0 flex-1">
         {detail ? (
