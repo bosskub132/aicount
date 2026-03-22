@@ -69,7 +69,6 @@ export async function updateSession(request: NextRequest) {
     const tenantId =
       request.headers.get("x-tenant-id") ||
       pathTenantIdMatch?.[1] ||
-      request.nextUrl.searchParams.get("tenantId") ||
       "00000000-0000-0000-0000-000000000000";
 
     requestHeaders.set("x-user-id", user.id);
