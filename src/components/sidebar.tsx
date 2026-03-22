@@ -31,7 +31,7 @@ const navGroups = [
     items: [
       { href: "/upload", label: "Upload & OCR", icon: Upload },
       { href: "/documents", label: "All Documents", icon: FileText },
-      { href: "/approvals", label: "Approvals", icon: CheckCircle2 },
+      { href: "/documents?tab=pending", label: "Approvals", icon: CheckCircle2 },
     ],
   },
   {
