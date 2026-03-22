@@ -5,9 +5,9 @@ import { Resend } from "resend";
 import { db } from "@/lib/db";
 import { invitations, tenants } from "@/lib/db/schema";
 import { ensureRole, forbidden, getRequestContext, unauthorized } from "@/lib/api/request-context";
+import { getAppUrl } from "@/lib/utils/app-url";
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
 export async function GET(
   request: Request,
@@ -67,7 +67,7 @@ export async function POST(
       })
       .returning();
 
-    const inviteUrl = `${APP_URL}/invite/${token}`;
+    const inviteUrl = `${getAppUrl()}/invite/${token}`;
 
     if (resend) {
       await resend.emails.send({

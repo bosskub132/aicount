@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { profiles } from "@/lib/db/schema";
 import { validateCsrf } from "@/lib/api/csrf";
 import { checkRateLimit } from "@/lib/api/rate-limit";
+import { getAppUrl } from "@/lib/utils/app-url";
 
 export async function POST(request: Request) {
   try {
@@ -32,10 +33,14 @@ export async function POST(request: Request) {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     );
 
+    const appUrl = getAppUrl();
     const { data, error } = await supabase.auth.signUp({
       email: body.email,
       password: body.password,
-      options: { data: { name: body.name || null, role: body.role || "maker" } },
+      options: {
+        data: { name: body.name || null, role: body.role || "maker" },
+        emailRedirectTo: `${appUrl}/auth/callback`,
+      },
     });
     if (error) {
       return NextResponse.json({ success: false, error: error.message }, { status: 400 });
