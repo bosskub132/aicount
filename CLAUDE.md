@@ -59,6 +59,9 @@ scripts/            # Utility scripts (migration, health checks, smoke tests)
 - Constants and enums are in `src/lib/utils/constants.ts`
 - Business logic lives in `src/lib/services/`
 - Database queries are in `src/lib/db/queries/`
+- React Compiler is active — avoid `Date.now()` / `Math.random()` in render, wrap cascading `setState` in `startTransition`, stabilize useMemo deps
+- Direction enum mapping: `"REVENUE"` = Accounts Receivable (AR), `"EXPENSE"` = Accounts Payable (AP)
+- Drizzle migrations: use `npx drizzle-kit generate` (auto-names files) — never hardcode migration filenames
 
 ## Design Tokens & Styling
 
@@ -89,17 +92,29 @@ if (!ensureTenantScope(ctx.tenantId, tenantId)) return forbidden("Cross-tenant a
 ```
 - NEVER expose raw `error.message` to clients — log it server-side, return generic message
 - Validate `status` params against allowlist, cap `search` input length
+- **Testing locally:** Routes expect headers set by proxy.ts, not cookies:
+  `curl -H "x-user-id: UUID" -H "x-tenant-id: UUID" -H "x-user-role: admin" http://localhost:3000/api/...`
+- Users link to tenants via `tenant_assignments` table (not profiles or workspace_members)
 
 ## Design System Components (Phase 1)
 
 All in `src/components/` (flat structure). Use these instead of inline markup:
 - **Primitives:** Button, Input, Badge/StatusBadge, Avatar
 - **Feedback:** Toast/ToastProvider, Modal, Tooltip, DropdownMenu
-- **Data:** Tabs, DataTable (with onRowClick), Pagination, StatCard (with href), Card, EmptyState, Skeleton
+- **Data:** Tabs, DataTable (with onRowClick + expandedRow), Pagination, StatCard (with href), Card, EmptyState, Skeleton
 - **Forms:** Select, Checkbox, RadioGroup, Toggle
 - **Navigation:** Breadcrumbs, Sidebar, Header
 - **Document:** DocumentSidePanel, DocumentImageViewer, ConfidenceBar, StatusTimeline, UploadQueue
+- **Accounting:** CurrencyInput, AccountSelect, JournalLineEditor, AgingMiniBar
 - **Toast hook:** `import { useToast } from "@/lib/stores/ui-store"`
+
+## Database Schema (Phase 3)
+
+- `journalEntries` — header table grouping `journalLines`, tracks JV number/status/type
+- `journalLines.documentId` is nullable (manual JVs have no source document)
+- `journalLines.journalEntryId` — FK to journalEntries header
+- `payments` — tracks AR/AP payments against documents, includes WHT deduction
+- `bankTransactions` + `bankReconMatches` — bank reconciliation
 
 ## Asset Handling
 
