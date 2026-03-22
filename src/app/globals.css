@@ -105,8 +105,8 @@
   --badge-manual-bg: #f1f5f9;
   --badge-manual-text: #475569;
   /* Aging gradient colors */
-  --aging-current: var(--color-foreground);
-  --aging-30: var(--color-foreground);
+  --aging-current: #059669;
+  --aging-30: #eab308;
   --aging-60: #d97706;
   --aging-90: #ea580c;
   --aging-overdue: var(--color-destructive);
