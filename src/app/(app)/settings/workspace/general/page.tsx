@@ -1,0 +1,220 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { Building2, Save } from "lucide-react";
+
+type TenantData = {
+  id: string;
+  name: string;
+  taxId: string | null;
+  vatRegistered: boolean;
+  baseCurrency: string;
+  dataRetentionYears: number;
+};
+
+export default function WorkspaceGeneralPage() {
+  const [tenantId, setTenantId] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState("");
+
+  const [name, setName] = useState("");
+  const [taxId, setTaxId] = useState("");
+  const [vatRegistered, setVatRegistered] = useState(false);
+  const [baseCurrency, setBaseCurrency] = useState("THB");
+  const [dataRetentionYears, setDataRetentionYears] = useState(5);
+
+  useEffect(() => {
+    const id = localStorage.getItem("workspaceTenantId") ?? "";
+    setTenantId(id);
+
+    if (!id) {
+      setLoading(false);
+      return;
+    }
+
+    async function fetchTenant() {
+      try {
+        const response = await fetch(`/api/tenants/${id}`, {
+          headers: { "x-tenant-id": id },
+        });
+        const json = (await response.json()) as { success: boolean; data?: TenantData; error?: string };
+        if (json.success && json.data) {
+          const d = json.data;
+          setName(d.name);
+          setTaxId(d.taxId ?? "");
+          setVatRegistered(d.vatRegistered);
+          setBaseCurrency(d.baseCurrency ?? "THB");
+          setDataRetentionYears(d.dataRetentionYears ?? 5);
+        } else {
+          setError(json.error ?? "Failed to load workspace");
+        }
+      } catch {
+        setError("Failed to load workspace");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    void fetchTenant();
+  }, []);
+
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    setError("");
+    setSaved(false);
+
+    try {
+      const response = await fetch(`/api/tenants/${tenantId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "x-tenant-id": tenantId,
+        },
+        body: JSON.stringify({ name, taxId, vatRegistered, baseCurrency, dataRetentionYears }),
+      });
+      const json = (await response.json()) as { success: boolean; error?: string };
+      if (json.success) {
+        setSaved(true);
+        setTimeout(() => setSaved(false), 3000);
+      } else {
+        setError(json.error ?? "Failed to save workspace settings");
+      }
+    } catch {
+      setError("Failed to save workspace settings");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (!tenantId && !loading) {
+    return (
+      <section className="space-y-6">
+        <div className="flex items-center gap-3">
+          <Building2 className="h-6 w-6 text-slate-500" />
+          <div>
+            <h1 className="text-2xl font-semibold text-slate-900">Workspace Settings</h1>
+            <p className="text-sm text-slate-500">Manage your workspace configuration.</p>
+          </div>
+        </div>
+        <div className="flex max-w-lg flex-col items-center justify-center rounded-lg border border-slate-200 bg-white p-12 text-center shadow-sm">
+          <Building2 className="mb-3 h-10 w-10 text-slate-300" />
+          <p className="text-sm font-medium text-slate-700">No workspace selected</p>
+          <p className="mt-1 text-xs text-slate-400">Select a workspace to manage its settings.</p>
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section className="space-y-6">
+      <div className="flex items-center gap-3">
+        <Building2 className="h-6 w-6 text-slate-500" />
+        <div>
+          <h1 className="text-2xl font-semibold text-slate-900">Workspace Settings</h1>
+          <p className="text-sm text-slate-500">Manage your workspace configuration.</p>
+        </div>
+      </div>
+
+      <div className="max-w-lg rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+        {loading ? (
+          <p className="text-sm text-slate-500">Loading...</p>
+        ) : (
+          <form onSubmit={handleSave} className="space-y-5">
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-slate-700" htmlFor="workspace-name">
+                Name
+              </label>
+              <input
+                id="workspace-name"
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Workspace name"
+                required
+                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-slate-700" htmlFor="tax-id">
+                Tax ID
+              </label>
+              <input
+                id="tax-id"
+                type="text"
+                value={taxId}
+                onChange={(e) => {
+                  const v = e.target.value.replace(/\D/g, "").slice(0, 13);
+                  setTaxId(v);
+                }}
+                placeholder="13-digit tax ID"
+                maxLength={13}
+                pattern="\d{13}"
+                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
+              <p className="text-xs text-slate-400">Must be exactly 13 numeric digits.</p>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <input
+                id="vat-registered"
+                type="checkbox"
+                checked={vatRegistered}
+                onChange={(e) => setVatRegistered(e.target.checked)}
+                className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+              />
+              <label className="text-sm font-medium text-slate-700" htmlFor="vat-registered">
+                VAT Registered
+              </label>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-slate-700" htmlFor="base-currency">
+                Base Currency
+              </label>
+              <input
+                id="base-currency"
+                type="text"
+                value={baseCurrency}
+                onChange={(e) => setBaseCurrency(e.target.value.toUpperCase())}
+                placeholder="THB"
+                maxLength={3}
+                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-slate-700" htmlFor="data-retention">
+                Data Retention (Years)
+              </label>
+              <input
+                id="data-retention"
+                type="number"
+                value={dataRetentionYears}
+                onChange={(e) => setDataRetentionYears(Number(e.target.value))}
+                min={1}
+                max={30}
+                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
+            </div>
+
+            {error ? <p className="text-sm text-red-600">{error}</p> : null}
+            {saved ? <p className="text-sm text-green-600">Settings saved!</p> : null}
+
+            <button
+              type="submit"
+              disabled={saving}
+              className="flex items-center gap-2 rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-60"
+            >
+              <Save className="h-4 w-4" />
+              {saving ? "Saving..." : "Save"}
+            </button>
+          </form>
+        )}
+      </div>
+    </section>
+  );
+}

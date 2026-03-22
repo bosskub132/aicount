@@ -12,6 +12,36 @@
 
 ---
 
+## ⚠️ Prerequisites — Auth/Settings Rework (2026-03-22)
+
+> The auth, onboarding, settings, and deletion rework was completed BEFORE this plan.
+> Key changes that affect this plan:
+>
+> 1. **`src/components/onboarding-modal.tsx` was DELETED.** Onboarding is now 7 dedicated
+>    route pages at `src/app/(onboarding)/onboarding/*/page.tsx`. Task 11 Step 4 (refactor
+>    onboarding modal) is no longer needed.
+>
+> 2. **`src/app/(app)/layout.tsx` was reworked.** It now includes:
+>    - Account deletion redirect (`profiles.deletedAt` → `/account-deleted`)
+>    - Onboarding redirect with step-resume (`isOnboardingComplete` → `/onboarding/[step]`)
+>    - Workspace deletion banner (`tenants.deletedAt` → amber warning bar)
+>    These must be preserved when Task 10 replaces the layout with Sidebar + Header.
+>
+> 3. **`src/app/(app)/settings/` has a new layout** (`settings/layout.tsx`) with its own
+>    sidebar navigation. The settings sidebar should be restyled to match the design system.
+>
+> 4. **Old settings routes deleted.** `settings/tenants/[id]/**` no longer exists. Master data
+>    and accounting pages are now at `settings/masterdata/*` and `settings/accounting/*`.
+>
+> 5. **New pages to restyle.** The onboarding pages, settings pages, verify-email page,
+>    delete-account page, and account-deleted page all use inline Tailwind and should be
+>    updated to use design system components once available (Button, Input, Card, etc.).
+>
+> **See:** `docs/superpowers/specs/2026-03-22-auth-settings-rework-design.md`
+> **See:** `docs/superpowers/plans/2026-03-22-auth-settings-rework.md`
+
+---
+
 ## File Structure
 
 ### New Files
@@ -49,7 +79,9 @@ src/
     global-search.tsx              # MODIFY — restyle to match design system
     offline-banner.tsx             # MODIFY — restyle to match design system
     workspace-selector.tsx         # MODIFY — restyle + move to sidebar context
-    onboarding-modal.tsx           # MODIFY — refactor to use new Modal component
+    # NOTE: onboarding-modal.tsx was DELETED by the auth/settings rework (2026-03-22).
+    # Onboarding is now route-based at src/app/(onboarding)/onboarding/*/page.tsx.
+    # No modal refactor needed.
   lib/
     stores/
       ui-store.ts                  # CREATE — Zustand store for sidebar, toasts, mobile menu
@@ -1950,8 +1982,9 @@ import { Header } from "@/components/header";
 import { ToastProvider } from "@/components/toast";
 import { GlobalSearch } from "@/components/global-search";
 import { OfflineBanner } from "@/components/offline-banner";
-import { OnboardingModal } from "@/components/onboarding-modal";
 import { getWorkspaceTenantId } from "@/components/workspace-selector";
+// NOTE: OnboardingModal no longer exists. Onboarding is now route-based.
+// The app layout redirects to /onboarding/[step] if isOnboardingComplete is false.
 
 // Map pathnames to page titles
 const pageTitles: Record<string, string> = {
@@ -1988,20 +2021,18 @@ function getPageTitle(pathname: string | null): string {
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const title = getPageTitle(pathname);
-  const [showOnboarding, setShowOnboarding] = useState(false);
-
-  useEffect(() => {
-    const tenantId = getWorkspaceTenantId();
-    if (!tenantId || tenantId === "default") {
-      setShowOnboarding(true);
-    }
-  }, []);
+  // NOTE: The current app layout (after auth/settings rework) already handles:
+  // - Account deletion redirect (profiles.deletedAt → /account-deleted)
+  // - Onboarding redirect (isOnboardingComplete === false → /onboarding/[step])
+  // - Workspace deletion banner (tenants.deletedAt → amber warning bar)
+  // These checks must be preserved when replacing the layout with the design system shell.
 
   return (
     <div className="flex h-screen bg-[var(--background)]">
       <Sidebar />
       <div className="flex flex-1 flex-col min-w-0">
         <Header title={title} />
+        {/* Workspace deletion banner — preserve from current layout */}
         <main className="flex-1 overflow-y-auto p-4 md:p-6">
           {children}
         </main>
@@ -2009,7 +2040,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <GlobalSearch />
       <OfflineBanner />
       <ToastProvider />
-      {showOnboarding && <OnboardingModal />}
     </div>
   );
 }
@@ -2030,6 +2060,12 @@ git commit -m "feat: replace inline layout with Sidebar + Header components"
 ---
 
 ## Task 11: Restyle Existing Components
+
+> **UPDATED 2026-03-22:** `onboarding-modal.tsx` was deleted by the auth/settings rework.
+> Onboarding is now route-based at `src/app/(onboarding)/`. The onboarding pages should
+> be restyled to use design system components once available, but that is a separate task.
+> Also note: `src/app/(app)/settings/` now has its own sidebar layout. The settings sidebar
+> should be restyled to match the design system alongside the app sidebar.
 
 **Files:**
 - Modify: `src/components/workspace-selector.tsx`
@@ -2063,24 +2099,15 @@ Replace hardcoded colors with CSS variables:
 - Results: use design system list styling with hover state `hover:bg-[var(--muted)]`
 - Keyboard shortcut badges: `bg-[var(--muted)] text-[var(--muted-foreground)]`
 
-- [ ] **Step 4: Refactor OnboardingModal to use new Modal component**
-
-Update `src/components/onboarding-modal.tsx`:
-- Replace the custom modal wrapper (fixed overlay + centered card) with the new `Modal` component
-- Replace hardcoded colors with CSS variables (`var(--primary)`, `var(--border)`, etc.)
-- Replace inline buttons with `Button` component
-- Replace inline inputs with `Input` component
-- Keep the 5-step onboarding logic and state unchanged
-
-- [ ] **Step 5: Verify dev server renders correctly**
+- [ ] **Step 4: Verify dev server renders correctly**
 
 Run: `npm run dev`
-Expected: All four components render with consistent design tokens. Workspace selector appears in sidebar. Search overlay matches new design. Onboarding modal uses new Modal component.
+Expected: All three components render with consistent design tokens. Workspace selector appears in sidebar. Search overlay matches new design.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 5: Commit**
 
 ```bash
-git add src/components/workspace-selector.tsx src/components/offline-banner.tsx src/components/global-search.tsx src/components/onboarding-modal.tsx
+git add src/components/workspace-selector.tsx src/components/offline-banner.tsx src/components/global-search.tsx
 git commit -m "feat: restyle existing components to match design system"
 ```
 
@@ -2150,6 +2177,10 @@ Run: `npm run dev` and check:
 - [ ] Mobile responsive: sidebar collapses at <768px, hamburger menu works
 - [ ] Toast notifications work (test via browser console if needed)
 - [ ] Global search opens with Cmd+K
+- [ ] Settings sidebar renders correctly inside the content area (nested sidebar)
+- [ ] Onboarding pages render without app sidebar (dedicated layout)
+- [ ] Workspace deletion banner shows when workspace has deletedAt set
+- [ ] Account deletion redirect works (profile.deletedAt → /account-deleted)
 
 - [ ] **Step 4: Final commit**
 

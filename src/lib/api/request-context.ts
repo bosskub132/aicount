@@ -57,21 +57,20 @@ export function getRequestContext(request: Request): RequestContext | null {
     };
   }
 
-  // Local/dev fallback: allow routes to work even when client auth headers
-  // are not wired yet. Production remains strict.
-  if (process.env.NODE_ENV !== "production") {
+  // Dev fallback removed for security — all requests must go through middleware.
+  // If you need local dev without auth, set DEV_AUTH_BYPASS=true in .env.local
+  // and provide x-user-id header manually.
+  if (process.env.DEV_AUTH_BYPASS === "true" && process.env.NODE_ENV !== "production") {
     const url = new URL(request.url);
     const pathTenantId = url.pathname.match(/^\/api\/tenants\/([^/]+)/)?.[1] ?? null;
     const derivedTenantId = tenantId || url.searchParams.get("tenantId") || pathTenantId;
-    const derivedRole =
-      role === "admin" || role === "maker" || role === "checker" ? role : "admin";
 
-    if (derivedTenantId) {
+    if (userId && derivedTenantId) {
       return {
-        userId: userId || "dev-user",
+        userId,
         userEmail: userEmail || null,
         tenantId: derivedTenantId,
-        role: derivedRole,
+        role: (role as RequestContext["role"]) || "maker",
         ipAddress,
       };
     }
@@ -96,9 +95,8 @@ export function ensureRole(
 }
 
 export function ensureTenantScope(ctxTenantId: string, requestedTenantId: string) {
-  // If middleware couldn't derive tenant from URL (default placeholder),
-  // trust the tenant ID provided in the request body/form.
-  if (ctxTenantId === "00000000-0000-0000-0000-000000000000") return true;
+  // Zero UUID is the default placeholder — never allow it to bypass scope
+  if (ctxTenantId === "00000000-0000-0000-0000-000000000000") return false;
   return ctxTenantId === requestedTenantId;
 }
 

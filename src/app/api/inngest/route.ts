@@ -8,6 +8,8 @@ import {
 } from "@/lib/inngest/functions/send-notifications";
 import { applyDataRetention } from "@/lib/inngest/functions/data-retention";
 import { autoExpirePendingApprovals } from "@/lib/inngest/functions/workflow-maintenance";
+import { workspacePurge } from "@/lib/inngest/functions/workspace-purge";
+import { accountPurge } from "@/lib/inngest/functions/account-purge";
 
 export const { GET, POST, PUT } = serve({
   client: inngest,
@@ -18,5 +20,7 @@ export const { GET, POST, PUT } = serve({
     notifyDocumentPendingApproval,
     applyDataRetention,
     autoExpirePendingApprovals,
+    workspacePurge,
+    accountPurge,
   ],
 });

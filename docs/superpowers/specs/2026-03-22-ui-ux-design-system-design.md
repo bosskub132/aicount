@@ -432,10 +432,13 @@ This spec covers **Phase 1** only. Subsequent phases each get their own spec:
    - Tax Reports (ภ.พ.30, ภ.พ.36, ภ.ง.ด. series)
    - WHT Certificates (50 ทวิ)
 
-5. **Phase 5: Settings, Master Data, Auth & Onboarding**
-   - COA, vendors, customers, departments, products
-   - Login/signup polish, onboarding wizard redesign
-   - Dashboard analytics page
+5. **Phase 5: Settings, Master Data, Auth & Onboarding** ✅ COMPLETED (2026-03-22)
+   - ~~COA, vendors, customers, departments, products~~ → Migrated to `/settings/masterdata/*`
+   - ~~Login/signup polish, onboarding wizard redesign~~ → Auth callback, email verification, dedicated onboarding pages
+   - Settings overhaul with sidebar navigation at `/settings/*`
+   - Account & workspace soft delete with 30-day grace period
+   - See: `docs/superpowers/specs/2026-03-22-auth-settings-rework-design.md`
+   - **Remaining:** Restyle all new pages to use Phase 1 design system components once available
 
 6. **Phase 6: AI Assistant & Suggestion System**
    - AI provider abstraction layer (Claude default, swappable)

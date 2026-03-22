@@ -26,23 +26,43 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  let user = null;
+  try {
+    const { data } = await supabase.auth.getUser();
+    user = data.user;
+  } catch {
+    // Stale/invalid refresh token — treat as unauthenticated.
+    // Clear the bad cookies so the user can log in fresh.
+  }
 
   const isApiRoute = request.nextUrl.pathname.startsWith("/api");
   const isAuthPage =
     request.nextUrl.pathname.startsWith("/login") ||
     request.nextUrl.pathname.startsWith("/signup") ||
     request.nextUrl.pathname.startsWith("/invite");
+  const isAuthCallback = request.nextUrl.pathname.startsWith("/auth/callback");
+  const isVerifyEmailPage = request.nextUrl.pathname.startsWith("/signup/verify-email");
 
-  if (!user && !isAuthPage && !isApiRoute) {
+  if (!user && !isAuthPage && !isApiRoute && !isAuthCallback) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
   }
 
   if (user) {
+    const isResendVerifyRoute = request.nextUrl.pathname === "/api/auth/resend-verification";
+    if (!user.email_confirmed_at && !isAuthPage && !isAuthCallback && !isVerifyEmailPage && !isResendVerifyRoute) {
+      if (isApiRoute) {
+        return NextResponse.json({ success: false, error: "Email not verified" }, { status: 403 });
+      }
+      const url = request.nextUrl.clone();
+      url.pathname = "/signup/verify-email";
+      if (user.email) {
+        url.searchParams.set("email", user.email);
+      }
+      return NextResponse.redirect(url);
+    }
+
     const roleRaw = String(user.user_metadata?.role || "maker");
     const role = roleRaw === "admin" || roleRaw === "checker" ? roleRaw : "maker";
     const pathTenantIdMatch = request.nextUrl.pathname.match(/^\/api\/tenants\/([^/]+)/);
