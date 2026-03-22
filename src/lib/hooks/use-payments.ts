@@ -9,6 +9,7 @@ interface RecordPaymentInput {
   paymentMethod?: string;
   reference?: string;
   notes?: string;
+  whtAmount?: number;
 }
 
 export function useRecordPayment(tenantId: string) {
