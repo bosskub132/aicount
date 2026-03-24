@@ -573,7 +573,7 @@ function BulkGenerateTab({
   const batchGenerate = useBatchGenerateWht();
   const toast = useToast();
 
-  const documents: UncertifiedDocRow[] = data?.items ?? [];
+  const documents: UncertifiedDocRow[] = useMemo(() => data?.items ?? [], [data?.items]);
 
   const allSelected =
     documents.length > 0 && selectedIds.size === documents.length;

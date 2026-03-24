@@ -222,10 +222,9 @@ export async function generateCertificate(
     };
 
     // 6c. Render PDF
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const pdfBuffer = await renderToBuffer(
-      createElement(WhtCertificatePdf, { data: certData }) as any
-    );
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- @react-pdf/renderer type mismatch
+    const pdfElement: any = createElement(WhtCertificatePdf, { data: certData });
+    const pdfBuffer = await renderToBuffer(pdfElement);
 
     // 6d. Upload to Supabase Storage
     const storagePath = `${tenantId}/wht-certificates/${certificateNo}.pdf`;
@@ -351,10 +350,9 @@ export async function voidCertificate(
   };
 
   // 3. Re-render PDF with voided watermark
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const pdfBuffer = await renderToBuffer(
-    createElement(WhtCertificatePdf, { data: certData }) as any
-  );
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- @react-pdf/renderer type mismatch
+  const voidPdfElement: any = createElement(WhtCertificatePdf, { data: certData });
+  const pdfBuffer = await renderToBuffer(voidPdfElement);
 
   // 4. Overwrite at the same storage path
   if (cert.pdfStoragePath) {
