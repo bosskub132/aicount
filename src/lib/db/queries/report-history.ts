@@ -112,63 +112,70 @@ export async function upsertReportDraft(
 ): Promise<ReportHistoryRow> {
   const now = new Date();
 
-  // Check for existing draft (unique index: tenantId + reportType + period + periodScope where locked_at IS NULL AND deleted_at IS NULL)
-  const [existing] = await db
-    .select()
-    .from(reportHistory)
-    .where(
-      and(
-        eq(reportHistory.tenantId, tenantId),
-        eq(reportHistory.reportType, data.reportType),
-        eq(reportHistory.period, data.period),
-        eq(reportHistory.periodScope, data.periodScope),
-        isNull(reportHistory.lockedAt),
-        isNull(reportHistory.deletedAt)
+  return await db.transaction(async (tx) => {
+    // Check for existing draft inside transaction for atomicity
+    const [existing] = await tx
+      .select()
+      .from(reportHistory)
+      .where(
+        and(
+          eq(reportHistory.tenantId, tenantId),
+          eq(reportHistory.reportType, data.reportType),
+          eq(reportHistory.period, data.period),
+          eq(reportHistory.periodScope, data.periodScope),
+          isNull(reportHistory.lockedAt),
+          isNull(reportHistory.deletedAt)
+        )
       )
-    )
-    .limit(1);
+      .limit(1);
 
-  if (existing) {
-    const [updated] = await db
-      .update(reportHistory)
-      .set({
+    if (existing) {
+      // Refresh expires_at on regeneration
+      const policy = await getRetentionPolicy(tenantId);
+      const expiresAt = computeExpiresAt(data.reportType, false, policy);
+
+      const [updated] = await tx
+        .update(reportHistory)
+        .set({
+          dateFrom: data.dateFrom,
+          dateTo: data.dateTo,
+          filters: data.filters ?? existing.filters,
+          pdfStoragePath: data.pdfStoragePath ?? existing.pdfStoragePath,
+          pdfSizeBytes: data.pdfSizeBytes ?? existing.pdfSizeBytes,
+          generatedBy: data.generatedBy ?? existing.generatedBy,
+          expiresAt,
+          updatedAt: now,
+        })
+        .where(eq(reportHistory.id, existing.id))
+        .returning();
+
+      return updated;
+    }
+
+    // Compute expires_at for new draft
+    const policy = await getRetentionPolicy(tenantId);
+    const expiresAt = computeExpiresAt(data.reportType, false, policy);
+
+    const [inserted] = await tx
+      .insert(reportHistory)
+      .values({
+        tenantId,
+        reportType: data.reportType,
+        period: data.period,
+        periodScope: data.periodScope,
         dateFrom: data.dateFrom,
         dateTo: data.dateTo,
-        filters: data.filters ?? existing.filters,
-        pdfStoragePath: data.pdfStoragePath ?? existing.pdfStoragePath,
-        pdfSizeBytes: data.pdfSizeBytes ?? existing.pdfSizeBytes,
-        generatedBy: data.generatedBy ?? existing.generatedBy,
+        filters: data.filters ?? null,
+        pdfStoragePath: data.pdfStoragePath ?? null,
+        pdfSizeBytes: data.pdfSizeBytes ?? null,
+        generatedBy: data.generatedBy ?? null,
+        expiresAt,
         updatedAt: now,
       })
-      .where(eq(reportHistory.id, existing.id))
       .returning();
 
-    return updated;
-  }
-
-  // Compute expires_at for new draft
-  const policy = await getRetentionPolicy(tenantId);
-  const expiresAt = computeExpiresAt(data.reportType, false, policy);
-
-  const [inserted] = await db
-    .insert(reportHistory)
-    .values({
-      tenantId,
-      reportType: data.reportType,
-      period: data.period,
-      periodScope: data.periodScope,
-      dateFrom: data.dateFrom,
-      dateTo: data.dateTo,
-      filters: data.filters ?? null,
-      pdfStoragePath: data.pdfStoragePath ?? null,
-      pdfSizeBytes: data.pdfSizeBytes ?? null,
-      generatedBy: data.generatedBy ?? null,
-      expiresAt,
-      updatedAt: now,
-    })
-    .returning();
-
-  return inserted;
+    return inserted;
+  });
 }
 
 export async function lockReport(
@@ -191,7 +198,11 @@ export async function lockReport(
       updatedAt: new Date(),
     })
     .where(
-      and(eq(reportHistory.id, reportId), eq(reportHistory.tenantId, tenantId))
+      and(
+        eq(reportHistory.id, reportId),
+        eq(reportHistory.tenantId, tenantId),
+        isNull(reportHistory.lockedAt)
+      )
     )
     .returning();
 
@@ -235,7 +246,11 @@ export async function softDeleteReport(
       updatedAt: new Date(),
     })
     .where(
-      and(eq(reportHistory.id, reportId), eq(reportHistory.tenantId, tenantId))
+      and(
+        eq(reportHistory.id, reportId),
+        eq(reportHistory.tenantId, tenantId),
+        isNull(reportHistory.deletedAt)
+      )
     )
     .returning();
 
