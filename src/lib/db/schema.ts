@@ -307,8 +307,6 @@ export const documents = pgTable(
     whtAmount: decimal("wht_amount", { precision: 15, scale: 2 }),
     dueDate: date("due_date"),
 
-    dueDate: date("due_date"),
-
     // Classification
     direction: directionEnum("direction"),
     docType: docTypeEnum("doc_type"),
