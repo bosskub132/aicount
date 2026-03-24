@@ -26,6 +26,14 @@ import {
   GlDetailPdf,
   JournalListingPdf,
 } from "@/lib/services/report-pdf-templates";
+import {
+  Pp30Pdf,
+  Pp36Pdf,
+  Pnd3Pdf,
+  Pnd53Pdf,
+  PurchaseVatRegisterPdf,
+  SalesVatRegisterPdf,
+} from "@/lib/services/tax-pdf-templates";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -197,6 +205,24 @@ async function renderReportPdf(
     case "journal_listing":
       element = JournalListingPdf({ ...baseProps, data });
       break;
+    case "pp30":
+      element = Pp30Pdf({ ...baseProps, data });
+      break;
+    case "pp36":
+      element = Pp36Pdf({ ...baseProps, data });
+      break;
+    case "pnd3":
+      element = Pnd3Pdf({ ...baseProps, data });
+      break;
+    case "pnd53":
+      element = Pnd53Pdf({ ...baseProps, data });
+      break;
+    case "purchase_vat_register":
+      element = PurchaseVatRegisterPdf({ ...baseProps, data });
+      break;
+    case "sales_vat_register":
+      element = SalesVatRegisterPdf({ ...baseProps, data });
+      break;
     default:
       throw new Error(`Unsupported report type: ${reportType}`);
   }
@@ -335,6 +361,19 @@ async function fetchReportData(
         page: 1,
         limit: 10000, // Fetch all entries for PDF
       });
+
+    // Tax reports: data is passed through via filters.taxData
+    // These reports require pre-aggregated tax data from the calling API
+    case "pp30":
+    case "pp36":
+    case "pnd3":
+    case "pnd53":
+    case "purchase_vat_register":
+    case "sales_vat_register":
+      if (!filters?.taxData) {
+        throw new Error(`${reportType} requires pre-aggregated tax data in filters.taxData`);
+      }
+      return filters.taxData;
 
     default:
       throw new Error(`Unsupported report type: ${reportType}`);
