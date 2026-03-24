@@ -97,7 +97,10 @@ export const tenants = pgTable("tenants", {
   baseCurrency: varchar("base_currency", { length: 3 }).default("THB"),
   dataRetentionYears: integer("data_retention_years").default(7),
   defaultExportTemplateId: uuid("default_export_template_id"),
+  address: text("address"),
+  branchNumber: varchar("branch_number", { length: 20 }).default("00000"),
   nextJvSequence: integer("next_jv_sequence").default(0).notNull(),
+  nextWhtSequence: integer("next_wht_sequence").default(0).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   deletedAt: timestamp("deleted_at", { withTimezone: true }),
@@ -707,3 +710,52 @@ export const reportRetentionPolicy = pgTable("report_retention_policy", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   updatedBy: uuid("updated_by").references(() => profiles.id),
 });
+
+// ── WHT Certificates ──────────────────────────────────────────────────────
+
+export const whtCertificates = pgTable(
+  "wht_certificates",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    certificateNo: varchar("certificate_no", { length: 20 }).notNull(),
+    documentId: uuid("document_id")
+      .notNull()
+      .references(() => documents.id),
+    paymentId: uuid("payment_id"),
+    vendorId: uuid("vendor_id"),
+    formType: varchar("form_type", { length: 10 }).notNull(),
+    payeeName: text("payee_name").notNull(),
+    payeeTaxId: varchar("payee_tax_id", { length: 13 }).notNull(),
+    payeeBranch: varchar("payee_branch", { length: 20 }).default("00000"),
+    payeeAddress: text("payee_address"),
+    payerName: text("payer_name").notNull(),
+    payerTaxId: varchar("payer_tax_id", { length: 13 }).notNull(),
+    payerAddress: text("payer_address"),
+    payerBranch: varchar("payer_branch", { length: 20 }).default("00000"),
+    incomeType: varchar("income_type", { length: 50 }).notNull(),
+    incomeSection: varchar("income_section", { length: 20 }).notNull(),
+    paymentDate: date("payment_date").notNull(),
+    amountPaid: decimal("amount_paid", { precision: 15, scale: 2 }).notNull(),
+    whtRate: decimal("wht_rate", { precision: 5, scale: 2 }).notNull(),
+    whtAmount: decimal("wht_amount", { precision: 15, scale: 2 }).notNull(),
+    pdfStoragePath: text("pdf_storage_path"),
+    pdfSizeBytes: integer("pdf_size_bytes"),
+    issuedAt: timestamp("issued_at").defaultNow().notNull(),
+    issuedBy: uuid("issued_by").references(() => profiles.id),
+    voidedAt: timestamp("voided_at"),
+    voidedBy: uuid("voided_by").references(() => profiles.id),
+    voidReason: text("void_reason"),
+    replacesId: uuid("replaces_id"),
+    expiresAt: timestamp("expires_at"),
+    deletedAt: timestamp("deleted_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("wht_cert_tenant_no_idx").on(table.tenantId, table.certificateNo),
+    index("wht_cert_doc_idx").on(table.tenantId, table.documentId),
+  ]
+);
