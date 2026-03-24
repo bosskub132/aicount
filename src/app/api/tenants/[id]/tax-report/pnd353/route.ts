@@ -1,3 +1,4 @@
+// DEPRECATED: Use /api/tenants/{id}/reports/tax/pnd3 and /reports/tax/pnd53 instead
 import { and, between, eq, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";

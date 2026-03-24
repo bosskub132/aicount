@@ -1,3 +1,4 @@
+// DEPRECATED: Use /api/tenants/{id}/reports/tax/pp30 instead
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { and, between, eq, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
