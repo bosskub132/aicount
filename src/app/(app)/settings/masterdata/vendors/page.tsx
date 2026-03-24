@@ -9,6 +9,10 @@ type VendorRow = {
   address: string | null;
   defaultExpenseGl: string | null;
   defaultWhtRate: string | null;
+  vendorType: string;
+  isNonResident: boolean;
+  branchNumber: string | null;
+  country: string | null;
 };
 
 export default function MasterDataVendorsPage() {
@@ -20,12 +24,20 @@ export default function MasterDataVendorsPage() {
   const [address, setAddress] = useState("");
   const [defaultExpenseGl, setDefaultExpenseGl] = useState("");
   const [defaultWhtRate, setDefaultWhtRate] = useState("3");
+  const [vendorType, setVendorType] = useState("company");
+  const [isNonResident, setIsNonResident] = useState(false);
+  const [branchNumber, setBranchNumber] = useState("");
+  const [country, setCountry] = useState("");
   const [editId, setEditId] = useState("");
   const [editTaxId, setEditTaxId] = useState("");
   const [editName, setEditName] = useState("");
   const [editAddress, setEditAddress] = useState("");
   const [editDefaultExpenseGl, setEditDefaultExpenseGl] = useState("");
   const [editDefaultWhtRate, setEditDefaultWhtRate] = useState("3");
+  const [editVendorType, setEditVendorType] = useState("company");
+  const [editIsNonResident, setEditIsNonResident] = useState(false);
+  const [editBranchNumber, setEditBranchNumber] = useState("");
+  const [editCountry, setEditCountry] = useState("");
   const [message, setMessage] = useState("");
 
   useEffect(() => {
@@ -59,6 +71,10 @@ export default function MasterDataVendorsPage() {
         address: address || undefined,
         defaultExpenseGl: defaultExpenseGl || undefined,
         defaultWhtRate: Number(defaultWhtRate),
+        vendorType,
+        isNonResident,
+        branchNumber: branchNumber || undefined,
+        country: country || undefined,
       }),
     });
     const json = (await response.json()) as { success: boolean; error?: string };
@@ -69,6 +85,10 @@ export default function MasterDataVendorsPage() {
       setAddress("");
       setDefaultExpenseGl("");
       setDefaultWhtRate("3");
+      setVendorType("company");
+      setIsNonResident(false);
+      setBranchNumber("");
+      setCountry("");
       await load();
     }
   }
@@ -92,6 +112,10 @@ export default function MasterDataVendorsPage() {
     setEditAddress(row.address || "");
     setEditDefaultExpenseGl(row.defaultExpenseGl || "");
     setEditDefaultWhtRate(row.defaultWhtRate || "3");
+    setEditVendorType(row.vendorType || "company");
+    setEditIsNonResident(row.isNonResident ?? false);
+    setEditBranchNumber(row.branchNumber || "");
+    setEditCountry(row.country || "");
   }
 
   function cancelEdit() {
@@ -101,6 +125,10 @@ export default function MasterDataVendorsPage() {
     setEditAddress("");
     setEditDefaultExpenseGl("");
     setEditDefaultWhtRate("3");
+    setEditVendorType("company");
+    setEditIsNonResident(false);
+    setEditBranchNumber("");
+    setEditCountry("");
   }
 
   async function saveEdit() {
@@ -116,6 +144,10 @@ export default function MasterDataVendorsPage() {
         address: editAddress || undefined,
         defaultExpenseGl: editDefaultExpenseGl || undefined,
         defaultWhtRate: Number(editDefaultWhtRate),
+        vendorType: editVendorType,
+        isNonResident: editIsNonResident,
+        branchNumber: editBranchNumber || undefined,
+        country: editCountry || undefined,
       }),
     });
     const json = (await response.json()) as { success: boolean; error?: string };
@@ -151,6 +183,45 @@ export default function MasterDataVendorsPage() {
           value={defaultWhtRate}
           onChange={(e) => setDefaultWhtRate(e.target.value)}
         />
+        <div className="flex flex-col gap-1">
+          <label className="text-xs text-slate-500">Vendor Type / ประเภทผู้ขาย</label>
+          <select
+            className="rounded border px-2 py-1"
+            value={vendorType}
+            onChange={(e) => setVendorType(e.target.value)}
+          >
+            <option value="company">Company / นิติบุคคล</option>
+            <option value="individual">Individual / บุคคลธรรมดา</option>
+          </select>
+        </div>
+        <div className="flex items-center gap-2">
+          <label className="flex cursor-pointer items-center gap-2 text-xs text-slate-500">
+            <button
+              type="button"
+              role="switch"
+              aria-checked={isNonResident}
+              onClick={() => setIsNonResident(!isNonResident)}
+              className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors ${isNonResident ? "bg-slate-900" : "bg-slate-300"}`}
+            >
+              <span className={`inline-block h-3.5 w-3.5 rounded-full bg-white transition-transform ${isNonResident ? "translate-x-4" : "translate-x-0.5"}`} />
+            </button>
+            Non-Resident Vendor / ผู้ขายต่างประเทศ
+          </label>
+        </div>
+        {isNonResident && (
+          <input
+            className="rounded border px-2 py-1"
+            placeholder="Country / ประเทศ"
+            value={country}
+            onChange={(e) => setCountry(e.target.value)}
+          />
+        )}
+        <input
+          className="rounded border px-2 py-1"
+          placeholder="00000 = Head Office"
+          value={branchNumber}
+          onChange={(e) => setBranchNumber(e.target.value)}
+        />
         <button onClick={createVendor} className="rounded bg-slate-900 px-3 py-2 text-white hover:bg-slate-800">
           Add Vendor
         </button>
@@ -164,6 +235,8 @@ export default function MasterDataVendorsPage() {
             <tr>
               <th className="px-3 py-2">Tax ID</th>
               <th className="px-3 py-2">Name</th>
+              <th className="px-3 py-2">Type</th>
+              <th className="px-3 py-2">Branch</th>
               <th className="px-3 py-2">Address</th>
               <th className="px-3 py-2">Expense GL</th>
               <th className="px-3 py-2">WHT %</th>
@@ -185,6 +258,23 @@ export default function MasterDataVendorsPage() {
                     <input className="w-full rounded border px-2 py-1" value={editName} onChange={(e) => setEditName(e.target.value)} />
                   ) : (
                     row.name
+                  )}
+                </td>
+                <td className="px-3 py-2">
+                  {editId === row.id ? (
+                    <select className="rounded border px-2 py-1" value={editVendorType} onChange={(e) => setEditVendorType(e.target.value)}>
+                      <option value="company">Company</option>
+                      <option value="individual">Individual</option>
+                    </select>
+                  ) : (
+                    <span className="capitalize">{row.vendorType}{row.isNonResident ? " (NR)" : ""}</span>
+                  )}
+                </td>
+                <td className="px-3 py-2">
+                  {editId === row.id ? (
+                    <input className="w-24 rounded border px-2 py-1" placeholder="00000" value={editBranchNumber} onChange={(e) => setEditBranchNumber(e.target.value)} />
+                  ) : (
+                    row.branchNumber || "-"
                   )}
                 </td>
                 <td className="px-3 py-2">
@@ -243,7 +333,7 @@ export default function MasterDataVendorsPage() {
             ))}
             {!rows.length ? (
               <tr>
-                <td className="px-3 py-2 text-slate-500" colSpan={6}>
+                <td className="px-3 py-2 text-slate-500" colSpan={8}>
                   No vendors.
                 </td>
               </tr>

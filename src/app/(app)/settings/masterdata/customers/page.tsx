@@ -7,6 +7,7 @@ type CustomerRow = {
   taxId: string;
   name: string;
   creditTermDays: number | null;
+  branchNumber: string | null;
 };
 
 export default function MasterDataCustomersPage() {
@@ -20,6 +21,8 @@ export default function MasterDataCustomersPage() {
   const [editTaxId, setEditTaxId] = useState("");
   const [editName, setEditName] = useState("");
   const [editCreditTermDays, setEditCreditTermDays] = useState("30");
+  const [branchNumber, setBranchNumber] = useState("");
+  const [editBranchNumber, setEditBranchNumber] = useState("");
   const [message, setMessage] = useState("");
 
   useEffect(() => {
@@ -47,7 +50,7 @@ export default function MasterDataCustomersPage() {
     const response = await fetch(`/api/tenants/${tenantId}/customers`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-tenant-id": tenantId },
-      body: JSON.stringify({ taxId, name, creditTermDays: Number(creditTermDays) }),
+      body: JSON.stringify({ taxId, name, creditTermDays: Number(creditTermDays), branchNumber: branchNumber || undefined }),
     });
     const json = (await response.json()) as { success: boolean; error?: string };
     setMessage(json.success ? "Customer created" : json.error || "Create failed");
@@ -55,6 +58,7 @@ export default function MasterDataCustomersPage() {
       setTaxId("");
       setName("");
       setCreditTermDays("30");
+      setBranchNumber("");
       await load();
     }
   }
@@ -76,6 +80,7 @@ export default function MasterDataCustomersPage() {
     setEditTaxId(row.taxId);
     setEditName(row.name);
     setEditCreditTermDays(String(row.creditTermDays ?? 30));
+    setEditBranchNumber(row.branchNumber || "");
   }
 
   function cancelEdit() {
@@ -83,6 +88,7 @@ export default function MasterDataCustomersPage() {
     setEditTaxId("");
     setEditName("");
     setEditCreditTermDays("30");
+    setEditBranchNumber("");
   }
 
   async function saveEdit() {
@@ -96,6 +102,7 @@ export default function MasterDataCustomersPage() {
         taxId: editTaxId,
         name: editName,
         creditTermDays: Number(editCreditTermDays),
+        branchNumber: editBranchNumber || undefined,
       }),
     });
     const json = (await response.json()) as { success: boolean; error?: string };
@@ -129,6 +136,12 @@ export default function MasterDataCustomersPage() {
           value={creditTermDays}
           onChange={(e) => setCreditTermDays(e.target.value)}
         />
+        <input
+          className="rounded border px-2 py-1"
+          placeholder="00000 = Head Office"
+          value={branchNumber}
+          onChange={(e) => setBranchNumber(e.target.value)}
+        />
         <button onClick={createCustomer} className="rounded bg-slate-900 px-3 py-2 text-white hover:bg-slate-800">
           Add Customer
         </button>
@@ -142,6 +155,7 @@ export default function MasterDataCustomersPage() {
             <tr>
               <th className="px-3 py-2">Tax ID</th>
               <th className="px-3 py-2">Name</th>
+              <th className="px-3 py-2">Branch</th>
               <th className="px-3 py-2">Credit Days</th>
               <th className="px-3 py-2">Action</th>
             </tr>
@@ -161,6 +175,13 @@ export default function MasterDataCustomersPage() {
                     <input className="w-full rounded border px-2 py-1" value={editName} onChange={(e) => setEditName(e.target.value)} />
                   ) : (
                     row.name
+                  )}
+                </td>
+                <td className="px-3 py-2">
+                  {editId === row.id ? (
+                    <input className="w-24 rounded border px-2 py-1" placeholder="00000" value={editBranchNumber} onChange={(e) => setEditBranchNumber(e.target.value)} />
+                  ) : (
+                    row.branchNumber || "-"
                   )}
                 </td>
                 <td className="px-3 py-2">
@@ -201,7 +222,7 @@ export default function MasterDataCustomersPage() {
             ))}
             {!rows.length ? (
               <tr>
-                <td className="px-3 py-2 text-slate-500" colSpan={4}>
+                <td className="px-3 py-2 text-slate-500" colSpan={5}>
                   No customers.
                 </td>
               </tr>

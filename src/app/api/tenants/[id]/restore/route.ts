@@ -25,8 +25,8 @@ export async function POST(
 
     const body = (await request.json()) as {
       chartOfAccounts?: Array<{ accountCode: string; accountName: string; category: "asset" | "liability" | "equity" | "revenue" | "expense" }>;
-      vendors?: Array<{ taxId: string; name: string }>;
-      customers?: Array<{ taxId: string; name: string }>;
+      vendors?: Array<{ taxId: string; name: string; vendorType?: string; isNonResident?: boolean; branchNumber?: string; country?: string }>;
+      customers?: Array<{ taxId: string; name: string; branchNumber?: string }>;
       products?: Array<{ itemCode: string; itemName: string }>;
       departments?: Array<{ deptCode: string; deptName: string }>;
       purgeExisting?: boolean;
@@ -51,11 +51,24 @@ export async function POST(
       );
     }
     if (Array.isArray(body.vendors) && body.vendors.length) {
-      await db.insert(vendors).values(body.vendors.map((row) => ({ tenantId: id, taxId: row.taxId, name: row.name })));
+      await db.insert(vendors).values(body.vendors.map((row) => ({
+        tenantId: id,
+        taxId: row.taxId,
+        name: row.name,
+        vendorType: row.vendorType ?? "company",
+        isNonResident: row.isNonResident ?? false,
+        branchNumber: row.branchNumber,
+        country: row.country,
+      })));
     }
     if (Array.isArray(body.customers) && body.customers.length) {
       await db.insert(customers).values(
-        body.customers.map((row) => ({ tenantId: id, taxId: row.taxId, name: row.name }))
+        body.customers.map((row) => ({
+          tenantId: id,
+          taxId: row.taxId,
+          name: row.name,
+          branchNumber: row.branchNumber,
+        }))
       );
     }
     if (Array.isArray(body.products) && body.products.length) {

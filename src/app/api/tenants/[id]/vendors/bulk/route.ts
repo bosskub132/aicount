@@ -17,6 +17,10 @@ export async function POST(
         address?: string;
         defaultExpenseGl?: string;
         defaultWhtRate?: number;
+        vendorType?: string;
+        isNonResident?: boolean;
+        branchNumber?: string;
+        country?: string;
       }>;
       deactivateIds?: string[];
     };
@@ -40,6 +44,10 @@ export async function POST(
             address: row.address,
             defaultExpenseGl: row.defaultExpenseGl,
             defaultWhtRate: row.defaultWhtRate != null ? String(row.defaultWhtRate) : undefined,
+            vendorType: row.vendorType,
+            isNonResident: row.isNonResident,
+            branchNumber: row.branchNumber,
+            country: row.country,
             updatedAt: new Date(),
           })
           .where(and(eq(vendors.id, row.id), eq(vendors.tenantId, tenantId)))
@@ -53,6 +61,10 @@ export async function POST(
           address: row.address,
           defaultExpenseGl: row.defaultExpenseGl,
           defaultWhtRate: row.defaultWhtRate != null ? String(row.defaultWhtRate) : "3.00",
+          vendorType: row.vendorType ?? "company",
+          isNonResident: row.isNonResident ?? false,
+          branchNumber: row.branchNumber,
+          country: row.country,
         });
         results.created += 1;
       }

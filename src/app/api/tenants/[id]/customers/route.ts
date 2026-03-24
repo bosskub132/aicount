@@ -22,6 +22,7 @@ export async function POST(
       taxId: string;
       name: string;
       creditTermDays?: number;
+      branchNumber?: string;
     };
     const [created] = await db
       .insert(customers)
@@ -30,6 +31,7 @@ export async function POST(
         taxId: body.taxId,
         name: body.name,
         creditTermDays: body.creditTermDays ?? 30,
+        branchNumber: body.branchNumber,
       })
       .returning();
     return NextResponse.json({ success: true, data: created }, { status: 201 });
@@ -48,6 +50,7 @@ export async function PUT(
     taxId?: string;
     name?: string;
     creditTermDays?: number;
+    branchNumber?: string;
     isActive?: boolean;
   };
   const [updated] = await db
@@ -56,6 +59,7 @@ export async function PUT(
       taxId: body.taxId,
       name: body.name,
       creditTermDays: body.creditTermDays,
+      branchNumber: body.branchNumber,
       isActive: body.isActive,
       updatedAt: new Date(),
     })
