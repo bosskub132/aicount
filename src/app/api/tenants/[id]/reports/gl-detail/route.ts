@@ -38,7 +38,8 @@ export async function GET(
     const dates = resolvePeriodDates(period, scope);
     const result = await getAccountLedger(db, id, account, dates.start, dates.end);
 
-    // Paginate transactions
+    // TODO: In-memory pagination — getAccountLedger loads all transactions for running balance
+    // calculation. For large accounts, consider SQL-level pagination with pre-computed opening balance.
     const total = result.transactions.length;
     const offset = (page - 1) * limit;
     const paginatedTransactions = result.transactions.slice(offset, offset + limit);

@@ -75,7 +75,8 @@ export async function GET(
   }
 
   // Legacy mode: rolling N months
-  const months = Number(monthsParam || 6);
+  const rawMonths = parseInt(monthsParam || "6", 10);
+  const months = (!isNaN(rawMonths) && rawMonths >= 1 && rawMonths <= 36) ? rawMonths : 6;
   const start = new Date();
   start.setMonth(start.getMonth() - (months - 1));
   start.setDate(1);
