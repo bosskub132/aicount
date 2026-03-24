@@ -303,6 +303,7 @@ export const documents = pgTable(
     vatAmount: decimal("vat_amount", { precision: 15, scale: 2 }),
     grandTotal: decimal("grand_total", { precision: 15, scale: 2 }),
     whtAmount: decimal("wht_amount", { precision: 15, scale: 2 }),
+    dueDate: date("due_date"),
 
     dueDate: date("due_date"),
 
