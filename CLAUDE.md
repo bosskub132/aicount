@@ -62,6 +62,11 @@ scripts/            # Utility scripts (migration, health checks, smoke tests)
 - React Compiler is active — avoid `Date.now()` / `Math.random()` in render, wrap cascading `setState` in `startTransition`, stabilize useMemo deps
 - Direction enum mapping: `"REVENUE"` = Accounts Receivable (AR), `"EXPENSE"` = Accounts Payable (AP)
 - Drizzle migrations: use `npx drizzle-kit generate` (auto-names files) — never hardcode migration filenames
+- `DataTable<T>` generic requires `T extends Record<string, unknown>` — add `[key: string]: unknown` index signature to custom row interfaces
+- `@react-pdf/renderer` `renderToBuffer()` has a type mismatch with createElement — use `any` with `// eslint-disable-next-line @typescript-eslint/no-explicit-any` comment
+- Avoid `as const` on objects used as Drizzle defaults — creates literal types that don't match DB column types
+- Nullish coalescing: `a ?? b || c` requires parentheses `(a ?? b) || c` — Turbopack enforces this
+- Badge component variants: default, draft, processing, query, action_required, pending, rejected, approved, exported, void — NO "warning" variant
 
 ## Design Tokens & Styling
 
@@ -106,6 +111,7 @@ All in `src/components/` (flat structure). Use these instead of inline markup:
 - **Navigation:** Breadcrumbs, Sidebar, Header
 - **Document:** DocumentSidePanel, DocumentImageViewer, ConfidenceBar, StatusTimeline, UploadQueue
 - **Accounting:** CurrencyInput, AccountSelect, JournalLineEditor, AgingMiniBar
+- **Reports:** PeriodPicker, ReportFilterBar, ReportStatCards, PdfPreviewModal, ReportHistoryDrawer
 - **Toast hook:** `import { useToast } from "@/lib/stores/ui-store"`
 
 ## Database Schema (Phase 3)
@@ -115,6 +121,19 @@ All in `src/components/` (flat structure). Use these instead of inline markup:
 - `journalLines.journalEntryId` — FK to journalEntries header
 - `payments` — tracks AR/AP payments against documents, includes WHT deduction
 - `bankTransactions` + `bankReconMatches` — bank reconciliation
+- CRITICAL: Report queries MUST join `journalLines → journalEntries` (NOT `journalLines → documents`) for tenant scoping. The documents join silently excludes manual JVs where `documentId` is NULL.
+- Only include POSTED entries in reports: `eq(journalEntries.status, "posted")`
+
+## Database Schema (Phase 4)
+
+- `reportHistory` — report versioning with lock/unlock, soft delete, expiry. Partial unique index for draft UPSERT.
+- `reportRetentionPolicy` — per-tenant tiered retention (financial/tax/wht/management categories)
+- `whtCertificates` — individual certificate records with snapshotted payer/payee data, void support, sequential numbering
+- `chartOfAccounts.cashFlowCategory` — operating/investing/financing (used by Cash Flow report)
+- `vendors`: vendorType (individual/company), isNonResident, branchNumber, country
+- `customers`: branchNumber
+- `documents`: issuerBranch, whtIncomeType, whtRate
+- `tenants`: address, branchNumber, nextWhtSequence
 
 ## Asset Handling
 
@@ -122,6 +141,24 @@ All in `src/components/` (flat structure). Use these instead of inline markup:
 - Generated files go in `public/generated/`
 - IMPORTANT: If the Figma MCP server returns a localhost source for an image or SVG, use that source directly
 - IMPORTANT: DO NOT use or create placeholders if a localhost source is provided
+
+## PDF Generation (Phase 4)
+
+- Server-side: `@react-pdf/renderer` with `renderToBuffer()` — templates in `src/lib/services/report-pdf-templates.ts`, `tax-pdf-templates.ts`, `wht-certificate-pdf.ts`
+- Storage: Supabase Storage bucket `report-pdfs` (private, signed URLs with 1hr expiry)
+- Font: NotoSansThai registered via `Font.register()` — registration is idempotent across files
+- Templates use `React.createElement` (not JSX) since they are `.ts` files
+- Report generator orchestrator: `src/lib/services/report-generator.ts`
+
+## Thai Accounting Rules
+
+- Balance sheet MUST include retained earnings (cumulative revenue - expenses) in equity section, or A=L+E won't balance
+- WHT form routing: individual vendors → ภ.ง.ด.3, company vendors → ภ.ง.ด.53, non-resident → ภ.พ.36
+- Unmatched vendors (no master data match) default to ภ.ง.ด.53 (company form)
+- VAT registers: Purchase joins vendors table, Sales joins customers table (NOT the same counterparty table)
+- Tax reports are always monthly (no quarterly/yearly). Financial statements support M/Q/Y.
+- Certificate data is snapshotted at generation time — editing vendor later must NOT change issued certificates
+- Certificate numbering: atomic sequential WHT-YYYY-NNNN via `tenants.nextWhtSequence` (same pattern as JV numbering)
 
 ---
 
