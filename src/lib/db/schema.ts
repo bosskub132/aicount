@@ -13,6 +13,7 @@ import {
   uniqueIndex,
   index,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 
 // ── Enums ───────────────────────────────────────────────────────────────────
 
@@ -179,6 +180,7 @@ export const chartOfAccounts = pgTable(
     accountName: text("account_name").notNull(),
     category: accountCategoryEnum("category").notNull(),
     isSuspense: boolean("is_suspense").default(false).notNull(),
+    cashFlowCategory: varchar("cash_flow_category", { length: 20 }),
     isActive: boolean("is_active").default(true).notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -644,3 +646,58 @@ export const notifications = pgTable(
     index("notif_user_read_idx").on(table.userId, table.isRead),
   ]
 );
+
+// ── Report History ──────────────────────────────────────────────────────────
+
+export const reportHistory = pgTable(
+  "report_history",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    reportType: varchar("report_type", { length: 50 }).notNull(),
+    period: varchar("period", { length: 20 }).notNull(),
+    periodScope: varchar("period_scope", { length: 20 }).notNull(),
+    dateFrom: date("date_from").notNull(),
+    dateTo: date("date_to").notNull(),
+    filters: jsonb("filters"),
+    pdfStoragePath: text("pdf_storage_path"),
+    pdfSizeBytes: integer("pdf_size_bytes"),
+    generatedBy: uuid("generated_by").references(() => profiles.id),
+    lockedAt: timestamp("locked_at"),
+    lockedBy: uuid("locked_by").references(() => profiles.id),
+    deletedAt: timestamp("deleted_at"),
+    expiresAt: timestamp("expires_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("report_history_draft_idx")
+      .on(table.tenantId, table.reportType, table.period, table.periodScope)
+      .where(sql`locked_at IS NULL AND deleted_at IS NULL`),
+  ]
+);
+
+// ── Report Retention Policy ─────────────────────────────────────────────────
+
+export const reportRetentionPolicy = pgTable("report_retention_policy", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id")
+    .notNull()
+    .references(() => tenants.id, { onDelete: "cascade" })
+    .unique(),
+  draftRetentionDays: integer("draft_retention_days").default(30).notNull(),
+  trashRecoveryDays: integer("trash_recovery_days").default(7).notNull(),
+  financialRetentionValue: integer("financial_retention_value").default(7).notNull(),
+  financialRetentionUnit: varchar("financial_retention_unit", { length: 10 }).default("years").notNull(),
+  taxRetentionValue: integer("tax_retention_value").default(7).notNull(),
+  taxRetentionUnit: varchar("tax_retention_unit", { length: 10 }).default("years").notNull(),
+  whtRetentionValue: integer("wht_retention_value").default(7).notNull(),
+  whtRetentionUnit: varchar("wht_retention_unit", { length: 10 }).default("years").notNull(),
+  managementRetentionValue: integer("management_retention_value").default(2).notNull(),
+  managementRetentionUnit: varchar("management_retention_unit", { length: 10 }).default("years").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  updatedBy: uuid("updated_by").references(() => profiles.id),
+});

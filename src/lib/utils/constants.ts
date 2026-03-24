@@ -53,3 +53,13 @@ export const STATUS_TRANSITIONS: Record<DocumentStatus, DocumentStatus[]> = {
   EXPORTED: [],
   VOID: [],
 };
+
+export const REPORT_RETENTION_CATEGORY: Record<string, string> = {
+  trial_balance: "financial",
+  profit_loss: "financial",
+  balance_sheet: "financial",
+  cash_flow: "financial",
+  monthly_comparison: "management",
+  gl_detail: "management",
+  journal_listing: "management",
+};
