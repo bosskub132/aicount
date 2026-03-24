@@ -1,25 +1,24 @@
-# AICount - Project Architecture (updated Phase 3)
+# AICount - Project Architecture (updated Phase 4)
 
 ## Overview
 Thai accounting SaaS: Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS v4, Supabase (PostgreSQL via Drizzle ORM).
 
 ## Key Directories
-- `src/app/(app)/` — Authenticated pages (dashboard, upload, documents, extractions, export, settings, ledger, receivables, payables, bank-recon)
+- `src/app/(app)/` — Authenticated pages (dashboard, upload, documents, extractions, export, settings, ledger, receivables, payables, bank-recon, reports/financial, reports/tax, reports/wht)
 - `src/app/(auth)/` — Auth pages (login, signup, invite)
 - `src/app/api/` — API route handlers
-- `src/components/` — 30+ design system components (flat, no ui/ subfolder)
-- `src/lib/hooks/` — React Query hooks (use-documents, use-dashboard, use-export, use-journal-entries, use-account-ledger, use-receivables, use-payables, use-payments, use-bank-recon)
+- `src/components/` — 35+ design system components (flat, no ui/ subfolder)
+- `src/lib/hooks/` — 25+ React Query hooks
 - `src/lib/providers/` — QueryClientProvider wrapper
 - `src/lib/stores/` — Zustand stores (ui-store: sidebar, toasts, mobile menu)
-- `src/lib/services/` — Business logic (OCR, confidence, VAT, WHT, audit, jv-number, payment-status, aging, bank-matching)
+- `src/lib/services/` — Business logic (OCR, confidence, VAT, WHT, audit, reports, certificates)
 - `src/lib/api/` — Auth (request-context, csrf, rate-limit)
-- `src/lib/db/` — Drizzle schema, relations, queries (journal-entries, account-ledger, receivables, payables, payments, bank-recon)
+- `src/lib/db/` — Drizzle schema, relations, 20+ query modules
 - `src/lib/utils/` — Constants, formatters, csv-export
-- `src/lib/inngest/` — Background job definitions
+- `src/lib/inngest/` — Background job definitions (OCR processing, report cleanup, WHT batch)
 
 ## IMPORTANT: Next.js 16 Middleware
-- Uses `src/proxy.ts` (NOT middleware.ts) — Next.js 16 convention
-- Do NOT create middleware.ts — it will conflict with proxy.ts
+- Uses `src/proxy.ts` (NOT middleware.ts)
 - Auth middleware: `src/lib/supabase/middleware.ts` (called by proxy.ts)
 
 ## Auth Pattern (all API routes)
@@ -27,33 +26,41 @@ Thai accounting SaaS: Next.js 16 (App Router), React 19, TypeScript, Tailwind CS
 import { getRequestContext, unauthorized, forbidden, ensureTenantScope } from "@/lib/api/request-context";
 const ctx = getRequestContext(request);
 if (!ctx) return unauthorized();
-if (!ensureTenantScope(ctx.tenantId, tenantId)) return forbidden("Cross-tenant");
+if (!ensureTenantScope(ctx.tenantId, id)) return forbidden("Cross-tenant");
 ```
-- Auth uses custom headers (x-user-id, x-tenant-id, x-user-role) set by proxy.ts
-- Users link to tenants via `tenant_assignments` table
-- Testing locally: `curl -H "x-user-id: UUID" -H "x-tenant-id: UUID" -H "x-user-role: admin" http://localhost:3000/api/...`
 
 ## React Compiler
-- Active and strict — avoid `Date.now()` / `Math.random()` in render
-- Wrap cascading `setState` in `startTransition`
-- Stabilize useMemo/useCallback deps (wrap logical expressions in their own useMemo)
+Active and strict — avoid Date.now()/Math.random() in render, wrap cascading setState in startTransition, stabilize useMemo deps.
 
-## Data Fetching
-- React Query v5 via hooks in `src/lib/hooks/`
-- QueryClientProvider in `src/app/(app)/layout.tsx`
-- Toast notifications via `useToast()` from `src/lib/stores/ui-store`
+## Schema (Phase 4 additions)
+- `reportHistory` — report versioning with lock/soft delete/expiry, partial unique index for draft UPSERT
+- `reportRetentionPolicy` — per-tenant tiered retention config (financial/tax/wht/management)
+- `whtCertificates` — individual certificate records with snapshotted payer/payee data, void support
+- `chartOfAccounts.cashFlowCategory` — operating/investing/financing classification
+- `tenants` additions: address, branchNumber, nextWhtSequence
+- `vendors` additions: vendorType (individual/company), isNonResident, branchNumber, country
+- `customers` additions: branchNumber
+- `documents` additions: issuerBranch, whtIncomeType, whtRate
 
-## Schema (Phase 3 additions)
-- `journalEntries` — header table grouping journalLines (JV number, status, type)
-- `journalLines.documentId` — nullable (manual JVs have no source document)
-- `journalLines.journalEntryId` — FK to journalEntries header
-- `payments` — tracks AR/AP payments against documents, includes WHT deduction
-- `bankTransactions` + `bankReconMatches` — bank reconciliation
-- Direction enum: `"REVENUE"` = AR, `"EXPENSE"` = AP
-- Migration NOT yet applied — run `npx drizzle-kit generate` then `npx drizzle-kit push`
+## Critical Query Pattern
+ALL financial report queries MUST join journalLines → journalEntries (NOT documents) for tenant scoping. The documents join silently excludes manual journal entries.
 
-## Styling
-- Tailwind CSS v4 with @theme inline in globals.css
-- Full CSS variable system (colors, shadows, radius, z-index, badge colors, aging colors)
-- Fonts: Inter + Noto Sans Thai + Geist Mono
-- Icons: lucide-react only
+## PDF Generation
+- Server-side @react-pdf/renderer with renderToBuffer()
+- Uploaded to Supabase Storage (bucket: report-pdfs, wht-certificates)
+- Signed URLs with 1-hour expiry for download
+- NotoSansThai font registered for Thai text
+- Templates in report-pdf-templates.ts, tax-pdf-templates.ts, wht-certificate-pdf.ts
+
+## Report History & Retention
+- Auto-save with versioning: one active draft per type+period (UPSERT)
+- Lock to freeze as official, new draft created alongside locked version
+- Tiered retention: financial 7yr, tax 7yr, WHT 7yr, management 2yr, drafts 30d
+- Soft delete: 7-day configurable trash recovery before permanent deletion
+- Daily Inngest cron cleanup at 02:00 ICT
+
+## WHT Certificate System
+- Atomic sequential numbering: WHT-YYYY-NNNN via tenants.nextWhtSequence
+- Form routing: getWhtFormType() → PND3 (individual) / PND53 (company) / PP36 (non-resident)
+- Void/reissue with audit trail (replaces_id, voided watermark)
+- Data snapshotted at generation time (immutable legal documents)

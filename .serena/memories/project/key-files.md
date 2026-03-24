@@ -1,4 +1,4 @@
-# Key Files Reference (updated Phase 3)
+# Key Files Reference (updated Phase 4)
 
 ## Auth & Security
 - `src/proxy.ts` — Next.js 16 middleware entry point (NOT middleware.ts)
@@ -8,76 +8,101 @@
 - `src/lib/api/rate-limit.ts` — Upstash Redis rate limiter with in-process fallback
 
 ## Design System
-- `src/app/globals.css` — Full design token set (colors, shadows, radius, z-index, badge colors, aging colors)
+- `src/app/globals.css` — Full design token set
 - `src/app/layout.tsx` — Root layout with Inter + Noto Sans Thai + Geist Mono fonts
-- `src/components/` — 30+ components (flat structure)
+- `src/components/` — 35+ components (flat structure)
 - `src/lib/stores/ui-store.ts` — Zustand: sidebar, toasts, mobile menu + useToast()
 - `src/lib/providers/query-provider.tsx` — React Query provider
 
 ## App Shell
-- `src/app/(app)/layout.tsx` — Sidebar + Header + QueryProvider + auth redirects + deletion banner
-- `src/components/sidebar.tsx` — 230px grouped nav (Workflow + Accounting + Settings)
-- `src/components/header.tsx` — 56px sticky, search trigger, avatar
+- `src/app/(app)/layout.tsx` — Sidebar + Header + QueryProvider + auth redirects
+- `src/components/sidebar.tsx` — 230px grouped nav (Workflow + Accounting + Reports + Settings)
 
 ## Core Pages (Phase 2)
 - `src/app/(app)/dashboard/page.tsx` — 3-tab dashboard with Recharts
-- `src/app/(app)/documents/page.tsx` — DataTable + side panel + tabs + pagination
+- `src/app/(app)/documents/page.tsx` — DataTable + side panel
 - `src/app/(app)/extractions/page.tsx` — Two-column editing (image + fields)
 - `src/app/(app)/upload/page.tsx` — Drag-drop + live OCR status polling
-- `src/app/(app)/export/page.tsx` — Template selection + history + preview modal
+- `src/app/(app)/export/page.tsx` — Template selection + history + preview
 
 ## Accounting Pages (Phase 3)
-- `src/app/(app)/ledger/page.tsx` — GL with Journal Entries + Account Ledger tabs, JV modal
-- `src/app/(app)/receivables/page.tsx` — AR aging table, customer drill-down, payment recording
-- `src/app/(app)/payables/page.tsx` — AP aging table, vendor drill-down, WHT in payments
-- `src/app/(app)/bank-recon/page.tsx` — Split view, auto-matching, confirm/unmatch
+- `src/app/(app)/ledger/page.tsx` — GL with Journal Entries + Account Ledger tabs
+- `src/app/(app)/receivables/page.tsx` — AR aging table
+- `src/app/(app)/payables/page.tsx` — AP aging table
+- `src/app/(app)/bank-recon/page.tsx` — Split view, auto-matching
 
-## Accounting Components (Phase 3)
-- `src/components/currency-input.tsx` — ฿ prefix, thousand separators, tabular-nums
-- `src/components/account-select.tsx` — Searchable COA dropdown grouped by category
-- `src/components/journal-line-editor.tsx` — Editable JV lines with balance check
-- `src/components/aging-mini-bar.tsx` — Horizontal stacked aging bar
-- `src/components/data-table.tsx` — Enhanced with expandedRow render prop
+## Report Pages (Phase 4A)
+- `src/app/(app)/reports/financial/page.tsx` — Report Hub (card grid)
+- `src/app/(app)/reports/financial/trial-balance/page.tsx`
+- `src/app/(app)/reports/financial/profit-loss/page.tsx`
+- `src/app/(app)/reports/financial/balance-sheet/page.tsx`
+- `src/app/(app)/reports/financial/cash-flow/page.tsx`
+- `src/app/(app)/reports/financial/monthly-comparison/page.tsx`
+- `src/app/(app)/reports/financial/gl-detail/page.tsx`
+- `src/app/(app)/reports/financial/journal-listing/page.tsx`
+- `src/app/(app)/settings/accounting/report-retention/page.tsx`
 
-## React Query Hooks
-- `src/lib/hooks/use-documents.ts` — useDocuments, useDocument, useDocumentMutations
-- `src/lib/hooks/use-dashboard.ts` — useMonthlyComparison, useStatusBreakdown, useApprovalQueue
-- `src/lib/hooks/use-export.ts` — useExportTemplates, useExportHistory, useExportMutation
-- `src/lib/hooks/use-journal-entries.ts` — useJournalEntries, useCreateJournalEntry, usePostJournalEntry
-- `src/lib/hooks/use-account-ledger.ts` — useAccountLedger
-- `src/lib/hooks/use-receivables.ts` — useReceivables
-- `src/lib/hooks/use-payables.ts` — usePayables
-- `src/lib/hooks/use-payments.ts` — useRecordPayment
-- `src/lib/hooks/use-bank-recon.ts` — useBankRecon, useConfirmMatch, useBulkConfirm
+## Tax Report Pages (Phase 4B)
+- `src/app/(app)/reports/tax/page.tsx` — Tax Report Hub
+- `src/app/(app)/reports/tax/pp30/page.tsx` — ภ.พ.30
+- `src/app/(app)/reports/tax/pp36/page.tsx` — ภ.พ.36
+- `src/app/(app)/reports/tax/pnd3/page.tsx` — ภ.ง.ด.3
+- `src/app/(app)/reports/tax/pnd53/page.tsx` — ภ.ง.ด.53
+- `src/app/(app)/reports/tax/purchase-vat/page.tsx`
+- `src/app/(app)/reports/tax/sales-vat/page.tsx`
 
-## Services (Phase 3)
-- `src/lib/services/jv-number.ts` — Tenant-scoped JV number generation (JV-YYYY-NNNN)
-- `src/lib/services/payment-status.ts` — Compute open/partial/paid/overdue
-- `src/lib/services/aging.ts` — Overdue-based aging bucket calculation
-- `src/lib/services/bank-matching.ts` — Auto-match bank txns to GL entries
-- `src/lib/utils/csv-export.ts` — Client-side CSV with UTF-8 BOM for Thai
+## WHT Certificates (Phase 4C)
+- `src/app/(app)/reports/wht/page.tsx` — Certificate Log + Bulk Generate
 
-## DB Queries (Phase 3)
-- `src/lib/db/queries/journal-entries.ts` — CRUD, list, post, reverse, stats
-- `src/lib/db/queries/account-ledger.ts` — Running balance, opening/closing
-- `src/lib/db/queries/receivables.ts` — AR aging by customer
-- `src/lib/db/queries/payables.ts` — AP aging by vendor
-- `src/lib/db/queries/payments.ts` — Record payment + offsetting JE
-- `src/lib/db/queries/bank-recon.ts` — Match/unmatch/confirm
+## Report Infrastructure (Phase 4)
+- `src/lib/services/report-generator.ts` — Orchestrator: data → PDF → Storage → history
+- `src/lib/services/report-pdf-templates.ts` — 7 financial report PDF templates
+- `src/lib/services/report-retention.ts` — Expiry computation, validation
+- `src/lib/services/tax-pdf-templates.ts` — 6 tax report PDF templates
+- `src/lib/services/wht-certificate.ts` — Certificate generation + void orchestrator
+- `src/lib/services/wht-certificate-pdf.ts` — 50 ทวิ PDF template
+- `src/lib/services/wht-certificate-number.ts` — Atomic sequential numbering
+- `src/lib/services/wht-form-routing.ts` — PND3/PND53/PP36 routing + income type codes
 
-## API Routes (Phase 3)
-- `GET/POST /api/tenants/{id}/journal-entries` — List + create
-- `GET/PUT/PATCH /api/tenants/{id}/journal-entries/{entryId}` — Single + edit + status
-- `GET /api/tenants/{id}/account-ledger` — Account transactions
-- `GET /api/tenants/{id}/receivables` — AR aging
-- `GET /api/tenants/{id}/payables` — AP aging
-- `POST /api/tenants/{id}/payments` — Record payment
-- `GET /api/tenants/{id}/bank-recon` — Bank recon data
-- `POST/DELETE /api/tenants/{id}/bank-recon/matches` — Confirm/unmatch
+## Report Queries (Phase 4)
+- `src/lib/db/queries/period-utils.ts` — Shared period resolution (M/Q/Y/custom)
+- `src/lib/db/queries/profit-loss.ts` — P&L aggregation
+- `src/lib/db/queries/balance-sheet.ts` — Cumulative BS with retained earnings
+- `src/lib/db/queries/cash-flow.ts` — Indirect method with cashFlowCategory
+- `src/lib/db/queries/journal-listing.ts` — Paginated JV listing
+- `src/lib/db/queries/report-history.ts` — History CRUD with UPSERT draft
+- `src/lib/db/queries/report-retention.ts` — Retention policy CRUD
+- `src/lib/db/queries/tax-pp30.ts` — VAT return
+- `src/lib/db/queries/tax-pp36.ts` — Non-resident services
+- `src/lib/db/queries/tax-pnd3.ts` — Individual WHT
+- `src/lib/db/queries/tax-pnd53.ts` — Corporate WHT (with unmatched)
+- `src/lib/db/queries/vat-register.ts` — Purchase/Sales VAT register
+- `src/lib/db/queries/wht-certificates.ts` — Certificate CRUD
+
+## Report Hooks (Phase 4)
+- `src/lib/hooks/use-trial-balance.ts` through `use-journal-listing.ts` (7 hooks)
+- `src/lib/hooks/use-report-history.ts` — List + lock/unlock/delete/restore mutations
+- `src/lib/hooks/use-report-pdf.ts` — Generate PDF mutation
+- `src/lib/hooks/use-report-retention.ts` — Settings CRUD
+- `src/lib/hooks/use-tax-pp30.ts` through `use-vat-register.ts` (5 hooks)
+- `src/lib/hooks/use-wht-certificates.ts` — List + generate/void/batch mutations
+- `src/lib/hooks/use-wht-uncertified.ts` — Uncertified documents
+
+## Report Components (Phase 4)
+- `src/components/period-picker.tsx` — M/Q/Y toggle + navigator
+- `src/components/report-filter-bar.tsx` — Configurable filter bar
+- `src/components/report-stat-cards.tsx` — 4-card grid with colored borders
+- `src/components/pdf-preview-modal.tsx` — PDF iframe viewer
+- `src/components/report-history-drawer.tsx` — Side drawer for past generations
+
+## Background Jobs
+- `src/lib/inngest/functions/report-cleanup.ts` — Daily cron: expire reports + WHT certs
+- `src/lib/inngest/functions/wht-batch-generate.ts` — Bulk certificate generation
 
 ## Specs & Plans
-- `docs/superpowers/specs/2026-03-23-phase3-accounting-modules-design.md`
-- `docs/superpowers/plans/2026-03-23-phase3-accounting-modules.md`
-- `docs/superpowers/specs/2026-03-23-phase2-core-workflows-design.md`
-- `docs/superpowers/plans/2026-03-23-phase2-core-workflows.md`
-- `docs/superpowers/plans/2026-03-22-design-system-phase1.md`
+- `docs/superpowers/specs/2026-03-25-phase4a-financial-statements-design.md`
+- `docs/superpowers/specs/2026-03-25-phase4b-tax-reports-design.md`
+- `docs/superpowers/specs/2026-03-25-phase4c-wht-certificates-design.md`
+- `docs/superpowers/plans/2026-03-25-phase4a-financial-statements.md`
+- `docs/superpowers/plans/2026-03-25-phase4b-tax-reports.md`
+- `docs/superpowers/plans/2026-03-25-phase4c-wht-certificates.md`
