@@ -17,6 +17,7 @@ type PatchBody = {
   tenantId: string;
   issuerTaxId?: string | null;
   issuerName?: string | null;
+  issuerBranch?: string | null;
   documentNumber?: string | null;
   documentDate?: string | null;
   subtotal?: number | null;
@@ -138,6 +139,7 @@ export async function PATCH(
       .set({
         issuerTaxId: body.issuerTaxId,
         issuerName: body.issuerName,
+        issuerBranch: body.issuerBranch,
         documentNumber: body.documentNumber,
         documentDate: body.documentDate ? new Date(body.documentDate).toISOString().slice(0, 10) : null,
         subtotal: body.subtotal != null ? String(body.subtotal) : null,

@@ -24,17 +24,23 @@ export function detectWht({
 }: {
   lineItemsText: string;
   subtotal: number | string | null;
-}) {
+}): {
+  applicable: boolean;
+  rate: number;
+  amount: number;
+  reason: string;
+  incomeType: string | null;
+} {
   const text = normalizeText(lineItemsText);
   const amount = Number(subtotal || 0);
 
   if (!Number.isFinite(amount) || amount < 1000) {
-    return { applicable: false, rate: 0, amount: 0, reason: "SUBTOTAL_BELOW_THRESHOLD" };
+    return { applicable: false, rate: 0, amount: 0, reason: "SUBTOTAL_BELOW_THRESHOLD", incomeType: null };
   }
 
   const matchedRule = WHT_RULES.find((rule) => text.includes(normalizeText(rule.keyword)));
   if (!matchedRule) {
-    return { applicable: false, rate: 0, amount: 0, reason: "NO_WHT_KEYWORD_MATCH" };
+    return { applicable: false, rate: 0, amount: 0, reason: "NO_WHT_KEYWORD_MATCH", incomeType: null };
   }
 
   const whtAmount = Number((amount * matchedRule.rate).toFixed(2));
@@ -43,6 +49,7 @@ export function detectWht({
     rate: matchedRule.rate,
     amount: whtAmount,
     reason: `MATCHED_${matchedRule.keyword}`,
+    incomeType: matchedRule.keyword,
   };
 }
 

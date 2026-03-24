@@ -123,6 +123,7 @@ export const processDocument = inngest.createFunction(
         .set({
           issuerTaxId: ocrResult?.issuer?.tax_id ?? doc.issuerTaxId,
           issuerName: ocrResult?.issuer?.name ?? doc.issuerName,
+          issuerBranch: ocrResult?.issuer?.branch_id || null,
           documentNumber: ocrResult?.document?.invoice_number ?? doc.documentNumber,
           documentDate: ocrResult?.document?.issue_date ?? doc.documentDate,
           subtotal: String(ocrResult?.amounts?.net_amount_ex_vat ?? doc.subtotal ?? 0),
@@ -140,6 +141,8 @@ export const processDocument = inngest.createFunction(
               : undefined,
           },
           whtAmount: taxGl.wht.applicable ? String(taxGl.wht.amount) : doc.whtAmount,
+          whtIncomeType: taxGl.wht.applicable ? taxGl.wht.incomeType : null,
+          whtRate: taxGl.wht.applicable ? String(taxGl.wht.rate) : null,
           updatedAt: new Date(),
         })
         .where(eq(documents.id, doc.id));
