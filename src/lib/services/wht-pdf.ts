@@ -1,6 +1,3 @@
-import { promises as fs } from "fs";
-import path from "path";
-
 const WHT_RULES = [
   { keyword: "ค่าเช่า", rate: 0.05 },
   { keyword: "ค่าบริการ", rate: 0.03 },
@@ -53,34 +50,4 @@ export function detectWht({
   };
 }
 
-export async function generate50TawiFile({
-  documentId,
-  vendorName,
-  vendorTaxId,
-  amount,
-  rate,
-}: {
-  documentId: string;
-  vendorName?: string | null;
-  vendorTaxId?: string | null;
-  amount: number;
-  rate: number;
-}) {
-  const dir = path.join(process.cwd(), "public", "generated", "wht-certificates");
-  await fs.mkdir(dir, { recursive: true });
-
-  const fileName = `50tawi-${documentId}-${Date.now()}.txt`;
-  const fullPath = path.join(dir, fileName);
-  const content = [
-    "หนังสือรับรองการหักภาษี ณ ที่จ่าย (50 ทวิ)",
-    `Document ID: ${documentId}`,
-    `Vendor: ${vendorName || "-"}`,
-    `Vendor Tax ID: ${vendorTaxId || "-"}`,
-    `WHT Rate: ${(rate * 100).toFixed(2)}%`,
-    `WHT Amount: ${Number(amount || 0).toFixed(2)}`,
-  ].join("\n");
-
-  await fs.writeFile(fullPath, content, "utf8");
-  return `/generated/wht-certificates/${fileName}`;
-}
 

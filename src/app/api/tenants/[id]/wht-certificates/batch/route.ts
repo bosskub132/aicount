@@ -1,10 +1,9 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { and, between, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { documents } from "@/lib/db/schema";
 import { ensureTenantScope, forbidden, getRequestContext, unauthorized } from "@/lib/api/request-context";
-import { generate50TawiFile } from "@/lib/services/wht-pdf";
+import { generateCertificate } from "@/lib/services/wht-certificate";
 
 export async function POST(
   request: Request,
@@ -36,19 +35,26 @@ export async function POST(
         )
       );
 
-    const generated: Array<{ documentId: string; path: string }> = [];
+    const generated: Array<{ documentId: string; certificateId: string; certificateNo: string; pdfUrl: string }> = [];
+    const skipped: Array<{ documentId: string; reason: string }> = [];
+
     for (const doc of rows) {
       const whtAmount = Number(doc.whtAmount || 0);
       if (whtAmount <= 0) continue;
-      const rate = Number((doc.ocrRaw as any)?.wht?.rate || 0.03);
-      const path = await generate50TawiFile({
-        documentId: doc.id,
-        vendorName: doc.issuerName,
-        vendorTaxId: doc.issuerTaxId,
-        amount: whtAmount,
-        rate,
-      });
-      generated.push({ documentId: doc.id, path });
+
+      try {
+        const result = await generateCertificate({
+          tenantId: id,
+          documentId: doc.id,
+          issuedBy: ctx.userId,
+        });
+        generated.push({ documentId: doc.id, ...result });
+      } catch (err) {
+        skipped.push({
+          documentId: doc.id,
+          reason: err instanceof Error ? err.message : "Unknown error",
+        });
+      }
     }
 
     return NextResponse.json({
@@ -56,12 +62,15 @@ export async function POST(
       data: {
         yearMonth: body.yearMonth,
         generatedCount: generated.length,
+        skippedCount: skipped.length,
         generated,
+        skipped,
       },
     });
   } catch (error) {
+    console.error("[WHT batch] Unexpected error:", error);
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : "Batch 50 Tawi generation failed" },
+      { success: false, error: "Batch WHT certificate generation failed" },
       { status: 500 }
     );
   }
