@@ -18,6 +18,7 @@ import {
   Lock,
   Landmark,
   ClipboardList,
+  Clock,
 } from "lucide-react";
 
 type NavItem = {
@@ -66,6 +67,7 @@ const navGroups: NavGroup[] = [
       { label: "Period Locks", href: "/settings/accounting/period-locks", icon: Lock },
       { label: "Bank Reconciliation", href: "/settings/accounting/bank-recon", icon: Landmark },
       { label: "Tax Reports", href: "/settings/accounting/tax-reports", icon: ClipboardList },
+      { label: "Report Retention", href: "/settings/accounting/report-retention", icon: Clock },
     ],
   },
 ];
