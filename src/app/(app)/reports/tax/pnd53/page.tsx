@@ -116,7 +116,7 @@ function Pnd53Content() {
     return lines.slice(start, start + PAGE_SIZE);
   }, [lines, page]);
 
-  const totalPages = reportData?.totalPages ?? Math.ceil(lines.length / PAGE_SIZE) || 1;
+  const totalPages = (reportData?.totalPages ?? Math.ceil(lines.length / PAGE_SIZE)) || 1;
 
   const historyItems: ReportHistoryItem[] = useMemo(() => {
     const items = (history.data as { items?: ReportHistoryItem[] })?.items;
@@ -222,7 +222,7 @@ function Pnd53Content() {
                 <span className="text-sm font-semibold text-[var(--foreground)]">
                   Unmatched Transactions
                 </span>
-                <Badge variant="warning">{unmatchedLines.length} items</Badge>
+                <Badge variant="action_required">{unmatchedLines.length} items</Badge>
               </div>
               <p className="text-xs text-[var(--muted-foreground)]">
                 These transactions could not be matched to a specific payee type and default to PND53. Review and reclassify if needed.

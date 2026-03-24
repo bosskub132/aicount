@@ -102,7 +102,7 @@ function Pp36Content() {
     return lines.slice(start, start + PAGE_SIZE);
   }, [lines, page]);
 
-  const totalPages = reportData?.totalPages ?? Math.ceil(lines.length / PAGE_SIZE) || 1;
+  const totalPages = (reportData?.totalPages ?? Math.ceil(lines.length / PAGE_SIZE)) || 1;
 
   const historyItems: ReportHistoryItem[] = useMemo(() => {
     const items = (history.data as { items?: ReportHistoryItem[] })?.items;
