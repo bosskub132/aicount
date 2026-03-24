@@ -62,4 +62,11 @@ export const REPORT_RETENTION_CATEGORY: Record<string, string> = {
   monthly_comparison: "management",
   gl_detail: "management",
   journal_listing: "management",
+  // Phase 4B
+  pp30: "tax",
+  pp36: "tax",
+  pnd3: "tax",
+  pnd53: "tax",
+  purchase_vat: "tax",
+  sales_vat: "tax",
 };

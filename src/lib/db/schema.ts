@@ -199,6 +199,10 @@ export const vendors = pgTable(
       .references(() => tenants.id, { onDelete: "cascade" }),
     taxId: varchar("tax_id", { length: 13 }).notNull(),
     name: text("name").notNull(),
+    vendorType: varchar("vendor_type", { length: 20 }).default("company").notNull(),
+    isNonResident: boolean("is_non_resident").default(false).notNull(),
+    branchNumber: varchar("branch_number", { length: 20 }),
+    country: varchar("country", { length: 100 }),
     address: text("address"),
     defaultExpenseGl: varchar("default_expense_gl", { length: 20 }),
     defaultWhtRate: decimal("default_wht_rate", {
@@ -223,6 +227,7 @@ export const customers = pgTable(
       .references(() => tenants.id, { onDelete: "cascade" }),
     taxId: varchar("tax_id", { length: 13 }).notNull(),
     name: text("name").notNull(),
+    branchNumber: varchar("branch_number", { length: 20 }),
     creditTermDays: integer("credit_term_days").default(30),
     isActive: boolean("is_active").default(true).notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -299,12 +304,15 @@ export const documents = pgTable(
     // OCR-extracted fields
     issuerTaxId: varchar("issuer_tax_id", { length: 13 }),
     issuerName: text("issuer_name"),
+    issuerBranch: varchar("issuer_branch", { length: 20 }),
     documentNumber: varchar("document_number", { length: 100 }),
     documentDate: date("document_date"),
     subtotal: decimal("subtotal", { precision: 15, scale: 2 }),
     vatAmount: decimal("vat_amount", { precision: 15, scale: 2 }),
     grandTotal: decimal("grand_total", { precision: 15, scale: 2 }),
     whtAmount: decimal("wht_amount", { precision: 15, scale: 2 }),
+    whtIncomeType: varchar("wht_income_type", { length: 50 }),
+    whtRate: decimal("wht_rate", { precision: 5, scale: 2 }),
     dueDate: date("due_date"),
 
     // Classification
