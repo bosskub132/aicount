@@ -6,7 +6,6 @@ import {
   journalLines,
 } from "@/lib/db/schema";
 import {
-  type PeriodDates,
   resolvePeriodDates,
   shiftPeriod,
 } from "./period-utils";

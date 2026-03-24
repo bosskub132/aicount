@@ -1,4 +1,4 @@
-import { and, eq, isNotNull, isNull, lte, sql } from "drizzle-orm";
+import { and, isNotNull, isNull, lte, sql } from "drizzle-orm";
 import { createClient } from "@supabase/supabase-js";
 import { inngest } from "../client";
 import { db } from "@/lib/db";
