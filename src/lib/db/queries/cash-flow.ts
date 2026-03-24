@@ -30,6 +30,7 @@ export interface CashFlowResult {
   investing: CashFlowSection;
   financing: CashFlowSection;
   netCashChange: number;
+  unclassifiedAccounts: Array<{ accountCode: string; accountName: string }>;
   comparison?: CashFlowResult;
 }
 
@@ -161,6 +162,9 @@ async function buildResult(
     amount: netIncome,
   });
 
+  // Track accounts with no cashFlowCategory assigned
+  const unclassifiedAccounts: Array<{ accountCode: string; accountName: string }> = [];
+
   // Add balance sheet account movements
   for (const row of movements) {
     const category = row.category;
@@ -176,6 +180,14 @@ async function buildResult(
       category === "asset" ? -(debit - credit) : credit - debit;
 
     if (amount === 0) continue;
+
+    // Track accounts where cashFlowCategory is NULL
+    if (!row.cashFlowCategory) {
+      unclassifiedAccounts.push({
+        accountCode: row.accountCode,
+        accountName: row.accountName ?? row.accountCode,
+      });
+    }
 
     const cfCategory = classifyCashFlowCategory(row.cashFlowCategory);
     buckets[cfCategory].push({
@@ -195,6 +207,7 @@ async function buildResult(
     investing,
     financing,
     netCashChange: operating.total + investing.total + financing.total,
+    unclassifiedAccounts,
   };
 }
 

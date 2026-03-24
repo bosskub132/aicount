@@ -102,11 +102,27 @@ export async function getJournalListing(
     .limit(limit)
     .offset(offset);
 
+  // Fetch period-wide totals (not page-scoped) for the summary
+  const [periodTotals] = await db
+    .select({
+      totalDebit: sql<string>`coalesce(sum(${journalLines.debit}), 0)`,
+      totalCredit: sql<string>`coalesce(sum(${journalLines.credit}), 0)`,
+    })
+    .from(journalLines)
+    .innerJoin(
+      journalEntries,
+      eq(journalLines.journalEntryId, journalEntries.id)
+    )
+    .where(and(...conditions));
+
+  const periodDebit = Number(periodTotals?.totalDebit ?? 0);
+  const periodCredit = Number(periodTotals?.totalCredit ?? 0);
+
   if (headers.length === 0) {
     return {
       period: dates,
       entries: [],
-      summary: { totalEntries: total, totalDebit: 0, totalCredit: 0 },
+      summary: { totalEntries: total, totalDebit: periodDebit, totalCredit: periodCredit },
       pagination: { page, limit, total },
     };
   }
@@ -151,15 +167,10 @@ export async function getJournalListing(
   }
 
   // Assemble entries
-  let summaryDebit = 0;
-  let summaryCredit = 0;
-
   const entries: JournalListingEntry[] = headers.map((header) => {
     const entryLines = linesByEntry.get(header.id) ?? [];
     const totalDebit = entryLines.reduce((s, l) => s + l.debit, 0);
     const totalCredit = entryLines.reduce((s, l) => s + l.credit, 0);
-    summaryDebit += totalDebit;
-    summaryCredit += totalCredit;
 
     return {
       id: header.id,
@@ -178,8 +189,8 @@ export async function getJournalListing(
     entries,
     summary: {
       totalEntries: total,
-      totalDebit: summaryDebit,
-      totalCredit: summaryCredit,
+      totalDebit: periodDebit,
+      totalCredit: periodCredit,
     },
     pagination: { page, limit, total },
   };

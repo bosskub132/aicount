@@ -93,24 +93,42 @@ function buildResult(
     equity: [],
   };
 
+  // Compute retained earnings from revenue/expense accounts
+  let retainedEarnings = 0;
+
   for (const row of rows) {
     const category = row.category;
-    if (!category || !buckets[category]) continue;
+    if (!category) continue;
 
     const debit = Number(row.totalDebit);
     const credit = Number(row.totalCredit);
 
-    // Assets: debit - credit; Liabilities/Equity: credit - debit
-    const balance =
-      category === "asset" ? debit - credit : credit - debit;
+    if (category === "revenue") {
+      retainedEarnings += credit - debit;
+    } else if (category === "expense") {
+      retainedEarnings -= debit - credit;
+    } else if (buckets[category]) {
+      // Assets: debit - credit; Liabilities/Equity: credit - debit
+      const balance =
+        category === "asset" ? debit - credit : credit - debit;
 
-    if (balance !== 0) {
-      buckets[category].push({
-        accountCode: row.accountCode,
-        accountName: row.accountName ?? row.accountCode,
-        balance,
-      });
+      if (balance !== 0) {
+        buckets[category].push({
+          accountCode: row.accountCode,
+          accountName: row.accountName ?? row.accountCode,
+          balance,
+        });
+      }
     }
+  }
+
+  // Add retained earnings as a synthetic equity row
+  if (retainedEarnings !== 0) {
+    buckets.equity.push({
+      accountCode: "RETAINED",
+      accountName: "Retained Earnings / กำไรสะสม",
+      balance: retainedEarnings,
+    });
   }
 
   const totalAssets = buckets.asset.reduce((s, r) => s + r.balance, 0);
