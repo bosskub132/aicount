@@ -11,6 +11,7 @@ import { autoExpirePendingApprovals } from "@/lib/inngest/functions/workflow-mai
 import { workspacePurge } from "@/lib/inngest/functions/workspace-purge";
 import { accountPurge } from "@/lib/inngest/functions/account-purge";
 import { reportCleanup } from "@/lib/inngest/functions/report-cleanup";
+import { whtBatchGenerate } from "@/lib/inngest/functions/wht-batch-generate";
 
 export const { GET, POST, PUT } = serve({
   client: inngest,
@@ -24,5 +25,6 @@ export const { GET, POST, PUT } = serve({
     workspacePurge,
     accountPurge,
     reportCleanup,
+    whtBatchGenerate,
   ],
 });
