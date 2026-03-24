@@ -2,7 +2,18 @@ import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { reportRetentionPolicy } from "@/lib/db/schema";
 
-const DEFAULTS = {
+const DEFAULTS: {
+  draftRetentionDays: number;
+  trashRecoveryDays: number;
+  financialRetentionValue: number;
+  financialRetentionUnit: string;
+  taxRetentionValue: number;
+  taxRetentionUnit: string;
+  whtRetentionValue: number;
+  whtRetentionUnit: string;
+  managementRetentionValue: number;
+  managementRetentionUnit: string;
+} = {
   draftRetentionDays: 30,
   trashRecoveryDays: 7,
   financialRetentionValue: 7,
@@ -13,15 +24,25 @@ const DEFAULTS = {
   whtRetentionUnit: "years",
   managementRetentionValue: 2,
   managementRetentionUnit: "years",
-} as const;
+};
 
-export type RetentionPolicy = typeof DEFAULTS & {
+export interface RetentionPolicy {
   id: string | null;
   tenantId: string;
+  draftRetentionDays: number;
+  trashRecoveryDays: number;
+  financialRetentionValue: number;
+  financialRetentionUnit: string;
+  taxRetentionValue: number;
+  taxRetentionUnit: string;
+  whtRetentionValue: number;
+  whtRetentionUnit: string;
+  managementRetentionValue: number;
+  managementRetentionUnit: string;
   createdAt: Date | null;
   updatedAt: Date | null;
   updatedBy: string | null;
-};
+}
 
 export async function getRetentionPolicy(
   tenantId: string

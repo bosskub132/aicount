@@ -30,6 +30,7 @@ import { formatCurrency, formatDate } from "@/lib/utils/format";
 // ---------------------------------------------------------------------------
 
 interface GlDetailRow {
+  [key: string]: unknown;
   id: string;
   date: string;
   jvNo: string;
@@ -237,9 +238,9 @@ function GlDetailContent() {
           </div>
 
           {/* Data table */}
-          <DataTable
+          <DataTable<GlDetailRow>
             columns={GL_COLUMNS}
-            data={reportData.transactions as unknown as Record<string, unknown>[]}
+            data={reportData.transactions}
             keyField="id"
           />
 

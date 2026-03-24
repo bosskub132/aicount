@@ -219,6 +219,7 @@ function RetentionPageContent() {
   }
 
   function confirmSave() {
+    if (!form) return;
     mutation.mutate({ trashDays: form.trashDays, draftDays: form.draftDays, locked: form.locked }, {
       onSuccess: () => { setInitialState({ ...form }); setShowConfirm(false); },
       onSettled: () => { setShowConfirm(false); },

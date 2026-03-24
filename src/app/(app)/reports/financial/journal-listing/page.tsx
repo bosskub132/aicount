@@ -267,14 +267,14 @@ function JournalListingContent() {
         />
       ) : (
         <>
-          <DataTable
+          <DataTable<JournalEntryRow>
             columns={columns}
-            data={reportData.entries as unknown as Record<string, unknown>[]}
+            data={reportData.entries}
             keyField="id"
-            expandedRow={renderExpandedRow as (row: Record<string, unknown>) => React.ReactNode}
+            expandedRow={renderExpandedRow}
             expandedRowIds={expandedIds}
             onToggleExpand={handleToggleExpand}
-            onRowClick={(row) => handleToggleExpand((row as unknown as JournalEntryRow).id)}
+            onRowClick={(row) => handleToggleExpand(row.id)}
           />
 
           {totalPages > 1 && (
