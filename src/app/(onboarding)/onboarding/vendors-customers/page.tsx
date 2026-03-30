@@ -49,7 +49,8 @@ export default function OnboardingVendorsCustomersPage() {
 
   const [tenantId, setTenantId] = useState("");
   const [activeTab, setActiveTab] = useState("vendors");
-  const [mode, setMode] = useState<"manual" | "import">("manual");
+  const [vendorMode, setVendorMode] = useState<"manual" | "import">("manual");
+  const [customerMode, setCustomerMode] = useState<"manual" | "import">("manual");
   const [vendors, setVendors] = useState<VendorRow[]>([]);
   const [customers, setCustomers] = useState<CustomerRow[]>([]);
 
@@ -177,7 +178,7 @@ export default function OnboardingVendorsCustomersPage() {
       });
       const loadJson = await loadRes.json();
       if (loadJson.success) setVendors(loadJson.data || []);
-      setMode("manual");
+      setVendorMode("manual");
     }
   }
 
@@ -196,7 +197,7 @@ export default function OnboardingVendorsCustomersPage() {
       });
       const loadJson = await loadRes.json();
       if (loadJson.success) setCustomers(loadJson.data || []);
-      setMode("manual");
+      setCustomerMode("manual");
     }
   }
 
@@ -338,28 +339,28 @@ export default function OnboardingVendorsCustomersPage() {
         {/* Mode toggle */}
         <div className="flex gap-2 mb-4">
           <Button
-            variant={mode === "manual" ? "primary" : "secondary"}
+            variant={(activeTab === "vendors" ? vendorMode : customerMode) === "manual" ? "primary" : "secondary"}
             size="sm"
-            onClick={() => setMode("manual")}
+            onClick={() => activeTab === "vendors" ? setVendorMode("manual") : setCustomerMode("manual")}
           >
             Manual Entry
           </Button>
           <Button
-            variant={mode === "import" ? "primary" : "secondary"}
+            variant={(activeTab === "vendors" ? vendorMode : customerMode) === "import" ? "primary" : "secondary"}
             size="sm"
-            onClick={() => setMode("import")}
+            onClick={() => activeTab === "vendors" ? setVendorMode("import") : setCustomerMode("import")}
           >
             Import File
           </Button>
         </div>
 
-        {mode === "import" ? (
-          activeTab === "vendors" ? (
-            <FileImport key="vendor-import" entityType="vendor" onImport={handleVendorImport} />
-          ) : (
-            <FileImport key="customer-import" entityType="customer" onImport={handleCustomerImport} />
-          )
-        ) : activeTab === "vendors" ? (
+        {activeTab === "vendors" && vendorMode === "import" && (
+          <FileImport key="vendor-import" entityType="vendor" onImport={handleVendorImport} />
+        )}
+        {activeTab === "customers" && customerMode === "import" && (
+          <FileImport key="customer-import" entityType="customer" onImport={handleCustomerImport} />
+        )}
+        {activeTab === "vendors" && vendorMode === "manual" ? (
           /* Vendor manual form */
           <div className="flex flex-col gap-3">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -417,7 +418,7 @@ export default function OnboardingVendorsCustomersPage() {
               </Button>
             </div>
           </div>
-        ) : (
+        ) : activeTab === "customers" && customerMode === "manual" ? (
           /* Customer manual form */
           <div className="flex flex-col gap-3">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -470,7 +471,7 @@ export default function OnboardingVendorsCustomersPage() {
               </Button>
             </div>
           </div>
-        )}
+        ) : null}
 
         {/* Data table */}
         <div className="mt-4 max-h-96 overflow-y-auto rounded-lg border border-[var(--border)]">

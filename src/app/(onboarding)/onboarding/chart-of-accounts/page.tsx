@@ -12,6 +12,7 @@ interface CoaRow {
   accountCode: string;
   accountName: string;
   category: string;
+  _local?: boolean;
 }
 
 const CATEGORY_OPTIONS = [
@@ -93,7 +94,7 @@ export default function OnboardingChartOfAccountsPage() {
     setLoading(true);
     try {
       // Save any locally-added rows that haven't been persisted yet
-      const unsavedRows = coaRows.filter((r: Record<string, unknown>) => (r as Record<string, unknown>)._local);
+      const unsavedRows = coaRows.filter((r) => r._local);
       if (unsavedRows.length > 0 && tenantId) {
         const res = await fetch(`/api/tenants/${tenantId}/coa/batch`, {
           method: "POST",
