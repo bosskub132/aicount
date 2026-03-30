@@ -24,7 +24,7 @@ export function ToastProvider() {
 
   return (
     <div
-      className="fixed bottom-4 right-4 z-[1000] flex flex-col gap-2 max-w-sm"
+      className="fixed top-4 right-4 z-[1000] flex flex-col gap-2 max-w-sm"
       aria-live="polite"
     >
       {toasts.map((toast) => (
