@@ -1,46 +1,193 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { ClipboardList, FileText, Receipt } from "lucide-react";
+import { Button } from "@/components/button";
+import { Select } from "@/components/select";
+import { useToast } from "@/lib/stores/ui-store";
+
+const WHT_RATE_OPTIONS = [
+  { value: "1", label: "1%" },
+  { value: "2", label: "2%" },
+  { value: "3", label: "3%" },
+  { value: "5", label: "5%" },
+  { value: "10", label: "10%" },
+  { value: "15", label: "15%" },
+];
 
 export default function AccountingTaxReportsPage() {
-  const [tenantId] = useState(() => (typeof window !== "undefined" ? localStorage.getItem("workspaceTenantId") || "" : ""));
-  const [month, setMonth] = useState("2026-03");
-  const [pp30, setPp30] = useState("");
-  const [pnd, setPnd] = useState("");
+  const toast = useToast();
+  const [tenantId, setTenantId] = useState("");
+  const [taxId, setTaxId] = useState("");
+  const [whtRate, setWhtRate] = useState("3");
 
-  async function runTaxReports() {
+  useEffect(() => {
+    const id = localStorage.getItem("workspaceTenantId") || "";
+    setTenantId(id);
+
+    const savedRate = localStorage.getItem("defaultWhtRate");
+    if (savedRate) {
+      setWhtRate(savedRate);
+    }
+  }, []);
+
+  useEffect(() => {
     if (!tenantId) return;
-    const [pp30Res, pndRes] = await Promise.all([
-      fetch(`/api/tenants/${tenantId}/tax-report/pp30?month=${month}`, { headers: { "x-tenant-id": tenantId } }),
-      fetch(`/api/tenants/${tenantId}/tax-report/pnd353?month=${month}`, { headers: { "x-tenant-id": tenantId } }),
-    ]);
-    const pp30Json = await pp30Res.json();
-    const pndJson = await pndRes.json();
-    setPp30(pp30Json.success ? JSON.stringify(pp30Json.data) : pp30Json.error || "PP30 failed");
-    setPnd(pndJson.success ? JSON.stringify(pndJson.data) : pndJson.error || "PND failed");
+    async function fetchTenant() {
+      try {
+        const res = await fetch(`/api/tenants/${tenantId}`, {
+          headers: { "x-tenant-id": tenantId },
+        });
+        const json = (await res.json()) as {
+          success: boolean;
+          data?: { taxId?: string };
+          error?: string;
+        };
+        if (json.success && json.data?.taxId) {
+          setTaxId(json.data.taxId);
+        }
+      } catch {
+        // Silently fail — taxId will show "Not set"
+      }
+    }
+    fetchTenant();
+  }, [tenantId]);
+
+  function handleSave() {
+    localStorage.setItem("defaultWhtRate", whtRate);
+    toast.success("Default WHT rate saved");
   }
 
   if (!tenantId) {
     return (
       <section className="space-y-4">
-        <h1 className="text-2xl font-semibold">Tax Reports</h1>
-        <p className="text-slate-500">No workspace selected. Please select a workspace to generate tax reports.</p>
+        <div className="flex items-center gap-3">
+          <ClipboardList className="h-6 w-6 text-[var(--muted-foreground)]" />
+          <div>
+            <h1 className="text-2xl font-semibold text-[var(--foreground)]">
+              Tax Report Settings
+            </h1>
+            <p className="text-sm text-[var(--muted-foreground)]">
+              No workspace selected. Please select a workspace to configure tax
+              settings.
+            </p>
+          </div>
+        </div>
       </section>
     );
   }
 
   return (
-    <section className="space-y-4">
-      <h1 className="text-2xl font-semibold">Tax Reports</h1>
-      <p className="text-slate-600">Generate monthly tax snapshots for PP30 and PND3/53.</p>
-      <div className="flex items-center gap-2 text-sm">
-        <input value={month} onChange={(e) => setMonth(e.target.value)} className="rounded border px-2 py-1" />
-        <button onClick={runTaxReports} className="rounded bg-slate-900 px-3 py-2 text-white">
-          Run Reports
-        </button>
+    <section className="space-y-6">
+      {/* Page Header */}
+      <div className="flex items-center gap-3">
+        <ClipboardList className="h-6 w-6 text-[var(--muted-foreground)]" />
+        <div>
+          <h1 className="text-2xl font-semibold text-[var(--foreground)]">
+            Tax Report Settings
+          </h1>
+          <p className="text-sm text-[var(--muted-foreground)]">
+            Configure tax reporting preferences.
+          </p>
+        </div>
       </div>
-      {pp30 ? <pre className="overflow-x-auto rounded border bg-white p-3 text-xs">{pp30}</pre> : null}
-      {pnd ? <pre className="overflow-x-auto rounded border bg-white p-3 text-xs">{pnd}</pre> : null}
+
+      {/* Card 1: Tax Filing Info */}
+      <div className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--card)] p-5 space-y-4">
+        <h3 className="text-sm font-semibold text-[var(--foreground)]">
+          Tax Filing Information
+        </h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <p className="text-xs font-medium text-[var(--muted-foreground)]">
+              Filing Frequency
+            </p>
+            <p className="text-sm text-[var(--foreground)]">
+              Monthly (required by Thai law)
+            </p>
+          </div>
+          <div>
+            <p className="text-xs font-medium text-[var(--muted-foreground)]">
+              VAT Rate
+            </p>
+            <p className="text-sm text-[var(--foreground)]">7%</p>
+          </div>
+          <div>
+            <p className="text-xs font-medium text-[var(--muted-foreground)]">
+              Tax ID
+            </p>
+            <p className="text-sm font-mono text-[var(--foreground)]">
+              {taxId || "Not set"}
+            </p>
+          </div>
+          <Select
+            label="Default WHT Rate"
+            options={WHT_RATE_OPTIONS}
+            value={whtRate}
+            onChange={setWhtRate}
+          />
+        </div>
+        <p className="text-xs text-[var(--muted-foreground)]">
+          WHT rate precedence: vendor-specific rate → workspace default → 3%
+        </p>
+        <div>
+          <Button variant="primary" onClick={handleSave}>
+            Save
+          </Button>
+        </div>
+      </div>
+
+      {/* Card 2: Quick Links */}
+      <div className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--card)] p-5 space-y-3">
+        <h3 className="text-sm font-semibold text-[var(--foreground)]">
+          Tax Reports
+        </h3>
+        <div className="space-y-2">
+          <Link
+            href="/reports/tax"
+            className="flex items-center gap-3 rounded-[var(--radius-input)] p-3 hover:bg-[var(--muted)] transition-colors"
+          >
+            <ClipboardList className="h-5 w-5 text-[var(--primary)]" />
+            <div>
+              <p className="text-sm font-medium text-[var(--foreground)]">
+                Tax Report Hub
+              </p>
+              <p className="text-xs text-[var(--muted-foreground)]">
+                Generate ภ.พ.30, ภ.ง.ด.3, ภ.ง.ด.53, ภ.พ.36
+              </p>
+            </div>
+          </Link>
+          <Link
+            href="/reports/wht"
+            className="flex items-center gap-3 rounded-[var(--radius-input)] p-3 hover:bg-[var(--muted)] transition-colors"
+          >
+            <FileText className="h-5 w-5 text-[var(--primary)]" />
+            <div>
+              <p className="text-sm font-medium text-[var(--foreground)]">
+                WHT Certificates
+              </p>
+              <p className="text-xs text-[var(--muted-foreground)]">
+                Generate 50 ทวิ certificates
+              </p>
+            </div>
+          </Link>
+          <Link
+            href="/reports/tax/purchase-vat"
+            className="flex items-center gap-3 rounded-[var(--radius-input)] p-3 hover:bg-[var(--muted)] transition-colors"
+          >
+            <Receipt className="h-5 w-5 text-[var(--primary)]" />
+            <div>
+              <p className="text-sm font-medium text-[var(--foreground)]">
+                VAT Registers
+              </p>
+              <p className="text-xs text-[var(--muted-foreground)]">
+                Purchase & Sales VAT registers
+              </p>
+            </div>
+          </Link>
+        </div>
+      </div>
     </section>
   );
 }
