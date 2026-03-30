@@ -3,12 +3,24 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, BookOpen, Plus, Trash2 } from "lucide-react";
+import { Button } from "@/components/button";
+import { Input } from "@/components/input";
+import { Select } from "@/components/select";
+import { FileImport } from "@/components/file-import";
 
 interface CoaRow {
   accountCode: string;
   accountName: string;
   category: string;
 }
+
+const CATEGORY_OPTIONS = [
+  { value: "asset", label: "Asset" },
+  { value: "liability", label: "Liability" },
+  { value: "equity", label: "Equity" },
+  { value: "revenue", label: "Revenue" },
+  { value: "expense", label: "Expense" },
+];
 
 export default function OnboardingChartOfAccountsPage() {
   const router = useRouter();
@@ -21,6 +33,7 @@ export default function OnboardingChartOfAccountsPage() {
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [mode, setMode] = useState<"manual" | "import">("manual");
 
   useEffect(() => {
     const tid = localStorage.getItem("workspaceTenantId") || "";
@@ -94,7 +107,7 @@ export default function OnboardingChartOfAccountsPage() {
         }
       }
       await patchOnboardingStep(3);
-      router.push("/onboarding/departments");
+      router.push("/onboarding/vendors-customers");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
     } finally {
@@ -104,13 +117,13 @@ export default function OnboardingChartOfAccountsPage() {
 
   async function handleSkip() {
     await patchOnboardingStep(3);
-    router.push("/onboarding/departments");
+    router.push("/onboarding/vendors-customers");
   }
 
   if (fetching) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-[var(--primary)] border-t-transparent" />
       </div>
     );
   }
@@ -119,84 +132,113 @@ export default function OnboardingChartOfAccountsPage() {
     <div className="mx-auto max-w-2xl">
       {/* Page header */}
       <div className="flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-100">
-          <BookOpen className="h-5 w-5 text-blue-600" />
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--primary-light)]">
+          <BookOpen className="h-5 w-5 text-[var(--primary)]" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Chart of Accounts</h1>
-          <p className="text-sm text-slate-500">Import your account codes and categories</p>
+          <h1 className="text-2xl font-bold text-[var(--foreground)]">Chart of Accounts</h1>
+          <p className="text-sm text-[var(--muted-foreground)]">Import your account codes and categories</p>
         </div>
       </div>
 
       {/* Form card */}
-      <div className="mt-8 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-        <p className="mb-4 text-sm text-slate-600">
+      <div className="mt-8 rounded-xl border border-[var(--border)] bg-[var(--card)] p-6 shadow-[var(--shadow-sm)]">
+        <p className="mb-4 text-sm text-[var(--muted-foreground)]">
           Add your account codes below. You can always add or edit accounts later in Settings.
         </p>
 
-        {/* Input row */}
-        <div className="flex flex-wrap gap-2">
-          <input
-            type="text"
-            value={accountCode}
-            onChange={(e) => setAccountCode(e.target.value)}
-            placeholder="Code (e.g. 1100)"
-            className="w-28 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-          />
-          <input
-            type="text"
-            value={accountName}
-            onChange={(e) => setAccountName(e.target.value)}
-            placeholder="Account name"
-            className="flex-1 min-w-40 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-          />
-          <select
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-          >
-            <option value="asset">Asset</option>
-            <option value="liability">Liability</option>
-            <option value="equity">Equity</option>
-            <option value="revenue">Revenue</option>
-            <option value="expense">Expense</option>
-          </select>
-          <button
-            type="button"
-            onClick={handleAddEntry}
-            disabled={!accountCode.trim() || !accountName.trim()}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <Plus className="h-4 w-4" />
-            Add
-          </button>
+        {/* Mode toggle */}
+        <div className="flex gap-2 mb-4">
+          <Button variant={mode === "manual" ? "primary" : "secondary"} size="sm" onClick={() => setMode("manual")}>
+            Manual Entry
+          </Button>
+          <Button variant={mode === "import" ? "primary" : "secondary"} size="sm" onClick={() => setMode("import")}>
+            Import File
+          </Button>
         </div>
 
+        {mode === "import" ? (
+          <FileImport
+            entityType="coa"
+            onImport={async (rows) => {
+              const tenantIdVal = tenantId;
+              if (!tenantIdVal) return;
+              const res = await fetch(`/api/tenants/${tenantIdVal}/coa/batch`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "x-tenant-id": tenantIdVal },
+                body: JSON.stringify({ rows }),
+              });
+              const json = await res.json();
+              if (json.success) {
+                // Reload COA list
+                const loadRes = await fetch(`/api/tenants/${tenantIdVal}/coa`, {
+                  headers: { "x-tenant-id": tenantIdVal },
+                });
+                const loadJson = await loadRes.json();
+                if (loadJson.success) setCoaRows(loadJson.data || []);
+                setMode("manual");
+              }
+            }}
+          />
+        ) : (
+          <>
+            {/* Input row */}
+            <div className="flex flex-wrap gap-2">
+              <Input
+                placeholder="Code (e.g. 1100)"
+                value={accountCode}
+                onChange={(e) => setAccountCode(e.target.value)}
+                className="w-28"
+              />
+              <Input
+                placeholder="Account name"
+                value={accountName}
+                onChange={(e) => setAccountName(e.target.value)}
+                className="flex-1 min-w-40"
+              />
+              <Select
+                options={CATEGORY_OPTIONS}
+                value={category}
+                onChange={setCategory}
+              />
+              <Button
+                variant="primary"
+                size="sm"
+                icon={<Plus className="h-4 w-4" />}
+                onClick={handleAddEntry}
+                disabled={!accountCode.trim() || !accountName.trim()}
+              >
+                Add
+              </Button>
+            </div>
+          </>
+        )}
+
         {/* Accounts table */}
-        <div className="mt-4 overflow-hidden rounded-lg border border-slate-200">
+        <div className="mt-4 overflow-hidden rounded-lg border border-[var(--border)]">
           {coaRows.length > 0 ? (
             <table className="w-full text-sm">
-              <thead className="bg-slate-50">
+              <thead className="bg-[var(--muted)]">
                 <tr>
-                  <th className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wide text-slate-500">
+                  <th className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wide text-[var(--muted-foreground)]">
                     Code
                   </th>
-                  <th className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wide text-slate-500">
+                  <th className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wide text-[var(--muted-foreground)]">
                     Account Name
                   </th>
-                  <th className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wide text-slate-500">
+                  <th className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wide text-[var(--muted-foreground)]">
                     Category
                   </th>
                   <th className="px-4 py-2.5" />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-[var(--border)]">
                 {coaRows.map((row, i) => (
-                  <tr key={i} className="hover:bg-slate-50">
-                    <td className="px-4 py-2.5 font-mono text-xs text-slate-700">{row.accountCode}</td>
-                    <td className="px-4 py-2.5 text-slate-900">{row.accountName}</td>
+                  <tr key={i} className="hover:bg-[var(--muted)]">
+                    <td className="px-4 py-2.5 font-mono text-xs text-[var(--muted-foreground)]">{row.accountCode}</td>
+                    <td className="px-4 py-2.5 text-[var(--foreground)]">{row.accountName}</td>
                     <td className="px-4 py-2.5">
-                      <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium capitalize text-slate-700">
+                      <span className="inline-flex items-center rounded-full bg-[var(--muted)] px-2.5 py-0.5 text-xs font-medium capitalize text-[var(--muted-foreground)]">
                         {row.category}
                       </span>
                     </td>
@@ -204,7 +246,7 @@ export default function OnboardingChartOfAccountsPage() {
                       <button
                         type="button"
                         onClick={() => handleRemove(i)}
-                        className="rounded p-1 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600"
+                        className="rounded p-1 text-[var(--muted-foreground)] transition-colors hover:bg-[var(--destructive-light)] hover:text-[var(--destructive)]"
                         aria-label="Remove account"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -216,7 +258,7 @@ export default function OnboardingChartOfAccountsPage() {
             </table>
           ) : (
             <div className="px-4 py-8 text-center">
-              <p className="text-sm text-slate-400">
+              <p className="text-sm text-[var(--muted-foreground)]">
                 No accounts added yet. You can add them here or later in Settings.
               </p>
             </div>
@@ -226,48 +268,33 @@ export default function OnboardingChartOfAccountsPage() {
 
       {/* Error */}
       {error && (
-        <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="mt-4 rounded-lg border border-[var(--destructive)] bg-[var(--destructive-light)] px-4 py-3 text-sm text-[var(--destructive)]">
           {error}
         </div>
       )}
 
       {/* Navigation */}
       <div className="mt-6 flex items-center justify-between">
-        <button
-          type="button"
+        <Button
+          variant="secondary"
+          icon={<ArrowLeft className="h-4 w-4" />}
           onClick={() => router.push("/onboarding/workspace")}
-          className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
         >
-          <ArrowLeft className="h-4 w-4" />
           Back
-        </button>
+        </Button>
 
-        <button
-          type="button"
-          onClick={handleSkip}
-          className="text-sm text-slate-500 underline-offset-2 hover:text-slate-700 hover:underline"
-        >
+        <Button variant="link" onClick={handleSkip}>
           I&apos;ll do this later
-        </button>
+        </Button>
 
-        <button
-          type="button"
+        <Button
+          variant="primary"
+          loading={loading}
+          icon={<ArrowRight className="h-4 w-4" />}
           onClick={saveAndNext}
-          disabled={loading}
-          className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {loading ? (
-            <>
-              <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-              Saving…
-            </>
-          ) : (
-            <>
-              Next
-              <ArrowRight className="h-4 w-4" />
-            </>
-          )}
-        </button>
+          Next
+        </Button>
       </div>
     </div>
   );
