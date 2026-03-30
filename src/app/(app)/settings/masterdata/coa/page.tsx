@@ -171,13 +171,26 @@ export default function MasterDataCoaPage() {
     }
   }
 
+  const [sortKey, setSortKey] = useState<string | null>(null);
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+
   const filtered = useMemo(() => {
-    if (!search) return rows;
-    const q = search.toLowerCase();
-    return rows.filter(
-      (r) => r.accountCode.toLowerCase().includes(q) || r.accountName.toLowerCase().includes(q)
-    );
-  }, [rows, search]);
+    let result = rows;
+    if (search) {
+      const q = search.toLowerCase();
+      result = result.filter(
+        (r) => r.accountCode.toLowerCase().includes(q) || r.accountName.toLowerCase().includes(q)
+      );
+    }
+    if (sortKey) {
+      result = [...result].sort((a, b) => {
+        const aVal = String(a[sortKey as keyof CoaRow] ?? "");
+        const bVal = String(b[sortKey as keyof CoaRow] ?? "");
+        return sortDir === "asc" ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+      });
+    }
+    return result;
+  }, [rows, search, sortKey, sortDir]);
 
   const columns: Column<CoaRow>[] = [
     { key: "accountCode", header: "Code", width: "120px", sortable: true },
@@ -285,6 +298,8 @@ export default function MasterDataCoaPage() {
           columns={columns}
           data={filtered}
           keyField="id"
+          sortable
+          onSort={(key, dir) => { setSortKey(key); setSortDir(dir); }}
           emptyMessage={loading ? "Loading accounts..." : "No accounts found."}
         />
       </div>
