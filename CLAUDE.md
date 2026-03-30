@@ -67,6 +67,15 @@ scripts/            # Utility scripts (migration, health checks, smoke tests)
 - Avoid `as const` on objects used as Drizzle defaults — creates literal types that don't match DB column types
 - Nullish coalescing: `a ?? b || c` requires parentheses `(a ?? b) || c` — Turbopack enforces this
 - Badge component variants: default, draft, processing, query, action_required, pending, rejected, approved, exported, void — NO "warning" variant
+- Drizzle duplicate key errors: check `(error as { cause?: { code?: string } })?.cause?.code === "23505"` — not `error.message`
+- `useToast()` returns object with `.success()` and `.error()` methods — do NOT include `toast` in `useCallback` deps (causes infinite loop)
+- Select dropdown inside Modal: uses `absolute` positioning with `z-[9999]`, auto drop-up when near bottom. Modal has `overflow-visible`.
+- Modal sizes: sm, md, lg, xl (`max-w-4xl`), xxl (`max-w-6xl`)
+- Middleware resolves user role from `tenant_assignments` for API routes (not `user_metadata`) — maker+checker = admin
+- `getWorkspaceTenantId()` returns `""` on server to prevent hydration mismatch
+- Tailwind v4 `@source "../../src"` in globals.css prevents scanning docs/ for class names
+- Master data APIs support server-side pagination: `?page=1&limit=50&search=`
+- FileImport component supports multi-file import with local accumulation and duplicate highlighting
 
 ## Design Tokens & Styling
 
@@ -112,7 +121,8 @@ All in `src/components/` (flat structure). Use these instead of inline markup:
 - **Document:** DocumentSidePanel, DocumentImageViewer, ConfidenceBar, StatusTimeline, UploadQueue
 - **Accounting:** CurrencyInput, AccountSelect, JournalLineEditor, AgingMiniBar
 - **Reports:** PeriodPicker, ReportFilterBar, ReportStatCards, PdfPreviewModal, ReportHistoryDrawer
-- **Toast hook:** `import { useToast } from "@/lib/stores/ui-store"`
+- **Import:** FileImport (CSV/Excel with column mapping, validation, multi-file accumulation)
+- **Toast hook:** `import { useToast } from "@/lib/stores/ui-store"` — position: top-right
 
 ## Database Schema (Phase 3)
 
@@ -134,6 +144,14 @@ All in `src/components/` (flat structure). Use these instead of inline markup:
 - `customers`: branchNumber
 - `documents`: issuerBranch, whtIncomeType, whtRate
 - `tenants`: address, branchNumber, nextWhtSequence
+
+## Database Schema (Phase 5)
+
+- `bankReconSettings` — per-tenant matching rules (amountTolerance, dateRangeDays, autoMatch, matchByReference)
+- `bankAccounts` — bank account master data (bankName, accountNumber, glAccountCode)
+- `customExportTemplates` — custom column mapping templates (name, isActive, columnMappings JSONB)
+- Onboarding: 8 steps (Welcome, Workspace, COA, Partners, Departments, Team, Template, Complete)
+- `profiles.onboardingStep` max is 10 (Zod validation in profile PATCH)
 
 ## Asset Handling
 
