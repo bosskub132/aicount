@@ -46,7 +46,7 @@ export function Modal({ open, onClose, title, children, actions, size = "md" }: 
   return (
     <dialog
       ref={dialogRef}
-      className={`${sizeStyles[size]} w-full rounded-[var(--radius-modal)] border-none p-0 shadow-[var(--shadow-lg)] backdrop:bg-black/40 backdrop:backdrop-blur-[1px]`}
+      className={`${sizeStyles[size]} w-full fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-[var(--radius-modal)] border-none p-0 shadow-[var(--shadow-lg)] backdrop:bg-black/40 backdrop:backdrop-blur-[1px]`}
       onClick={(e) => {
         if (e.target === dialogRef.current) onClose();
       }}
