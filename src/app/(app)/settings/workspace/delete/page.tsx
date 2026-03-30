@@ -313,7 +313,11 @@ export default function WorkspaceDeletePage() {
 
         {isSoleMember ? (
           /* Sole member: show delete button directly */
-          <div className="max-w-lg">
+          <div className="max-w-lg space-y-3">
+            <p className="text-sm text-slate-600">
+              You are the only member of this workspace. No ownership transfer is needed.
+              Click below to schedule this workspace for deletion.
+            </p>
             <button
               onClick={() => setShowModal(true)}
               className="flex items-center gap-2 rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
@@ -326,7 +330,11 @@ export default function WorkspaceDeletePage() {
           /* Multiple members: require ownership transfer */
           <div className="max-w-lg space-y-4 rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
             <p className="text-sm font-medium text-slate-800">
-              You must transfer ownership before deleting this workspace.
+              Transfer ownership before deletion
+            </p>
+            <p className="text-sm text-slate-600">
+              This workspace has other members. Select a new owner who will take over
+              management of this workspace after you initiate deletion.
             </p>
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-slate-700" htmlFor="new-owner">
