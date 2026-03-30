@@ -57,10 +57,12 @@ export async function POST(
 
     return NextResponse.json({ success: true, data: created }, { status: 201 });
   } catch (error) {
-    return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : "Lock period failed" },
-      { status: 500 }
-    );
+    const cause = (error as { cause?: { code?: string } })?.cause;
+    if (cause?.code === "23505") {
+      return NextResponse.json({ success: false, error: "This period is already locked." }, { status: 409 });
+    }
+    console.error("Period lock error:", error);
+    return NextResponse.json({ success: false, error: "Failed to lock period." }, { status: 500 });
   }
 }
 
@@ -100,10 +102,8 @@ export async function DELETE(
 
     return NextResponse.json({ success: true, data: deleted ?? null });
   } catch (error) {
-    return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : "Unlock period failed" },
-      { status: 500 }
-    );
+    console.error("Period unlock error:", error);
+    return NextResponse.json({ success: false, error: "Failed to unlock period." }, { status: 500 });
   }
 }
 

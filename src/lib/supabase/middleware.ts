@@ -63,8 +63,6 @@ export async function updateSession(request: NextRequest) {
       return NextResponse.redirect(url);
     }
 
-    const roleRaw = String(user.user_metadata?.role || "maker");
-    const role = roleRaw === "admin" || roleRaw === "checker" ? roleRaw : "maker";
     const pathTenantIdMatch = request.nextUrl.pathname.match(/^\/api\/tenants\/([^/]+)/);
     const queryTenantId = request.nextUrl.searchParams.get("tenantId");
     const tenantId =
@@ -72,6 +70,32 @@ export async function updateSession(request: NextRequest) {
       pathTenantIdMatch?.[1] ||
       queryTenantId ||
       "00000000-0000-0000-0000-000000000000";
+
+    // Resolve role from tenant_assignments for API routes (accurate role check)
+    // For non-API routes, use metadata fallback (faster, role not critical for page rendering)
+    let role: string = String(user.user_metadata?.role || "maker");
+    if (isApiRoute && tenantId && tenantId !== "00000000-0000-0000-0000-000000000000") {
+      try {
+        const { data: assignments } = await supabase
+          .from("tenant_assignments")
+          .select("role")
+          .eq("user_id", user.id)
+          .eq("tenant_id", tenantId);
+        if (assignments && assignments.length > 0) {
+          const roles = assignments.map((a: { role: string }) => a.role);
+          if (roles.includes("maker") && roles.includes("checker")) {
+            role = "admin";
+          } else if (roles.includes("checker")) {
+            role = "checker";
+          } else if (roles.includes("maker")) {
+            role = "maker";
+          }
+        }
+      } catch {
+        // Fall back to metadata role
+      }
+    }
+    if (role !== "admin" && role !== "checker") role = "maker";
 
     requestHeaders.set("x-user-id", user.id);
     requestHeaders.set("x-user-role", role);
