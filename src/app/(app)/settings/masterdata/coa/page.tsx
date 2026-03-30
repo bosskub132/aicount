@@ -199,18 +199,21 @@ export default function MasterDataCoaPage() {
       key: "category",
       header: "Category",
       width: "120px",
+      sortable: false,
       render: (row) => <Badge variant="default">{row.category}</Badge>,
     },
     {
       key: "isSuspense",
       header: "Suspense",
       width: "100px",
+      sortable: false,
       render: (row) => (row.isSuspense ? "Yes" : "\u2014"),
     },
     {
       key: "actions",
       header: "",
       width: "100px",
+      sortable: false,
       render: (row) => (
         <div className="flex gap-1">
           <Button
