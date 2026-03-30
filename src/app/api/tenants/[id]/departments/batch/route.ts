@@ -5,6 +5,7 @@ import {
   forbidden,
   ensureTenantScope,
 } from "@/lib/api/request-context";
+import { sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { departments } from "@/lib/db/schema";
 
@@ -40,7 +41,17 @@ export async function POST(
       deptName: row.deptName,
     }));
 
-    const inserted = await db.insert(departments).values(values).returning();
+    const inserted = await db
+      .insert(departments)
+      .values(values)
+      .onConflictDoUpdate({
+        target: [departments.tenantId, departments.deptCode],
+        set: {
+          deptName: sql`excluded.dept_name`,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
 
     return NextResponse.json(
       { success: true, data: { count: inserted.length } },

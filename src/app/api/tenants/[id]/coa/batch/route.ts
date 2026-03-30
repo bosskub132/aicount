@@ -5,6 +5,7 @@ import {
   forbidden,
   ensureTenantScope,
 } from "@/lib/api/request-context";
+import { sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { chartOfAccounts } from "@/lib/db/schema";
 
@@ -53,6 +54,15 @@ export async function POST(
     const inserted = await db
       .insert(chartOfAccounts)
       .values(values)
+      .onConflictDoUpdate({
+        target: [chartOfAccounts.tenantId, chartOfAccounts.accountCode],
+        set: {
+          accountName: sql`excluded.account_name`,
+          category: sql`excluded.category`,
+          isSuspense: sql`excluded.is_suspense`,
+          updatedAt: new Date(),
+        },
+      })
       .returning();
 
     return NextResponse.json(

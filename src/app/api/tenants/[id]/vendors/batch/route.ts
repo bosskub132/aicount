@@ -5,6 +5,7 @@ import {
   forbidden,
   ensureTenantScope,
 } from "@/lib/api/request-context";
+import { sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { vendors } from "@/lib/db/schema";
 
@@ -54,7 +55,24 @@ export async function POST(
       defaultWhtRate: row.defaultWhtRate || undefined,
     }));
 
-    const inserted = await db.insert(vendors).values(values).returning();
+    const inserted = await db
+      .insert(vendors)
+      .values(values)
+      .onConflictDoUpdate({
+        target: [vendors.tenantId, vendors.taxId],
+        set: {
+          name: sql`excluded.name`,
+          address: sql`excluded.address`,
+          vendorType: sql`excluded.vendor_type`,
+          branchNumber: sql`excluded.branch_number`,
+          country: sql`excluded.country`,
+          isNonResident: sql`excluded.is_non_resident`,
+          defaultExpenseGl: sql`excluded.default_expense_gl`,
+          defaultWhtRate: sql`excluded.default_wht_rate`,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
 
     return NextResponse.json(
       { success: true, data: { count: inserted.length } },

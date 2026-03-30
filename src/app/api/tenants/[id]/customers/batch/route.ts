@@ -5,6 +5,7 @@ import {
   forbidden,
   ensureTenantScope,
 } from "@/lib/api/request-context";
+import { sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { customers } from "@/lib/db/schema";
 
@@ -47,7 +48,19 @@ export async function POST(
         : undefined,
     }));
 
-    const inserted = await db.insert(customers).values(values).returning();
+    const inserted = await db
+      .insert(customers)
+      .values(values)
+      .onConflictDoUpdate({
+        target: [customers.tenantId, customers.taxId],
+        set: {
+          name: sql`excluded.name`,
+          branchNumber: sql`excluded.branch_number`,
+          creditTermDays: sql`excluded.credit_term_days`,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
 
     return NextResponse.json(
       { success: true, data: { count: inserted.length } },
