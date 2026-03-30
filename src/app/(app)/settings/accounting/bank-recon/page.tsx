@@ -341,21 +341,22 @@ export default function BankReconSettingsPage() {
               />
             </div>
 
-            <Toggle
-              checked={settings.autoMatch}
-              onChange={(checked) =>
-                setSettings({ ...settings, autoMatch: checked })
-              }
-              label="Auto-match transactions"
-            />
-
-            <Toggle
-              checked={settings.matchByReference}
-              onChange={(checked) =>
-                setSettings({ ...settings, matchByReference: checked })
-              }
-              label="Match by reference number"
-            />
+            <div className="flex flex-wrap gap-8 pt-2">
+              <Toggle
+                checked={settings.autoMatch}
+                onChange={(checked) =>
+                  setSettings({ ...settings, autoMatch: checked })
+                }
+                label="Auto-match transactions"
+              />
+              <Toggle
+                checked={settings.matchByReference}
+                onChange={(checked) =>
+                  setSettings({ ...settings, matchByReference: checked })
+                }
+                label="Match by reference number"
+              />
+            </div>
           </>
         )}
       </div>
