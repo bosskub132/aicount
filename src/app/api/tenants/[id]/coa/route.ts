@@ -39,7 +39,12 @@ export async function POST(
       .returning();
     return NextResponse.json({ success: true, data: created }, { status: 201 });
   } catch (error) {
-    return NextResponse.json({ success: false, error: (error as Error).message }, { status: 500 });
+    const msg = (error as Error).message || "";
+    if (msg.includes("duplicate key") || msg.includes("unique constraint")) {
+      return NextResponse.json({ success: false, error: "An account with this code already exists." }, { status: 409 });
+    }
+    console.error("COA create error:", error);
+    return NextResponse.json({ success: false, error: "Failed to create account." }, { status: 500 });
   }
 }
 
