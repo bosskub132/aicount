@@ -355,9 +355,9 @@ export default function OnboardingVendorsCustomersPage() {
 
         {mode === "import" ? (
           activeTab === "vendors" ? (
-            <FileImport entityType="vendor" onImport={handleVendorImport} />
+            <FileImport key="vendor-import" entityType="vendor" onImport={handleVendorImport} />
           ) : (
-            <FileImport entityType="customer" onImport={handleCustomerImport} />
+            <FileImport key="customer-import" entityType="customer" onImport={handleCustomerImport} />
           )
         ) : activeTab === "vendors" ? (
           /* Vendor manual form */
