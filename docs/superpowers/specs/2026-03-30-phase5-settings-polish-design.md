@@ -62,7 +62,7 @@ Inputs:  rounded-[var(--radius-input)]    (6px)
 Buttons: rounded-[var(--radius-button)]   (8px)
 Cards:   rounded-[var(--radius-card)]     (10px)
 Modals:  rounded-[var(--radius-modal)]    (12px)
-Shadows: shadow-[var(--shadow-sm/md/lg)]
+Shadows: use --shadow-sm, --shadow-md, or --shadow-lg via shadow-[var(--shadow-*)]
 ```
 
 ### Page Header Pattern (Settings)
