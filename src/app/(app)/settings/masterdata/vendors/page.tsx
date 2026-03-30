@@ -210,13 +210,26 @@ export default function MasterDataVendorsPage() {
     }
   }
 
+  const [sortKey, setSortKey] = useState<string | null>(null);
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+
   const filtered = useMemo(() => {
-    if (!search) return rows;
-    const q = search.toLowerCase();
-    return rows.filter(
-      (r) => r.name.toLowerCase().includes(q) || r.taxId.toLowerCase().includes(q)
-    );
-  }, [rows, search]);
+    let result = rows;
+    if (search) {
+      const q = search.toLowerCase();
+      result = result.filter(
+        (r) => r.name.toLowerCase().includes(q) || r.taxId.toLowerCase().includes(q)
+      );
+    }
+    if (sortKey) {
+      result = [...result].sort((a, b) => {
+        const aVal = String(a[sortKey as keyof VendorRow] ?? "");
+        const bVal = String(b[sortKey as keyof VendorRow] ?? "");
+        return sortDir === "asc" ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+      });
+    }
+    return result;
+  }, [rows, search, sortKey, sortDir]);
 
   const columns: Column<VendorRow>[] = [
     { key: "name", header: "Name", sortable: true },
@@ -231,6 +244,7 @@ export default function MasterDataVendorsPage() {
       key: "vendorType",
       header: "Type",
       width: "140px",
+      sortable: false,
       render: (row) => (
         <Badge variant="default">
           {row.vendorType}{row.isNonResident ? " (NR)" : ""}
@@ -241,12 +255,14 @@ export default function MasterDataVendorsPage() {
       key: "branchNumber",
       header: "Branch",
       width: "100px",
+      sortable: false,
       render: (row) => row.branchNumber || "\u2014",
     },
     {
       key: "defaultWhtRate",
       header: "WHT Rate",
       width: "100px",
+      sortable: false,
       render: (row) => (
         <span className="tabular-nums">
           {row.defaultWhtRate ? `${row.defaultWhtRate}%` : "\u2014"}
@@ -257,6 +273,7 @@ export default function MasterDataVendorsPage() {
       key: "actions",
       header: "",
       width: "100px",
+      sortable: false,
       render: (row) => (
         <div className="flex gap-1">
           <Button
@@ -344,6 +361,8 @@ export default function MasterDataVendorsPage() {
           columns={columns}
           data={filtered}
           keyField="id"
+          sortable
+          onSort={(key, dir) => { setSortKey(key); setSortDir(dir); }}
           emptyMessage={loading ? "Loading vendors..." : "No vendors found."}
         />
       </div>

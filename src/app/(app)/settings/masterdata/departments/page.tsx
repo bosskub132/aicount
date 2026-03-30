@@ -147,13 +147,26 @@ export default function MasterDataDepartmentsPage() {
     }
   }
 
+  const [sortKey, setSortKey] = useState<string | null>(null);
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+
   const filtered = useMemo(() => {
-    if (!search) return rows;
-    const q = search.toLowerCase();
-    return rows.filter(
-      (r) => r.deptCode.toLowerCase().includes(q) || r.deptName.toLowerCase().includes(q)
-    );
-  }, [rows, search]);
+    let result = rows;
+    if (search) {
+      const q = search.toLowerCase();
+      result = result.filter(
+        (r) => r.deptCode.toLowerCase().includes(q) || r.deptName.toLowerCase().includes(q)
+      );
+    }
+    if (sortKey) {
+      result = [...result].sort((a, b) => {
+        const aVal = String(a[sortKey as keyof DepartmentRow] ?? "");
+        const bVal = String(b[sortKey as keyof DepartmentRow] ?? "");
+        return sortDir === "asc" ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+      });
+    }
+    return result;
+  }, [rows, search, sortKey, sortDir]);
 
   const columns: Column<DepartmentRow>[] = [
     { key: "deptCode", header: "Code", width: "120px", sortable: true },
@@ -162,6 +175,7 @@ export default function MasterDataDepartmentsPage() {
       key: "actions",
       header: "",
       width: "100px",
+      sortable: false,
       render: (row) => (
         <div className="flex gap-1">
           <Button
@@ -249,6 +263,8 @@ export default function MasterDataDepartmentsPage() {
           columns={columns}
           data={filtered}
           keyField="id"
+          sortable
+          onSort={(key, dir) => { setSortKey(key); setSortDir(dir); }}
           emptyMessage={loading ? "Loading departments..." : "No departments found."}
         />
       </div>

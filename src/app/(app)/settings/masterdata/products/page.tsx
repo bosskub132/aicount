@@ -171,13 +171,26 @@ export default function MasterDataProductsPage() {
     }
   }
 
+  const [sortKey, setSortKey] = useState<string | null>(null);
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+
   const filtered = useMemo(() => {
-    if (!search) return rows;
-    const q = search.toLowerCase();
-    return rows.filter(
-      (r) => r.itemCode.toLowerCase().includes(q) || r.itemName.toLowerCase().includes(q)
-    );
-  }, [rows, search]);
+    let result = rows;
+    if (search) {
+      const q = search.toLowerCase();
+      result = result.filter(
+        (r) => r.itemCode.toLowerCase().includes(q) || r.itemName.toLowerCase().includes(q)
+      );
+    }
+    if (sortKey) {
+      result = [...result].sort((a, b) => {
+        const aVal = String(a[sortKey as keyof ProductRow] ?? "");
+        const bVal = String(b[sortKey as keyof ProductRow] ?? "");
+        return sortDir === "asc" ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+      });
+    }
+    return result;
+  }, [rows, search, sortKey, sortDir]);
 
   const columns: Column<ProductRow>[] = [
     { key: "itemCode", header: "Code", width: "120px", sortable: true },
@@ -186,6 +199,7 @@ export default function MasterDataProductsPage() {
       key: "keywords",
       header: "Keywords",
       width: "200px",
+      sortable: false,
       render: (row) => {
         const kw = row.keywords;
         return kw && kw.length > 0 ? kw.join(", ") : "\u2014";
@@ -195,18 +209,21 @@ export default function MasterDataProductsPage() {
       key: "incomeGl",
       header: "Income GL",
       width: "120px",
+      sortable: false,
       render: (row) => row.incomeGl || "\u2014",
     },
     {
       key: "expenseGl",
       header: "Expense GL",
       width: "120px",
+      sortable: false,
       render: (row) => row.expenseGl || "\u2014",
     },
     {
       key: "actions",
       header: "",
       width: "100px",
+      sortable: false,
       render: (row) => (
         <div className="flex gap-1">
           <Button
@@ -289,6 +306,8 @@ export default function MasterDataProductsPage() {
           columns={columns}
           data={filtered}
           keyField="id"
+          sortable
+          onSort={(key, dir) => { setSortKey(key); setSortDir(dir); }}
           emptyMessage={loading ? "Loading products..." : "No products found."}
         />
       </div>

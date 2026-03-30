@@ -162,13 +162,26 @@ export default function MasterDataCustomersPage() {
     }
   }
 
+  const [sortKey, setSortKey] = useState<string | null>(null);
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+
   const filtered = useMemo(() => {
-    if (!search) return rows;
-    const q = search.toLowerCase();
-    return rows.filter(
-      (r) => r.name.toLowerCase().includes(q) || r.taxId.toLowerCase().includes(q)
-    );
-  }, [rows, search]);
+    let result = rows;
+    if (search) {
+      const q = search.toLowerCase();
+      result = result.filter(
+        (r) => r.name.toLowerCase().includes(q) || r.taxId.toLowerCase().includes(q)
+      );
+    }
+    if (sortKey) {
+      result = [...result].sort((a, b) => {
+        const aVal = String(a[sortKey as keyof CustomerRow] ?? "");
+        const bVal = String(b[sortKey as keyof CustomerRow] ?? "");
+        return sortDir === "asc" ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+      });
+    }
+    return result;
+  }, [rows, search, sortKey, sortDir]);
 
   const columns: Column<CustomerRow>[] = [
     { key: "name", header: "Name", sortable: true },
@@ -183,12 +196,14 @@ export default function MasterDataCustomersPage() {
       key: "branchNumber",
       header: "Branch",
       width: "120px",
+      sortable: false,
       render: (row) => row.branchNumber || "\u2014",
     },
     {
       key: "creditTermDays",
       header: "Credit Terms",
       width: "130px",
+      sortable: false,
       render: (row) => (
         <span className="tabular-nums">
           {row.creditTermDays != null ? `${row.creditTermDays} days` : "\u2014"}
@@ -199,6 +214,7 @@ export default function MasterDataCustomersPage() {
       key: "actions",
       header: "",
       width: "100px",
+      sortable: false,
       render: (row) => (
         <div className="flex gap-1">
           <Button
@@ -286,6 +302,8 @@ export default function MasterDataCustomersPage() {
           columns={columns}
           data={filtered}
           keyField="id"
+          sortable
+          onSort={(key, dir) => { setSortKey(key); setSortDir(dir); }}
           emptyMessage={loading ? "Loading customers..." : "No customers found."}
         />
       </div>
