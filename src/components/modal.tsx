@@ -64,7 +64,7 @@ export function Modal({ open, onClose, title, children, actions, size = "md" }: 
             <X className="h-4 w-4" />
           </button>
         </div>
-        <div className="text-sm text-[var(--muted-foreground)] leading-relaxed min-h-0 flex-1 overflow-y-auto overflow-x-visible">{children}</div>
+        <div className="text-sm text-[var(--muted-foreground)] leading-relaxed min-h-0 flex-1 overflow-visible">{children}</div>
         {actions && (
           <div className="flex justify-end gap-2 mt-6 shrink-0">{actions}</div>
         )}
