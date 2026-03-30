@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
-import { BookOpen, Plus, Upload, Pencil, Trash2, HelpCircle } from "lucide-react";
+import { BookOpen, Plus, Upload, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
 import { Select } from "@/components/select";
@@ -9,7 +9,7 @@ import { Modal } from "@/components/modal";
 import { DataTable, type Column } from "@/components/data-table";
 import { Badge } from "@/components/badge";
 import { Toggle } from "@/components/toggle";
-import { Tooltip } from "@/components/tooltip";
+
 import { FileImport } from "@/components/file-import";
 import { useToast } from "@/lib/stores/ui-store";
 
@@ -325,11 +325,11 @@ export default function MasterDataCoaPage() {
             value={category}
             onChange={(v) => setCategory(v as CoaCategory)}
           />
-          <div className="flex items-center gap-2">
+          <div>
             <Toggle checked={isSuspense} onChange={setIsSuspense} label="Suspense Account" />
-            <Tooltip side="bottom" content="A suspense account temporarily holds transactions when the correct account is unknown. Entries are moved to the proper account once identified.">
-              <HelpCircle className="h-4 w-4 text-[var(--muted-foreground)] cursor-help" />
-            </Tooltip>
+            <p className="mt-1 text-xs text-[var(--muted-foreground)]">
+              Temporarily holds transactions when the correct account is unknown.
+            </p>
           </div>
         </div>
       </Modal>
