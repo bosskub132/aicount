@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ArrowRight, BookOpen, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, BookOpen, Plus, Trash2, X } from "lucide-react";
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
 import { Select } from "@/components/select";
@@ -69,7 +69,7 @@ export default function OnboardingChartOfAccountsPage() {
     if (!accountCode.trim() || !accountName.trim()) return;
     setCoaRows((prev) => [
       ...prev,
-      { accountCode: accountCode.trim(), accountName: accountName.trim(), category },
+      { accountCode: accountCode.trim(), accountName: accountName.trim(), category, _local: true },
     ]);
     setAccountCode("");
     setAccountName("");
@@ -92,14 +92,16 @@ export default function OnboardingChartOfAccountsPage() {
     setError(null);
     setLoading(true);
     try {
-      if (coaRows.length > 0 && tenantId) {
-        const res = await fetch(`/api/tenants/${tenantId}/coa`, {
+      // Save any locally-added rows that haven't been persisted yet
+      const unsavedRows = coaRows.filter((r: Record<string, unknown>) => (r as Record<string, unknown>)._local);
+      if (unsavedRows.length > 0 && tenantId) {
+        const res = await fetch(`/api/tenants/${tenantId}/coa/batch`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             "x-tenant-id": tenantId,
           },
-          body: JSON.stringify({ accounts: coaRows }),
+          body: JSON.stringify({ rows: unsavedRows }),
         });
         if (!res.ok) {
           const json = (await res.json()) as { error?: string };
@@ -268,8 +270,11 @@ export default function OnboardingChartOfAccountsPage() {
 
       {/* Error */}
       {error && (
-        <div className="mt-4 rounded-lg border border-[var(--destructive)] bg-[var(--destructive-light)] px-4 py-3 text-sm text-[var(--destructive)]">
-          {error}
+        <div className="mt-4 flex items-start justify-between rounded-lg border border-[var(--destructive)] bg-[var(--destructive-light)] px-4 py-3 text-sm text-[var(--destructive)]">
+          <span>{error}</span>
+          <button onClick={() => setError(null)} className="ml-2 shrink-0 p-0.5 hover:opacity-70" aria-label="Dismiss">
+            <X className="h-4 w-4" />
+          </button>
         </div>
       )}
 
