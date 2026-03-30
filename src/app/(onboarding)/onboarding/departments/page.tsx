@@ -3,6 +3,9 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, Layers, Plus, Trash2 } from "lucide-react";
+import { Button } from "@/components/button";
+import { Input } from "@/components/input";
+import { FileImport } from "@/components/file-import";
 
 interface Department {
   deptCode: string;
@@ -19,6 +22,7 @@ export default function OnboardingDepartmentsPage() {
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [mode, setMode] = useState<"manual" | "import">("manual");
 
   useEffect(() => {
     const tid = localStorage.getItem("workspaceTenantId") || "";
@@ -90,7 +94,7 @@ export default function OnboardingDepartmentsPage() {
           throw new Error(json.error ?? "Failed to save departments.");
         }
       }
-      await patchOnboardingStep(4);
+      await patchOnboardingStep(5);
       router.push("/onboarding/team");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
@@ -100,14 +104,14 @@ export default function OnboardingDepartmentsPage() {
   }
 
   async function handleSkip() {
-    await patchOnboardingStep(4);
+    await patchOnboardingStep(5);
     router.push("/onboarding/team");
   }
 
   if (fetching) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-[var(--primary)] border-t-transparent" />
       </div>
     );
   }
@@ -116,73 +120,108 @@ export default function OnboardingDepartmentsPage() {
     <div className="mx-auto max-w-2xl">
       {/* Page header */}
       <div className="flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-100">
-          <Layers className="h-5 w-5 text-blue-600" />
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--primary-light)]">
+          <Layers className="h-5 w-5 text-[var(--primary)]" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Departments</h1>
-          <p className="text-sm text-slate-500">Add cost centers and departments for your organization</p>
+          <h1 className="text-2xl font-bold text-[var(--foreground)]">Departments</h1>
+          <p className="text-sm text-[var(--muted-foreground)]">Add cost centers and departments for your organization</p>
         </div>
       </div>
 
       {/* Form card */}
-      <div className="mt-8 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-        <p className="mb-4 text-sm text-slate-600">
+      <div className="mt-8 rounded-xl border border-[var(--border)] bg-[var(--card)] p-6 shadow-[var(--shadow-sm)]">
+        <p className="mb-4 text-sm text-[var(--muted-foreground)]">
           Add your departments or cost centers below. You can always add or edit them later in Settings.
         </p>
 
-        {/* Input row */}
-        <div className="flex flex-wrap gap-2">
-          <input
-            type="text"
-            value={deptCode}
-            onChange={(e) => setDeptCode(e.target.value)}
-            placeholder="Code (e.g. MKT)"
-            className="w-32 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-          />
-          <input
-            type="text"
-            value={deptName}
-            onChange={(e) => setDeptName(e.target.value)}
-            placeholder="Department name"
-            className="flex-1 min-w-40 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-          />
-          <button
-            type="button"
-            onClick={handleAddDepartment}
-            disabled={!deptCode.trim() || !deptName.trim()}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <Plus className="h-4 w-4" />
-            Add
-          </button>
+        {/* Mode toggle */}
+        <div className="flex gap-2 mb-4">
+          <Button variant={mode === "manual" ? "primary" : "secondary"} size="sm" onClick={() => setMode("manual")}>
+            Manual Entry
+          </Button>
+          <Button variant={mode === "import" ? "primary" : "secondary"} size="sm" onClick={() => setMode("import")}>
+            Import File
+          </Button>
         </div>
 
+        {mode === "import" ? (
+          <FileImport
+            entityType="department"
+            onImport={async (rows) => {
+              const tenantIdVal = tenantId;
+              if (!tenantIdVal) return;
+              const res = await fetch(`/api/tenants/${tenantIdVal}/departments/batch`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "x-tenant-id": tenantIdVal },
+                body: JSON.stringify({ rows }),
+              });
+              const json = await res.json();
+              if (json.success) {
+                // Reload departments list
+                const loadRes = await fetch(`/api/tenants/${tenantIdVal}/departments`, {
+                  headers: { "x-tenant-id": tenantIdVal },
+                });
+                const loadJson = await loadRes.json();
+                if (loadJson.success) setDepts(loadJson.data || []);
+                setMode("manual");
+              }
+            }}
+          />
+        ) : (
+          <>
+            {/* Input row */}
+            <div className="flex flex-wrap gap-2">
+              <Input
+                placeholder="Code (e.g. MKT)"
+                value={deptCode}
+                onChange={(e) => setDeptCode(e.target.value)}
+                className="w-32"
+              />
+              <Input
+                placeholder="Department name"
+                value={deptName}
+                onChange={(e) => setDeptName(e.target.value)}
+                className="flex-1 min-w-40"
+              />
+              <Button
+                variant="primary"
+                size="sm"
+                icon={<Plus className="h-4 w-4" />}
+                onClick={handleAddDepartment}
+                disabled={!deptCode.trim() || !deptName.trim()}
+              >
+                Add
+              </Button>
+            </div>
+          </>
+        )}
+
         {/* Departments table */}
-        <div className="mt-4 overflow-hidden rounded-lg border border-slate-200">
+        <div className="mt-4 overflow-hidden rounded-lg border border-[var(--border)]">
           {depts.length > 0 ? (
             <table className="w-full text-sm">
-              <thead className="bg-slate-50">
+              <thead className="bg-[var(--muted)]">
                 <tr>
-                  <th className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wide text-slate-500">
+                  <th className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wide text-[var(--muted-foreground)]">
                     Code
                   </th>
-                  <th className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wide text-slate-500">
+                  <th className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wide text-[var(--muted-foreground)]">
                     Department Name
                   </th>
                   <th className="px-4 py-2.5" />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-[var(--border)]">
                 {depts.map((dept, i) => (
-                  <tr key={i} className="hover:bg-slate-50">
-                    <td className="px-4 py-2.5 font-mono text-xs text-slate-700">{dept.deptCode}</td>
-                    <td className="px-4 py-2.5 text-slate-900">{dept.deptName}</td>
+                  <tr key={i} className="hover:bg-[var(--muted)]">
+                    <td className="px-4 py-2.5 font-mono text-xs text-[var(--muted-foreground)]">{dept.deptCode}</td>
+                    <td className="px-4 py-2.5 text-[var(--foreground)]">{dept.deptName}</td>
                     <td className="px-4 py-2.5 text-right">
                       <button
                         type="button"
                         onClick={() => handleRemove(i)}
-                        className="rounded p-1 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600"
+                        className="rounded p-1 text-[var(--muted-foreground)] transition-colors hover:bg-[var(--destructive-light)] hover:text-[var(--destructive)]"
                         aria-label="Remove department"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -194,7 +233,7 @@ export default function OnboardingDepartmentsPage() {
             </table>
           ) : (
             <div className="px-4 py-8 text-center">
-              <p className="text-sm text-slate-400">
+              <p className="text-sm text-[var(--muted-foreground)]">
                 No departments added yet. You can add them here or later in Settings.
               </p>
             </div>
@@ -204,48 +243,33 @@ export default function OnboardingDepartmentsPage() {
 
       {/* Error */}
       {error && (
-        <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="mt-4 rounded-lg border border-[var(--destructive)] bg-[var(--destructive-light)] px-4 py-3 text-sm text-[var(--destructive)]">
           {error}
         </div>
       )}
 
       {/* Navigation */}
       <div className="mt-6 flex items-center justify-between">
-        <button
-          type="button"
-          onClick={() => router.push("/onboarding/chart-of-accounts")}
-          className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+        <Button
+          variant="secondary"
+          icon={<ArrowLeft className="h-4 w-4" />}
+          onClick={() => router.push("/onboarding/vendors-customers")}
         >
-          <ArrowLeft className="h-4 w-4" />
           Back
-        </button>
+        </Button>
 
-        <button
-          type="button"
-          onClick={handleSkip}
-          className="text-sm text-slate-500 underline-offset-2 hover:text-slate-700 hover:underline"
-        >
+        <Button variant="link" onClick={handleSkip}>
           I&apos;ll do this later
-        </button>
+        </Button>
 
-        <button
-          type="button"
+        <Button
+          variant="primary"
+          loading={loading}
+          icon={<ArrowRight className="h-4 w-4" />}
           onClick={saveAndNext}
-          disabled={loading}
-          className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {loading ? (
-            <>
-              <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-              Saving…
-            </>
-          ) : (
-            <>
-              Next
-              <ArrowRight className="h-4 w-4" />
-            </>
-          )}
-        </button>
+          Next
+        </Button>
       </div>
     </div>
   );
