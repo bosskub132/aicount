@@ -17,8 +17,8 @@ type Workspace = {
 };
 
 export function getWorkspaceTenantId() {
-  if (typeof window === "undefined") return DEFAULT_WORKSPACE_TENANT_ID;
-  return localStorage.getItem("workspaceTenantId") || DEFAULT_WORKSPACE_TENANT_ID;
+  if (typeof window === "undefined") return "";
+  return localStorage.getItem("workspaceTenantId") || "";
 }
 
 export function WorkspaceSelector() {
