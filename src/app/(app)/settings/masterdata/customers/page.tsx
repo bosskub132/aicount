@@ -281,12 +281,14 @@ export default function MasterDataCustomersPage() {
       </div>
 
       {/* Data Table */}
-      <DataTable<CustomerRow>
-        columns={columns}
-        data={filtered}
-        keyField="id"
-        emptyMessage={loading ? "Loading customers..." : "No customers found."}
-      />
+      <div className="max-h-[calc(100vh-280px)] overflow-y-auto rounded-[var(--radius-card)] border border-[var(--border)]">
+        <DataTable<CustomerRow>
+          columns={columns}
+          data={filtered}
+          keyField="id"
+          emptyMessage={loading ? "Loading customers..." : "No customers found."}
+        />
+      </div>
 
       {/* Create/Edit Modal */}
       <Modal

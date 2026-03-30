@@ -284,12 +284,14 @@ export default function MasterDataProductsPage() {
       </div>
 
       {/* Data Table */}
-      <DataTable<ProductRow>
-        columns={columns}
-        data={filtered}
-        keyField="id"
-        emptyMessage={loading ? "Loading products..." : "No products found."}
-      />
+      <div className="max-h-[calc(100vh-280px)] overflow-y-auto rounded-[var(--radius-card)] border border-[var(--border)]">
+        <DataTable<ProductRow>
+          columns={columns}
+          data={filtered}
+          keyField="id"
+          emptyMessage={loading ? "Loading products..." : "No products found."}
+        />
+      </div>
 
       {/* Create/Edit Modal */}
       <Modal

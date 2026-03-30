@@ -280,12 +280,14 @@ export default function MasterDataCoaPage() {
       </div>
 
       {/* Data Table */}
-      <DataTable<CoaRow>
-        columns={columns}
-        data={filtered}
-        keyField="id"
-        emptyMessage={loading ? "Loading accounts..." : "No accounts found."}
-      />
+      <div className="max-h-[calc(100vh-280px)] overflow-y-auto rounded-[var(--radius-card)] border border-[var(--border)]">
+        <DataTable<CoaRow>
+          columns={columns}
+          data={filtered}
+          keyField="id"
+          emptyMessage={loading ? "Loading accounts..." : "No accounts found."}
+        />
+      </div>
 
       {/* Create/Edit Modal */}
       <Modal

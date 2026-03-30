@@ -244,12 +244,14 @@ export default function MasterDataDepartmentsPage() {
       </div>
 
       {/* Data Table */}
-      <DataTable<DepartmentRow>
-        columns={columns}
-        data={filtered}
-        keyField="id"
-        emptyMessage={loading ? "Loading departments..." : "No departments found."}
-      />
+      <div className="max-h-[calc(100vh-280px)] overflow-y-auto rounded-[var(--radius-card)] border border-[var(--border)]">
+        <DataTable<DepartmentRow>
+          columns={columns}
+          data={filtered}
+          keyField="id"
+          emptyMessage={loading ? "Loading departments..." : "No departments found."}
+        />
+      </div>
 
       {/* Create/Edit Modal */}
       <Modal
