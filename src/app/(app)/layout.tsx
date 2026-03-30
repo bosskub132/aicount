@@ -64,6 +64,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               "/onboarding",
               "/onboarding/workspace",
               "/onboarding/chart-of-accounts",
+              "/onboarding/vendors-customers",
               "/onboarding/departments",
               "/onboarding/team",
               "/onboarding/template",
