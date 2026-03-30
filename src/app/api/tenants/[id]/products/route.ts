@@ -1,15 +1,38 @@
-import { and, eq } from "drizzle-orm";
+import { sql, and, eq, or, ilike } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { products } from "@/lib/db/schema";
+import { getRequestContext, unauthorized, forbidden, ensureTenantScope } from "@/lib/api/request-context";
 
 export async function GET(
-  _request: Request,
+  request: Request,
   context: { params: Promise<{ id: string }> }
 ) {
+  const ctx = getRequestContext(request);
+  if (!ctx) return unauthorized();
   const { id: tenantId } = await context.params;
-  const rows = await db.select().from(products).where(and(eq(products.tenantId, tenantId), eq(products.isActive, true)));
-  return NextResponse.json({ success: true, data: rows });
+  if (!ensureTenantScope(ctx.tenantId, tenantId)) return forbidden("Cross-tenant access denied");
+
+  const { searchParams } = new URL(request.url);
+  const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
+  const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "50", 10)));
+  const search = (searchParams.get("search") || "").slice(0, 200);
+  const offset = (page - 1) * limit;
+
+  let where = and(eq(products.tenantId, tenantId), eq(products.isActive, true));
+  if (search) {
+    where = and(where, or(ilike(products.itemCode, `%${search}%`), ilike(products.itemName, `%${search}%`)));
+  }
+
+  const [countResult] = await db.select({ count: sql<number>`count(*)` }).from(products).where(where);
+  const total = Number(countResult.count);
+  const rows = await db.select().from(products).where(where).limit(limit).offset(offset).orderBy(products.itemCode);
+
+  return NextResponse.json({
+    success: true,
+    data: rows,
+    meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+  });
 }
 
 export async function POST(
