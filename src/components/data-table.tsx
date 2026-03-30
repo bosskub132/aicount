@@ -91,7 +91,7 @@ export function DataTable<T extends Record<string, unknown>>(props: DataTablePro
     align === "right" ? "text-right" : align === "center" ? "text-center" : "text-left";
 
   return (
-    <div className="overflow-x-auto rounded-[var(--radius-card)] border border-[var(--border)] bg-white">
+    <div className="overflow-x-auto rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--card)]">
       <table className="w-full text-sm">
         <thead className="sticky top-0 z-10">
           <tr className="border-b border-[var(--border)] bg-[var(--muted)]">

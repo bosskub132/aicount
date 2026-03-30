@@ -339,7 +339,7 @@ export default function MasterDataVendorsPage() {
       </div>
 
       {/* Data Table */}
-      <div className="max-h-[calc(100vh-280px)] overflow-y-auto rounded-[var(--radius-card)] border border-[var(--border)]">
+      <div className="max-h-[calc(100vh-280px)] overflow-auto">
         <DataTable<VendorRow>
           columns={columns}
           data={filtered}
