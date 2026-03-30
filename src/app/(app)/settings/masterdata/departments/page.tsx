@@ -1,23 +1,38 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
+import { Layers, Plus, Upload, Pencil, Trash2 } from "lucide-react";
+import { Button } from "@/components/button";
+import { Input } from "@/components/input";
+import { Modal } from "@/components/modal";
+import { DataTable, type Column } from "@/components/data-table";
+import { FileImport } from "@/components/file-import";
+import { useToast } from "@/lib/stores/ui-store";
 
-type DepartmentRow = {
+interface DepartmentRow {
   id: string;
   deptCode: string;
   deptName: string;
-};
+  [key: string]: unknown;
+}
 
 export default function MasterDataDepartmentsPage() {
+  const toast = useToast();
   const [tenantId, setTenantId] = useState("");
-
   const [rows, setRows] = useState<DepartmentRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+
+  // Modal states
+  const [modalOpen, setModalOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<DepartmentRow | null>(null);
+  const [editTarget, setEditTarget] = useState<DepartmentRow | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  // Form fields
   const [deptCode, setDeptCode] = useState("");
   const [deptName, setDeptName] = useState("");
-  const [editId, setEditId] = useState("");
-  const [editDeptCode, setEditDeptCode] = useState("");
-  const [editDeptName, setEditDeptName] = useState("");
-  const [message, setMessage] = useState("");
 
   useEffect(() => {
     const id = localStorage.getItem("workspaceTenantId") || "";
@@ -26,12 +41,22 @@ export default function MasterDataDepartmentsPage() {
 
   async function load() {
     if (!tenantId) return;
-    const response = await fetch(`/api/tenants/${tenantId}/departments`, {
-      headers: { "x-tenant-id": tenantId },
-    });
-    const json = (await response.json()) as { success: boolean; data?: DepartmentRow[]; error?: string };
-    if (json.success) setRows(json.data || []);
-    else setMessage(json.error || "Failed to load departments");
+    setLoading(true);
+    try {
+      const response = await fetch(`/api/tenants/${tenantId}/departments`, {
+        headers: { "x-tenant-id": tenantId },
+      });
+      const json = (await response.json()) as { success: boolean; data?: DepartmentRow[]; error?: string };
+      if (json.success) {
+        setRows(json.data || []);
+      } else {
+        toast.error(json.error || "Failed to load departments");
+      }
+    } catch {
+      toast.error("Failed to load departments");
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {
@@ -39,147 +64,278 @@ export default function MasterDataDepartmentsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tenantId]);
 
-  async function createDepartment() {
-    setMessage("");
-    const response = await fetch(`/api/tenants/${tenantId}/departments`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-tenant-id": tenantId },
-      body: JSON.stringify({ deptCode, deptName }),
-    });
-    const json = (await response.json()) as { success: boolean; error?: string };
-    setMessage(json.success ? "Department created" : json.error || "Create failed");
-    if (json.success) {
-      setDeptCode("");
-      setDeptName("");
-      await load();
+  function resetForm() {
+    setDeptCode("");
+    setDeptName("");
+    setEditTarget(null);
+  }
+
+  function closeModal() {
+    setModalOpen(false);
+    resetForm();
+  }
+
+  function openEditModal(row: DepartmentRow) {
+    setEditTarget(row);
+    setDeptCode(row.deptCode);
+    setDeptName(row.deptName);
+    setModalOpen(true);
+  }
+
+  async function handleSave() {
+    setSaving(true);
+    try {
+      if (editTarget) {
+        const response = await fetch(`/api/tenants/${tenantId}/departments`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json", "x-tenant-id": tenantId },
+          body: JSON.stringify({
+            id: editTarget.id,
+            deptName,
+          }),
+        });
+        const json = (await response.json()) as { success: boolean; error?: string };
+        if (json.success) {
+          toast.success("Department updated");
+          closeModal();
+          await load();
+        } else {
+          toast.error(json.error || "Update failed");
+        }
+      } else {
+        const response = await fetch(`/api/tenants/${tenantId}/departments`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-tenant-id": tenantId },
+          body: JSON.stringify({ deptCode, deptName }),
+        });
+        const json = (await response.json()) as { success: boolean; error?: string };
+        if (json.success) {
+          toast.success("Department created");
+          closeModal();
+          await load();
+        } else {
+          toast.error(json.error || "Create failed");
+        }
+      }
+    } catch {
+      toast.error("Failed to save department");
+    } finally {
+      setSaving(false);
     }
   }
 
-  async function removeDepartment(id: string) {
-    setMessage("");
-    const response = await fetch(`/api/tenants/${tenantId}/departments`, {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json", "x-tenant-id": tenantId },
-      body: JSON.stringify({ id }),
-    });
-    const json = (await response.json()) as { success: boolean; error?: string };
-    setMessage(json.success ? "Department removed" : json.error || "Remove failed");
-    if (json.success) await load();
-  }
-
-  function startEdit(row: DepartmentRow) {
-    setEditId(row.id);
-    setEditDeptCode(row.deptCode);
-    setEditDeptName(row.deptName);
-  }
-
-  function cancelEdit() {
-    setEditId("");
-    setEditDeptCode("");
-    setEditDeptName("");
-  }
-
-  async function saveEdit() {
-    if (!editId) return;
-    setMessage("");
-    const response = await fetch(`/api/tenants/${tenantId}/departments`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json", "x-tenant-id": tenantId },
-      body: JSON.stringify({ id: editId, deptCode: editDeptCode, deptName: editDeptName }),
-    });
-    const json = (await response.json()) as { success: boolean; error?: string };
-    setMessage(json.success ? "Department updated" : json.error || "Update failed");
-    if (json.success) {
-      cancelEdit();
-      await load();
+  async function handleDelete(id: string) {
+    setSaving(true);
+    try {
+      const response = await fetch(`/api/tenants/${tenantId}/departments`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json", "x-tenant-id": tenantId },
+        body: JSON.stringify({ id }),
+      });
+      const json = (await response.json()) as { success: boolean; error?: string };
+      if (json.success) {
+        toast.success("Department deleted");
+        setDeleteTarget(null);
+        await load();
+      } else {
+        toast.error(json.error || "Delete failed");
+      }
+    } catch {
+      toast.error("Failed to delete department");
+    } finally {
+      setSaving(false);
     }
   }
+
+  const filtered = useMemo(() => {
+    if (!search) return rows;
+    const q = search.toLowerCase();
+    return rows.filter(
+      (r) => r.deptCode.toLowerCase().includes(q) || r.deptName.toLowerCase().includes(q)
+    );
+  }, [rows, search]);
+
+  const columns: Column<DepartmentRow>[] = [
+    { key: "deptCode", header: "Code", width: "120px", sortable: true },
+    { key: "deptName", header: "Name", sortable: true },
+    {
+      key: "actions",
+      header: "",
+      width: "100px",
+      render: (row) => (
+        <div className="flex gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            icon={<Pencil className="h-3.5 w-3.5" />}
+            onClick={(e) => {
+              e.stopPropagation();
+              openEditModal(row);
+            }}
+          />
+          <Button
+            variant="ghost"
+            size="sm"
+            icon={<Trash2 className="h-3.5 w-3.5 text-[var(--destructive)]" />}
+            onClick={(e) => {
+              e.stopPropagation();
+              setDeleteTarget(row);
+            }}
+          />
+        </div>
+      ),
+    },
+  ];
 
   if (!tenantId) {
     return (
       <section className="space-y-4">
-        <h1 className="text-2xl font-semibold">Departments</h1>
-        <p className="text-slate-500">No workspace selected. Please select a workspace to manage departments.</p>
+        <div className="flex items-center gap-3">
+          <Layers className="h-6 w-6 text-[var(--muted-foreground)]" />
+          <div>
+            <h1 className="text-2xl font-semibold text-[var(--foreground)]">Departments</h1>
+            <p className="text-sm text-[var(--muted-foreground)]">
+              No workspace selected. Please select a workspace to manage departments.
+            </p>
+          </div>
+        </div>
       </section>
     );
   }
 
   return (
-    <section className="space-y-4">
-      <h1 className="text-2xl font-semibold">Departments</h1>
-      <p className="text-slate-600">Create and manage department/cost center data for this tenant.</p>
+    <section className="space-y-6">
+      {/* Page Header */}
+      <div className="flex items-center gap-3">
+        <Layers className="h-6 w-6 text-[var(--muted-foreground)]" />
+        <div>
+          <h1 className="text-2xl font-semibold text-[var(--foreground)]">Departments</h1>
+          <p className="text-sm text-[var(--muted-foreground)]">
+            Manage department and cost center data.
+          </p>
+        </div>
+      </div>
 
-      <div className="grid gap-2 rounded border bg-white p-3 text-sm sm:grid-cols-2">
-        <input className="rounded border px-2 py-1" placeholder="Department code" value={deptCode} onChange={(e) => setDeptCode(e.target.value)} />
-        <input className="rounded border px-2 py-1" placeholder="Department name" value={deptName} onChange={(e) => setDeptName(e.target.value)} />
-        <button onClick={createDepartment} className="rounded bg-slate-900 px-3 py-2 text-white hover:bg-slate-800">
+      {/* Toolbar */}
+      <div className="flex flex-wrap items-center gap-2">
+        <Button
+          icon={<Plus className="h-4 w-4" />}
+          onClick={() => {
+            resetForm();
+            setModalOpen(true);
+          }}
+        >
           Add Department
-        </button>
+        </Button>
+        <Button
+          variant="secondary"
+          icon={<Upload className="h-4 w-4" />}
+          onClick={() => setImportOpen(true)}
+        >
+          Import
+        </Button>
+        <div className="ml-auto w-64">
+          <Input
+            placeholder="Search departments..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
       </div>
 
-      {message ? <p className="text-sm text-slate-700">{message}</p> : null}
+      {/* Data Table */}
+      <DataTable<DepartmentRow>
+        columns={columns}
+        data={filtered}
+        keyField="id"
+        emptyMessage={loading ? "Loading departments..." : "No departments found."}
+      />
 
-      <div className="overflow-x-auto rounded border bg-white">
-        <table className="min-w-full text-sm">
-          <thead className="bg-slate-100 text-left">
-            <tr>
-              <th className="px-3 py-2">Code</th>
-              <th className="px-3 py-2">Name</th>
-              <th className="px-3 py-2">Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row) => (
-              <tr key={row.id} className="border-t">
-                <td className="px-3 py-2">
-                  {editId === row.id ? (
-                    <input className="w-full rounded border px-2 py-1" value={editDeptCode} onChange={(e) => setEditDeptCode(e.target.value)} />
-                  ) : (
-                    row.deptCode
-                  )}
-                </td>
-                <td className="px-3 py-2">
-                  {editId === row.id ? (
-                    <input className="w-full rounded border px-2 py-1" value={editDeptName} onChange={(e) => setEditDeptName(e.target.value)} />
-                  ) : (
-                    row.deptName
-                  )}
-                </td>
-                <td className="px-3 py-2">
-                  <div className="flex gap-2">
-                    {editId === row.id ? (
-                      <>
-                        <button onClick={saveEdit} className="rounded border px-2 py-1 text-xs hover:bg-slate-100">
-                          Save
-                        </button>
-                        <button onClick={cancelEdit} className="rounded border px-2 py-1 text-xs hover:bg-slate-100">
-                          Cancel
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <button onClick={() => startEdit(row)} className="rounded border px-2 py-1 text-xs hover:bg-slate-100">
-                          Edit
-                        </button>
-                        <button onClick={() => removeDepartment(row.id)} className="rounded border px-2 py-1 text-xs hover:bg-slate-100">
-                          Remove
-                        </button>
-                      </>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ))}
-            {!rows.length ? (
-              <tr>
-                <td className="px-3 py-2 text-slate-500" colSpan={3}>
-                  No departments.
-                </td>
-              </tr>
-            ) : null}
-          </tbody>
-        </table>
-      </div>
+      {/* Create/Edit Modal */}
+      <Modal
+        open={modalOpen}
+        onClose={closeModal}
+        title={editTarget ? "Edit Department" : "Add Department"}
+        actions={
+          <>
+            <Button variant="secondary" onClick={closeModal}>
+              Cancel
+            </Button>
+            <Button variant="primary" loading={saving} onClick={handleSave}>
+              {editTarget ? "Update" : "Create"}
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <Input
+            label="Department Code"
+            required
+            value={deptCode}
+            onChange={(e) => setDeptCode(e.target.value)}
+            disabled={!!editTarget}
+          />
+          <Input
+            label="Department Name"
+            required
+            value={deptName}
+            onChange={(e) => setDeptName(e.target.value)}
+          />
+        </div>
+      </Modal>
+
+      {/* Import Modal */}
+      <Modal
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        title="Import Departments"
+        size="lg"
+      >
+        <FileImport
+          entityType="department"
+          onImport={async (importedRows) => {
+            const res = await fetch(`/api/tenants/${tenantId}/departments/batch`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json", "x-tenant-id": tenantId },
+              body: JSON.stringify({ rows: importedRows }),
+            });
+            const json = (await res.json()) as { success: boolean; data?: { count: number }; error?: string };
+            if (json.success) {
+              toast.success(`Imported ${json.data?.count ?? 0} departments`);
+              setImportOpen(false);
+              await load();
+            } else {
+              toast.error(json.error || "Import failed");
+            }
+          }}
+        />
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        title="Delete Department"
+        actions={
+          <>
+            <Button variant="secondary" onClick={() => setDeleteTarget(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              loading={saving}
+              onClick={() => deleteTarget && handleDelete(deleteTarget.id)}
+            >
+              Delete
+            </Button>
+          </>
+        }
+      >
+        <p>
+          Are you sure you want to delete <strong>{deleteTarget?.deptCode}</strong> &mdash;{" "}
+          {deleteTarget?.deptName}?
+        </p>
+      </Modal>
     </section>
   );
 }
