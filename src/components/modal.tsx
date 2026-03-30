@@ -9,7 +9,7 @@ interface ModalProps {
   title: string;
   children: React.ReactNode;
   actions?: React.ReactNode;
-  size?: "sm" | "md" | "lg" | "xl";
+  size?: "sm" | "md" | "lg" | "xl" | "xxl";
 }
 
 const sizeStyles = {
@@ -17,6 +17,7 @@ const sizeStyles = {
   md: "max-w-md",
   lg: "max-w-2xl",
   xl: "max-w-4xl",
+  xxl: "max-w-6xl",
 };
 
 export function Modal({ open, onClose, title, children, actions, size = "md" }: ModalProps) {
@@ -52,8 +53,8 @@ export function Modal({ open, onClose, title, children, actions, size = "md" }: 
         if (e.target === dialogRef.current) onClose();
       }}
     >
-      <div className="p-6">
-        <div className="flex items-center justify-between mb-4">
+      <div className="flex max-h-[85vh] flex-col p-6">
+        <div className="flex items-center justify-between mb-4 shrink-0">
           <h2 className="text-[17px] font-semibold text-[var(--foreground)]">{title}</h2>
           <button
             onClick={onClose}
@@ -63,9 +64,9 @@ export function Modal({ open, onClose, title, children, actions, size = "md" }: 
             <X className="h-4 w-4" />
           </button>
         </div>
-        <div className="text-sm text-[var(--muted-foreground)] leading-relaxed">{children}</div>
+        <div className="text-sm text-[var(--muted-foreground)] leading-relaxed min-h-0 flex-1 overflow-y-auto overflow-x-visible">{children}</div>
         {actions && (
-          <div className="flex justify-end gap-2 mt-6">{actions}</div>
+          <div className="flex justify-end gap-2 mt-6 shrink-0">{actions}</div>
         )}
       </div>
     </dialog>
