@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ArrowRight, Plus, Store, Trash2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Plus, Store, Trash2, X } from "lucide-react";
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
 import { Select } from "@/components/select";
@@ -594,8 +594,11 @@ export default function OnboardingVendorsCustomersPage() {
 
       {/* Error */}
       {error && (
-        <div className="mt-4 rounded-lg border border-[var(--destructive)] bg-[var(--destructive-light)] px-4 py-3 text-sm text-[var(--destructive)]">
-          {error}
+        <div className="mt-4 rounded-lg border border-[var(--destructive)] bg-[var(--destructive-light)] px-4 py-3 text-sm text-[var(--destructive)] flex items-start justify-between">
+          <span>{error}</span>
+          <button onClick={() => setError(null)} className="ml-2 shrink-0 p-0.5 hover:opacity-70" aria-label="Dismiss">
+            <X className="h-4 w-4" />
+          </button>
         </div>
       )}
 
