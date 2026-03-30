@@ -204,7 +204,7 @@ export default function OnboardingTeamPage() {
 
         {/* Invitations list */}
         {invitations.length > 0 && (
-          <div className="mt-4 overflow-hidden rounded-lg border border-[var(--border)]">
+          <div className="mt-4 max-h-64 overflow-y-auto rounded-lg border border-[var(--border)]">
             <div className="bg-[var(--muted)] px-4 py-2.5">
               <p className="text-xs font-medium uppercase tracking-wide text-[var(--muted-foreground)]">Sent Invitations</p>
             </div>

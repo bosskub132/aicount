@@ -198,7 +198,7 @@ export default function OnboardingDepartmentsPage() {
         )}
 
         {/* Departments table */}
-        <div className="mt-4 overflow-hidden rounded-lg border border-[var(--border)]">
+        <div className="mt-4 max-h-64 overflow-y-auto rounded-lg border border-[var(--border)]">
           {depts.length > 0 ? (
             <table className="w-full text-sm">
               <thead className="bg-[var(--muted)]">
