@@ -97,6 +97,7 @@ export function Select({ options, value, onChange, placeholder = "Select...", se
           ref={dropdownRef}
           style={dropdownStyle}
           className="rounded-[var(--radius-card)] border border-[var(--border)] bg-white shadow-[var(--shadow-md)] max-h-60 overflow-auto"
+          onClick={(e) => e.stopPropagation()}
         >
           {searchable && (
             <div className="flex items-center gap-2 border-b border-[var(--border)] px-3 py-2">
@@ -133,7 +134,7 @@ export function Select({ options, value, onChange, placeholder = "Select...", se
             ))
           )}
         </div>,
-        document.body
+        buttonRef.current?.closest("dialog") || document.body
       )}
       {error && <p className="text-xs text-[var(--destructive)]">{error}</p>}
     </div>
