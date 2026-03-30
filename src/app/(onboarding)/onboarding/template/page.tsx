@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, FileSpreadsheet } from "lucide-react";
+import { Button } from "@/components/button";
+import { Input } from "@/components/input";
 
 export default function OnboardingTemplatePage() {
   const router = useRouter();
@@ -51,7 +53,7 @@ export default function OnboardingTemplatePage() {
           }
         }
       }
-      await patchOnboardingStep(6);
+      await patchOnboardingStep(7);
       router.push("/onboarding/complete");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
@@ -64,18 +66,18 @@ export default function OnboardingTemplatePage() {
     <div className="mx-auto max-w-2xl">
       {/* Page header */}
       <div className="flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-100">
-          <FileSpreadsheet className="h-5 w-5 text-blue-600" />
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--primary-light)]">
+          <FileSpreadsheet className="h-5 w-5 text-[var(--primary)]" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Export Template</h1>
-          <p className="text-sm text-slate-500">Configure your Express accounting export format</p>
+          <h1 className="text-2xl font-bold text-[var(--foreground)]">Export Template</h1>
+          <p className="text-sm text-[var(--muted-foreground)]">Configure your Express accounting export format</p>
         </div>
       </div>
 
       {/* Form card */}
-      <div className="mt-8 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-        <p className="mb-5 text-sm text-slate-600">
+      <div className="mt-8 rounded-xl border border-[var(--border)] bg-[var(--card)] p-6 shadow-[var(--shadow-sm)]">
+        <p className="mb-5 text-sm text-[var(--muted-foreground)]">
           Choose an export template for Express accounting software, or skip to use the default.
         </p>
 
@@ -84,8 +86,8 @@ export default function OnboardingTemplatePage() {
           <label
             className={`flex cursor-pointer items-start gap-4 rounded-xl border-2 p-4 transition-colors ${
               templateChoice === "default"
-                ? "border-blue-500 bg-blue-50"
-                : "border-slate-200 hover:border-slate-300 hover:bg-slate-50"
+                ? "border-[var(--primary)] bg-[var(--primary-light)]"
+                : "border-[var(--border)] hover:border-[var(--border)] hover:bg-[var(--muted)]"
             }`}
           >
             <input
@@ -94,11 +96,11 @@ export default function OnboardingTemplatePage() {
               value="default"
               checked={templateChoice === "default"}
               onChange={() => setTemplateChoice("default")}
-              className="mt-0.5 accent-blue-600"
+              className="mt-0.5 accent-[var(--primary)]"
             />
             <div>
-              <p className="text-sm font-semibold text-slate-900">Default Express Template</p>
-              <p className="mt-0.5 text-xs text-slate-500">
+              <p className="text-sm font-semibold text-[var(--foreground)]">Default Express Template</p>
+              <p className="mt-0.5 text-xs text-[var(--muted-foreground)]">
                 Standard Express format with common journal types. Suitable for most Thai accounting workflows.
               </p>
             </div>
@@ -107,8 +109,8 @@ export default function OnboardingTemplatePage() {
           <label
             className={`flex cursor-pointer items-start gap-4 rounded-xl border-2 p-4 transition-colors ${
               templateChoice === "custom"
-                ? "border-blue-500 bg-blue-50"
-                : "border-slate-200 hover:border-slate-300 hover:bg-slate-50"
+                ? "border-[var(--primary)] bg-[var(--primary-light)]"
+                : "border-[var(--border)] hover:border-[var(--border)] hover:bg-[var(--muted)]"
             }`}
           >
             <input
@@ -117,11 +119,11 @@ export default function OnboardingTemplatePage() {
               value="custom"
               checked={templateChoice === "custom"}
               onChange={() => setTemplateChoice("custom")}
-              className="mt-0.5 accent-blue-600"
+              className="mt-0.5 accent-[var(--primary)]"
             />
             <div className="flex-1">
-              <p className="text-sm font-semibold text-slate-900">Custom Template</p>
-              <p className="mt-0.5 text-xs text-slate-500">
+              <p className="text-sm font-semibold text-[var(--foreground)]">Custom Template</p>
+              <p className="mt-0.5 text-xs text-[var(--muted-foreground)]">
                 Configure custom column mappings later in Settings.
               </p>
             </div>
@@ -131,16 +133,13 @@ export default function OnboardingTemplatePage() {
         {/* Custom template name input */}
         {templateChoice === "custom" && (
           <div className="mt-4">
-            <label htmlFor="customTemplateName" className="text-sm font-medium text-slate-700">
-              Template Name <span className="font-normal text-slate-400">(optional)</span>
-            </label>
-            <input
+            <Input
+              label="Template Name"
               id="customTemplateName"
-              type="text"
               value={customTemplateName}
               onChange={(e) => setCustomTemplateName(e.target.value)}
               placeholder="e.g. My Company Template"
-              className="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+              helperText="Optional"
             />
           </div>
         )}
@@ -148,40 +147,29 @@ export default function OnboardingTemplatePage() {
 
       {/* Error */}
       {error && (
-        <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="mt-4 rounded-lg border border-[var(--destructive)] bg-[var(--destructive-light)] px-4 py-3 text-sm text-[var(--destructive)]">
           {error}
         </div>
       )}
 
       {/* Navigation */}
       <div className="mt-6 flex items-center justify-between">
-        <button
-          type="button"
+        <Button
+          variant="secondary"
+          icon={<ArrowLeft className="h-4 w-4" />}
           onClick={() => router.push("/onboarding/team")}
-          className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
         >
-          <ArrowLeft className="h-4 w-4" />
           Back
-        </button>
+        </Button>
 
-        <button
-          type="button"
+        <Button
+          variant="primary"
+          loading={loading}
+          icon={<ArrowRight className="h-4 w-4" />}
           onClick={handleNext}
-          disabled={loading}
-          className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {loading ? (
-            <>
-              <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-              Saving…
-            </>
-          ) : (
-            <>
-              Next
-              <ArrowRight className="h-4 w-4" />
-            </>
-          )}
-        </button>
+          Next
+        </Button>
       </div>
     </div>
   );
