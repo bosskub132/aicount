@@ -1,29 +1,42 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
+import { UserSquare2, Plus, Upload, Pencil, Trash2 } from "lucide-react";
+import { Button } from "@/components/button";
+import { Input } from "@/components/input";
+import { Modal } from "@/components/modal";
+import { DataTable, type Column } from "@/components/data-table";
+import { FileImport } from "@/components/file-import";
+import { useToast } from "@/lib/stores/ui-store";
 
-type CustomerRow = {
+interface CustomerRow {
   id: string;
   taxId: string;
   name: string;
-  creditTermDays: number | null;
   branchNumber: string | null;
-};
+  creditTermDays: number | null;
+  [key: string]: unknown;
+}
 
 export default function MasterDataCustomersPage() {
+  const toast = useToast();
   const [tenantId, setTenantId] = useState("");
-
   const [rows, setRows] = useState<CustomerRow[]>([]);
-  const [taxId, setTaxId] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+
+  // Modal states
+  const [modalOpen, setModalOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<CustomerRow | null>(null);
+  const [editTarget, setEditTarget] = useState<CustomerRow | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  // Form fields
   const [name, setName] = useState("");
-  const [creditTermDays, setCreditTermDays] = useState("30");
-  const [editId, setEditId] = useState("");
-  const [editTaxId, setEditTaxId] = useState("");
-  const [editName, setEditName] = useState("");
-  const [editCreditTermDays, setEditCreditTermDays] = useState("30");
+  const [taxId, setTaxId] = useState("");
   const [branchNumber, setBranchNumber] = useState("");
-  const [editBranchNumber, setEditBranchNumber] = useState("");
-  const [message, setMessage] = useState("");
+  const [creditTermDays, setCreditTermDays] = useState("");
 
   useEffect(() => {
     const id = localStorage.getItem("workspaceTenantId") || "";
@@ -32,12 +45,22 @@ export default function MasterDataCustomersPage() {
 
   async function load() {
     if (!tenantId) return;
-    const response = await fetch(`/api/tenants/${tenantId}/customers`, {
-      headers: { "x-tenant-id": tenantId },
-    });
-    const json = (await response.json()) as { success: boolean; data?: CustomerRow[]; error?: string };
-    if (json.success) setRows(json.data || []);
-    else setMessage(json.error || "Failed to load customers");
+    setLoading(true);
+    try {
+      const response = await fetch(`/api/tenants/${tenantId}/customers`, {
+        headers: { "x-tenant-id": tenantId },
+      });
+      const json = (await response.json()) as { success: boolean; data?: CustomerRow[]; error?: string };
+      if (json.success) {
+        setRows(json.data || []);
+      } else {
+        toast.error(json.error || "Failed to load customers");
+      }
+    } catch {
+      toast.error("Failed to load customers");
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {
@@ -45,191 +68,323 @@ export default function MasterDataCustomersPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tenantId]);
 
-  async function createCustomer() {
-    setMessage("");
-    const response = await fetch(`/api/tenants/${tenantId}/customers`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-tenant-id": tenantId },
-      body: JSON.stringify({ taxId, name, creditTermDays: Number(creditTermDays), branchNumber: branchNumber || undefined }),
-    });
-    const json = (await response.json()) as { success: boolean; error?: string };
-    setMessage(json.success ? "Customer created" : json.error || "Create failed");
-    if (json.success) {
-      setTaxId("");
-      setName("");
-      setCreditTermDays("30");
-      setBranchNumber("");
-      await load();
+  function resetForm() {
+    setName("");
+    setTaxId("");
+    setBranchNumber("");
+    setCreditTermDays("");
+    setEditTarget(null);
+  }
+
+  function closeModal() {
+    setModalOpen(false);
+    resetForm();
+  }
+
+  function openEditModal(row: CustomerRow) {
+    setEditTarget(row);
+    setName(row.name);
+    setTaxId(row.taxId);
+    setBranchNumber(row.branchNumber || "");
+    setCreditTermDays(row.creditTermDays != null ? String(row.creditTermDays) : "");
+    setModalOpen(true);
+  }
+
+  async function handleSave() {
+    setSaving(true);
+    try {
+      if (editTarget) {
+        const response = await fetch(`/api/tenants/${tenantId}/customers`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json", "x-tenant-id": tenantId },
+          body: JSON.stringify({
+            id: editTarget.id,
+            name,
+            creditTermDays: creditTermDays ? Number(creditTermDays) : undefined,
+            branchNumber: branchNumber || undefined,
+          }),
+        });
+        const json = (await response.json()) as { success: boolean; error?: string };
+        if (json.success) {
+          toast.success("Customer updated");
+          closeModal();
+          await load();
+        } else {
+          toast.error(json.error || "Update failed");
+        }
+      } else {
+        const response = await fetch(`/api/tenants/${tenantId}/customers`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-tenant-id": tenantId },
+          body: JSON.stringify({
+            taxId,
+            name,
+            creditTermDays: creditTermDays ? Number(creditTermDays) : undefined,
+            branchNumber: branchNumber || undefined,
+          }),
+        });
+        const json = (await response.json()) as { success: boolean; error?: string };
+        if (json.success) {
+          toast.success("Customer created");
+          closeModal();
+          await load();
+        } else {
+          toast.error(json.error || "Create failed");
+        }
+      }
+    } catch {
+      toast.error("Failed to save customer");
+    } finally {
+      setSaving(false);
     }
   }
 
-  async function removeCustomer(id: string) {
-    setMessage("");
-    const response = await fetch(`/api/tenants/${tenantId}/customers`, {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json", "x-tenant-id": tenantId },
-      body: JSON.stringify({ id }),
-    });
-    const json = (await response.json()) as { success: boolean; error?: string };
-    setMessage(json.success ? "Customer removed" : json.error || "Remove failed");
-    if (json.success) await load();
-  }
-
-  function startEdit(row: CustomerRow) {
-    setEditId(row.id);
-    setEditTaxId(row.taxId);
-    setEditName(row.name);
-    setEditCreditTermDays(String(row.creditTermDays ?? 30));
-    setEditBranchNumber(row.branchNumber || "");
-  }
-
-  function cancelEdit() {
-    setEditId("");
-    setEditTaxId("");
-    setEditName("");
-    setEditCreditTermDays("30");
-    setEditBranchNumber("");
-  }
-
-  async function saveEdit() {
-    if (!editId) return;
-    setMessage("");
-    const response = await fetch(`/api/tenants/${tenantId}/customers`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json", "x-tenant-id": tenantId },
-      body: JSON.stringify({
-        id: editId,
-        taxId: editTaxId,
-        name: editName,
-        creditTermDays: Number(editCreditTermDays),
-        branchNumber: editBranchNumber || undefined,
-      }),
-    });
-    const json = (await response.json()) as { success: boolean; error?: string };
-    setMessage(json.success ? "Customer updated" : json.error || "Update failed");
-    if (json.success) {
-      cancelEdit();
-      await load();
+  async function handleDelete(id: string) {
+    setSaving(true);
+    try {
+      const response = await fetch(`/api/tenants/${tenantId}/customers`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json", "x-tenant-id": tenantId },
+        body: JSON.stringify({ id }),
+      });
+      const json = (await response.json()) as { success: boolean; error?: string };
+      if (json.success) {
+        toast.success("Customer deleted");
+        setDeleteTarget(null);
+        await load();
+      } else {
+        toast.error(json.error || "Delete failed");
+      }
+    } catch {
+      toast.error("Failed to delete customer");
+    } finally {
+      setSaving(false);
     }
   }
+
+  const filtered = useMemo(() => {
+    if (!search) return rows;
+    const q = search.toLowerCase();
+    return rows.filter(
+      (r) => r.name.toLowerCase().includes(q) || r.taxId.toLowerCase().includes(q)
+    );
+  }, [rows, search]);
+
+  const columns: Column<CustomerRow>[] = [
+    { key: "name", header: "Name", sortable: true },
+    {
+      key: "taxId",
+      header: "Tax ID",
+      width: "160px",
+      sortable: true,
+      render: (row) => <span className="font-mono">{row.taxId}</span>,
+    },
+    {
+      key: "branchNumber",
+      header: "Branch",
+      width: "120px",
+      render: (row) => row.branchNumber || "\u2014",
+    },
+    {
+      key: "creditTermDays",
+      header: "Credit Terms",
+      width: "130px",
+      render: (row) => (
+        <span className="tabular-nums">
+          {row.creditTermDays != null ? `${row.creditTermDays} days` : "\u2014"}
+        </span>
+      ),
+    },
+    {
+      key: "actions",
+      header: "",
+      width: "100px",
+      render: (row) => (
+        <div className="flex gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            icon={<Pencil className="h-3.5 w-3.5" />}
+            onClick={(e) => {
+              e.stopPropagation();
+              openEditModal(row);
+            }}
+          />
+          <Button
+            variant="ghost"
+            size="sm"
+            icon={<Trash2 className="h-3.5 w-3.5 text-[var(--destructive)]" />}
+            onClick={(e) => {
+              e.stopPropagation();
+              setDeleteTarget(row);
+            }}
+          />
+        </div>
+      ),
+    },
+  ];
 
   if (!tenantId) {
     return (
       <section className="space-y-4">
-        <h1 className="text-2xl font-semibold">Customers</h1>
-        <p className="text-slate-500">No workspace selected. Please select a workspace to manage customers.</p>
+        <div className="flex items-center gap-3">
+          <UserSquare2 className="h-6 w-6 text-[var(--muted-foreground)]" />
+          <div>
+            <h1 className="text-2xl font-semibold text-[var(--foreground)]">Customers</h1>
+            <p className="text-sm text-[var(--muted-foreground)]">
+              No workspace selected. Please select a workspace to manage customers.
+            </p>
+          </div>
+        </div>
       </section>
     );
   }
 
   return (
-    <section className="space-y-4">
-      <h1 className="text-2xl font-semibold">Customers</h1>
-      <p className="text-slate-600">Create and manage customer master data for this tenant.</p>
+    <section className="space-y-6">
+      {/* Page Header */}
+      <div className="flex items-center gap-3">
+        <UserSquare2 className="h-6 w-6 text-[var(--muted-foreground)]" />
+        <div>
+          <h1 className="text-2xl font-semibold text-[var(--foreground)]">Customers</h1>
+          <p className="text-sm text-[var(--muted-foreground)]">
+            Manage customer master data for accounts receivable.
+          </p>
+        </div>
+      </div>
 
-      <div className="grid gap-2 rounded border bg-white p-3 text-sm sm:grid-cols-2">
-        <input className="rounded border px-2 py-1" placeholder="Tax ID" value={taxId} onChange={(e) => setTaxId(e.target.value)} />
-        <input className="rounded border px-2 py-1" placeholder="Customer name" value={name} onChange={(e) => setName(e.target.value)} />
-        <input
-          className="rounded border px-2 py-1"
-          placeholder="Credit term days"
-          value={creditTermDays}
-          onChange={(e) => setCreditTermDays(e.target.value)}
-        />
-        <input
-          className="rounded border px-2 py-1"
-          placeholder="00000 = Head Office"
-          value={branchNumber}
-          onChange={(e) => setBranchNumber(e.target.value)}
-        />
-        <button onClick={createCustomer} className="rounded bg-slate-900 px-3 py-2 text-white hover:bg-slate-800">
+      {/* Toolbar */}
+      <div className="flex flex-wrap items-center gap-2">
+        <Button
+          icon={<Plus className="h-4 w-4" />}
+          onClick={() => {
+            resetForm();
+            setModalOpen(true);
+          }}
+        >
           Add Customer
-        </button>
+        </Button>
+        <Button
+          variant="secondary"
+          icon={<Upload className="h-4 w-4" />}
+          onClick={() => setImportOpen(true)}
+        >
+          Import
+        </Button>
+        <div className="ml-auto w-64">
+          <Input
+            placeholder="Search customers..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
       </div>
 
-      {message ? <p className="text-sm text-slate-700">{message}</p> : null}
+      {/* Data Table */}
+      <DataTable<CustomerRow>
+        columns={columns}
+        data={filtered}
+        keyField="id"
+        emptyMessage={loading ? "Loading customers..." : "No customers found."}
+      />
 
-      <div className="overflow-x-auto rounded border bg-white">
-        <table className="min-w-full text-sm">
-          <thead className="bg-slate-100 text-left">
-            <tr>
-              <th className="px-3 py-2">Tax ID</th>
-              <th className="px-3 py-2">Name</th>
-              <th className="px-3 py-2">Branch</th>
-              <th className="px-3 py-2">Credit Days</th>
-              <th className="px-3 py-2">Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row) => (
-              <tr key={row.id} className="border-t">
-                <td className="px-3 py-2">
-                  {editId === row.id ? (
-                    <input className="w-full rounded border px-2 py-1" value={editTaxId} onChange={(e) => setEditTaxId(e.target.value)} />
-                  ) : (
-                    row.taxId
-                  )}
-                </td>
-                <td className="px-3 py-2">
-                  {editId === row.id ? (
-                    <input className="w-full rounded border px-2 py-1" value={editName} onChange={(e) => setEditName(e.target.value)} />
-                  ) : (
-                    row.name
-                  )}
-                </td>
-                <td className="px-3 py-2">
-                  {editId === row.id ? (
-                    <input className="w-24 rounded border px-2 py-1" placeholder="00000" value={editBranchNumber} onChange={(e) => setEditBranchNumber(e.target.value)} />
-                  ) : (
-                    row.branchNumber || "-"
-                  )}
-                </td>
-                <td className="px-3 py-2">
-                  {editId === row.id ? (
-                    <input
-                      className="w-24 rounded border px-2 py-1"
-                      value={editCreditTermDays}
-                      onChange={(e) => setEditCreditTermDays(e.target.value)}
-                    />
-                  ) : (
-                    row.creditTermDays ?? "-"
-                  )}
-                </td>
-                <td className="px-3 py-2">
-                  <div className="flex gap-2">
-                    {editId === row.id ? (
-                      <>
-                        <button onClick={saveEdit} className="rounded border px-2 py-1 text-xs hover:bg-slate-100">
-                          Save
-                        </button>
-                        <button onClick={cancelEdit} className="rounded border px-2 py-1 text-xs hover:bg-slate-100">
-                          Cancel
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <button onClick={() => startEdit(row)} className="rounded border px-2 py-1 text-xs hover:bg-slate-100">
-                          Edit
-                        </button>
-                        <button onClick={() => removeCustomer(row.id)} className="rounded border px-2 py-1 text-xs hover:bg-slate-100">
-                          Remove
-                        </button>
-                      </>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ))}
-            {!rows.length ? (
-              <tr>
-                <td className="px-3 py-2 text-slate-500" colSpan={5}>
-                  No customers.
-                </td>
-              </tr>
-            ) : null}
-          </tbody>
-        </table>
-      </div>
+      {/* Create/Edit Modal */}
+      <Modal
+        open={modalOpen}
+        onClose={closeModal}
+        title={editTarget ? "Edit Customer" : "Add Customer"}
+        actions={
+          <>
+            <Button variant="secondary" onClick={closeModal}>
+              Cancel
+            </Button>
+            <Button variant="primary" loading={saving} onClick={handleSave}>
+              {editTarget ? "Update" : "Create"}
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <Input
+            label="Name"
+            required
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+          <Input
+            label="Tax ID"
+            required
+            maxLength={13}
+            value={taxId}
+            onChange={(e) => setTaxId(e.target.value)}
+            disabled={!!editTarget}
+          />
+          <Input
+            label="Branch Number"
+            value={branchNumber}
+            onChange={(e) => setBranchNumber(e.target.value)}
+          />
+          <Input
+            label="Credit Term Days"
+            type="number"
+            placeholder="30"
+            value={creditTermDays}
+            onChange={(e) => setCreditTermDays(e.target.value)}
+          />
+        </div>
+      </Modal>
+
+      {/* Import Modal */}
+      <Modal
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        title="Import Customers"
+        size="lg"
+      >
+        <FileImport
+          entityType="customer"
+          onImport={async (importedRows) => {
+            const res = await fetch(`/api/tenants/${tenantId}/customers/batch`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json", "x-tenant-id": tenantId },
+              body: JSON.stringify({ rows: importedRows }),
+            });
+            const json = (await res.json()) as { success: boolean; data?: { count: number }; error?: string };
+            if (json.success) {
+              toast.success(`Imported ${json.data?.count ?? 0} customers`);
+              setImportOpen(false);
+              await load();
+            } else {
+              toast.error(json.error || "Import failed");
+            }
+          }}
+        />
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        title="Delete Customer"
+        actions={
+          <>
+            <Button variant="secondary" onClick={() => setDeleteTarget(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              loading={saving}
+              onClick={() => deleteTarget && handleDelete(deleteTarget.id)}
+            >
+              Delete
+            </Button>
+          </>
+        }
+      >
+        <p>
+          Are you sure you want to delete <strong>{deleteTarget?.name}</strong> (Tax ID: {deleteTarget?.taxId})?
+        </p>
+      </Modal>
     </section>
   );
 }
