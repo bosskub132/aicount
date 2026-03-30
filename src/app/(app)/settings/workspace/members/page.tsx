@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Users, Trash2 } from "lucide-react";
 
 type MemberRow = {
@@ -11,8 +11,17 @@ type MemberRow = {
   name: string | null;
 };
 
+type DisplayMember = {
+  userId: string;
+  email: string;
+  name: string | null;
+  role: "admin" | "maker" | "checker";
+  assignmentIds: string[];
+};
+
 export default function WorkspaceMembersPage() {
   const [tenantId, setTenantId] = useState("");
+  const [currentUserId, setCurrentUserId] = useState("");
   const [members, setMembers] = useState<MemberRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
@@ -28,6 +37,11 @@ export default function WorkspaceMembersPage() {
     }
 
     void fetchMembers(id);
+
+    // Get current user ID
+    fetch("/api/auth/profile").then(r => r.json()).then(json => {
+      if (json.success && json.data?.id) setCurrentUserId(json.data.id);
+    }).catch(() => {});
   }, []);
 
   async function fetchMembers(id: string) {
@@ -78,6 +92,28 @@ export default function WorkspaceMembersPage() {
     }
   }
 
+  // Deduplicate: users with both maker + checker = admin (owner)
+  const displayMembers: DisplayMember[] = useMemo(() => {
+    const map = new Map<string, DisplayMember>();
+    for (const m of members) {
+      const existing = map.get(m.userId);
+      if (existing) {
+        existing.assignmentIds.push(m.assignmentId);
+        // Has both roles = admin
+        existing.role = "admin";
+      } else {
+        map.set(m.userId, {
+          userId: m.userId,
+          email: m.email,
+          name: m.name,
+          role: m.assignmentRole,
+          assignmentIds: [m.assignmentId],
+        });
+      }
+    }
+    return Array.from(map.values());
+  }, [members]);
+
   if (!tenantId && !loading) {
     return (
       <section className="space-y-6">
@@ -124,33 +160,42 @@ export default function WorkspaceMembersPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {members.map((member) => (
-                <tr key={member.assignmentId} className="hover:bg-slate-50">
-                  <td className="px-4 py-3 text-slate-900">{member.name ?? "-"}</td>
-                  <td className="px-4 py-3 text-slate-600">{member.email}</td>
-                  <td className="px-4 py-3">
-                    <span
-                      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                        member.assignmentRole === "checker"
-                          ? "bg-purple-50 text-purple-700"
-                          : "bg-blue-50 text-blue-700"
-                      }`}
-                    >
-                      {member.assignmentRole}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <button
-                      onClick={() => void handleRemove(member.assignmentId, member.email)}
-                      className="flex items-center gap-1.5 rounded-md border border-slate-200 px-2.5 py-1 text-xs text-slate-600 hover:border-red-200 hover:bg-red-50 hover:text-red-600"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                      Remove
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              {!members.length ? (
+              {displayMembers.map((member) => {
+                const isCurrentUser = member.userId === currentUserId;
+                const roleColor = member.role === "admin"
+                  ? "bg-amber-50 text-amber-700"
+                  : member.role === "checker"
+                    ? "bg-purple-50 text-purple-700"
+                    : "bg-blue-50 text-blue-700";
+                return (
+                  <tr key={member.userId} className="hover:bg-slate-50">
+                    <td className="px-4 py-3 text-slate-900">
+                      {member.name ?? "-"}
+                      {isCurrentUser && <span className="ml-1.5 text-xs text-slate-400">(you)</span>}
+                    </td>
+                    <td className="px-4 py-3 text-slate-600">{member.email}</td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${roleColor}`}>
+                        {member.role}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      {isCurrentUser ? (
+                        <span className="text-xs text-slate-400">Owner</span>
+                      ) : (
+                        <button
+                          onClick={() => void handleRemove(member.assignmentIds[0], member.email)}
+                          className="flex items-center gap-1.5 rounded-md border border-slate-200 px-2.5 py-1 text-xs text-slate-600 hover:border-red-200 hover:bg-red-50 hover:text-red-600"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          Remove
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+              {!displayMembers.length ? (
                 <tr>
                   <td className="px-4 py-8 text-center text-slate-500" colSpan={4}>
                     No members found.
