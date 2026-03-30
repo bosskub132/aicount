@@ -759,3 +759,63 @@ export const whtCertificates = pgTable(
     index("wht_cert_doc_idx").on(table.tenantId, table.documentId),
   ]
 );
+
+// ── Bank Reconciliation Settings ──────────────────────────────────────────
+
+export const bankReconSettings = pgTable("bank_recon_settings", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id")
+    .notNull()
+    .references(() => tenants.id, { onDelete: "cascade" })
+    .unique(),
+  amountTolerance: decimal("amount_tolerance", { precision: 10, scale: 2 })
+    .default("0.50")
+    .notNull(),
+  dateRangeDays: integer("date_range_days").default(3).notNull(),
+  autoMatch: boolean("auto_match").default(true).notNull(),
+  matchByReference: boolean("match_by_reference").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// ── Bank Accounts ─────────────────────────────────────────────────────────
+
+export const bankAccounts = pgTable(
+  "bank_accounts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    bankName: text("bank_name").notNull(),
+    accountNumber: text("account_number").notNull(),
+    glAccountCode: varchar("gl_account_code", { length: 20 }),
+    isActive: boolean("is_active").default(true).notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [index("bank_account_tenant_idx").on(table.tenantId)]
+);
+
+// ── Custom Export Templates ───────────────────────────────────────────────
+
+export const customExportTemplates = pgTable("custom_export_templates", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id")
+    .notNull()
+    .references(() => tenants.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  isActive: boolean("is_active").default(false).notNull(),
+  columnMappings: jsonb("column_mappings")
+    .$type<
+      Array<{
+        position: number;
+        header: string;
+        sourceField: string;
+        format?: string;
+        defaultValue?: string;
+      }>
+    >()
+    .default([]),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
