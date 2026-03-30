@@ -10,6 +10,8 @@ import { FileImport } from "@/components/file-import";
 interface Department {
   deptCode: string;
   deptName: string;
+  _local?: boolean;
+  _duplicate?: boolean;
 }
 
 export default function OnboardingDepartmentsPage() {
@@ -58,7 +60,7 @@ export default function OnboardingDepartmentsPage() {
     if (!deptCode.trim() || !deptName.trim()) return;
     setDepts((prev) => [
       ...prev,
-      { deptCode: deptCode.trim(), deptName: deptName.trim() },
+      { deptCode: deptCode.trim(), deptName: deptName.trim(), _local: true },
     ]);
     setDeptCode("");
     setDeptName("");
@@ -80,14 +82,12 @@ export default function OnboardingDepartmentsPage() {
     setError(null);
     setLoading(true);
     try {
-      if (depts.length > 0 && tenantId) {
-        const res = await fetch(`/api/tenants/${tenantId}/departments`, {
+      const localDepts = depts.filter((d) => d._local);
+      if (localDepts.length > 0 && tenantId) {
+        const res = await fetch(`/api/tenants/${tenantId}/departments/batch`, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-tenant-id": tenantId,
-          },
-          body: JSON.stringify({ departments: depts }),
+          headers: { "Content-Type": "application/json", "x-tenant-id": tenantId },
+          body: JSON.stringify({ rows: localDepts }),
         });
         if (!res.ok) {
           const json = (await res.json()) as { error?: string };
@@ -149,23 +149,24 @@ export default function OnboardingDepartmentsPage() {
           <FileImport
             entityType="department"
             onImport={async (rows) => {
-              const tenantIdVal = tenantId;
-              if (!tenantIdVal) return;
-              const res = await fetch(`/api/tenants/${tenantIdVal}/departments/batch`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json", "x-tenant-id": tenantIdVal },
-                body: JSON.stringify({ rows }),
+              const newDepts: Department[] = rows.map((r) => ({
+                deptCode: r.deptCode,
+                deptName: r.deptName,
+                _local: true,
+              }));
+              setDepts((prev) => {
+                const combined = [...prev];
+                for (const dept of newDepts) {
+                  const existingIdx = combined.findIndex((d) => d.deptCode === dept.deptCode);
+                  if (existingIdx >= 0) {
+                    combined[existingIdx] = { ...dept, _duplicate: true };
+                  } else {
+                    combined.push(dept);
+                  }
+                }
+                return combined;
               });
-              const json = await res.json();
-              if (json.success) {
-                // Reload departments list
-                const loadRes = await fetch(`/api/tenants/${tenantIdVal}/departments`, {
-                  headers: { "x-tenant-id": tenantIdVal },
-                });
-                const loadJson = await loadRes.json();
-                if (loadJson.success) setDepts(loadJson.data || []);
-                setMode("manual");
-              }
+              setMode("manual");
             }}
           />
         ) : (
@@ -214,8 +215,11 @@ export default function OnboardingDepartmentsPage() {
               </thead>
               <tbody className="divide-y divide-[var(--border)]">
                 {depts.map((dept, i) => (
-                  <tr key={i} className="hover:bg-[var(--muted)]">
-                    <td className="px-4 py-2.5 font-mono text-xs text-[var(--muted-foreground)]">{dept.deptCode}</td>
+                  <tr key={i} className={`hover:bg-[var(--muted)] ${dept._duplicate ? "bg-[var(--warning-light)]" : ""}`}>
+                    <td className="px-4 py-2.5 font-mono text-xs text-[var(--muted-foreground)]">
+                      {dept.deptCode}
+                      {dept._duplicate && <span className="ml-1.5 text-[10px] font-medium text-[var(--warning)]">(updated)</span>}
+                    </td>
                     <td className="px-4 py-2.5 text-[var(--foreground)]">{dept.deptName}</td>
                     <td className="px-4 py-2.5 text-right">
                       <button

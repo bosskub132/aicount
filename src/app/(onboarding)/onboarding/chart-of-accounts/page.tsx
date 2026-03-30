@@ -13,6 +13,7 @@ interface CoaRow {
   accountName: string;
   category: string;
   _local?: boolean;
+  _duplicate?: boolean;
 }
 
 const CATEGORY_OPTIONS = [
@@ -164,23 +165,27 @@ export default function OnboardingChartOfAccountsPage() {
           <FileImport
             entityType="coa"
             onImport={async (rows) => {
-              const tenantIdVal = tenantId;
-              if (!tenantIdVal) return;
-              const res = await fetch(`/api/tenants/${tenantIdVal}/coa/batch`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json", "x-tenant-id": tenantIdVal },
-                body: JSON.stringify({ rows }),
+              // Accumulate imported rows locally — duplicates will be highlighted in table
+              const newRows: CoaRow[] = rows.map((r) => ({
+                accountCode: r.accountCode,
+                accountName: r.accountName,
+                category: r.category,
+                _local: true,
+              }));
+              setCoaRows((prev) => {
+                const combined = [...prev];
+                for (const row of newRows) {
+                  const existingIdx = combined.findIndex((c) => c.accountCode === row.accountCode);
+                  if (existingIdx >= 0) {
+                    // Replace duplicate with newer import
+                    combined[existingIdx] = { ...row, _duplicate: true };
+                  } else {
+                    combined.push(row);
+                  }
+                }
+                return combined;
               });
-              const json = await res.json();
-              if (json.success) {
-                // Reload COA list
-                const loadRes = await fetch(`/api/tenants/${tenantIdVal}/coa`, {
-                  headers: { "x-tenant-id": tenantIdVal },
-                });
-                const loadJson = await loadRes.json();
-                if (loadJson.success) setCoaRows(loadJson.data || []);
-                setMode("manual");
-              }
+              setMode("manual"); // Switch back to show combined table
             }}
           />
         ) : (
@@ -237,8 +242,11 @@ export default function OnboardingChartOfAccountsPage() {
               </thead>
               <tbody className="divide-y divide-[var(--border)]">
                 {coaRows.map((row, i) => (
-                  <tr key={i} className="hover:bg-[var(--muted)]">
-                    <td className="px-4 py-2.5 font-mono text-xs text-[var(--muted-foreground)]">{row.accountCode}</td>
+                  <tr key={i} className={`hover:bg-[var(--muted)] ${row._duplicate ? "bg-[var(--warning-light)]" : ""}`}>
+                    <td className="px-4 py-2.5 font-mono text-xs text-[var(--muted-foreground)]">
+                      {row.accountCode}
+                      {row._duplicate && <span className="ml-1.5 text-[10px] font-medium text-[var(--warning)]">(updated)</span>}
+                    </td>
                     <td className="px-4 py-2.5 text-[var(--foreground)]">{row.accountName}</td>
                     <td className="px-4 py-2.5">
                       <span className="inline-flex items-center rounded-full bg-[var(--muted)] px-2.5 py-0.5 text-xs font-medium capitalize text-[var(--muted-foreground)]">

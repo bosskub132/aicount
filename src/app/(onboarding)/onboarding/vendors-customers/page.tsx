@@ -17,6 +17,7 @@ interface VendorRow {
   address: string;
   defaultWhtRate: string;
   _local?: boolean;
+  _duplicate?: boolean;
   [key: string]: unknown;
 }
 
@@ -27,6 +28,7 @@ interface CustomerRow {
   address: string;
   creditTermDays: string;
   _local?: boolean;
+  _duplicate?: boolean;
   [key: string]: unknown;
 }
 
@@ -164,41 +166,52 @@ export default function OnboardingVendorsCustomersPage() {
   }
 
   async function handleVendorImport(rows: Record<string, string>[]) {
-    if (!tenantId) return;
-    const res = await fetch(`/api/tenants/${tenantId}/vendors/batch`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-tenant-id": tenantId },
-      body: JSON.stringify({ rows }),
+    const newRows: VendorRow[] = rows.map((r) => ({
+      name: r.name || "",
+      taxId: r.taxId || "",
+      vendorType: r.vendorType || "company",
+      branchNumber: r.branchNumber || "",
+      address: r.address || "",
+      defaultWhtRate: r.defaultWhtRate || "3",
+      _local: true,
+    }));
+    setVendors((prev) => {
+      const combined = [...prev];
+      for (const row of newRows) {
+        const existingIdx = combined.findIndex((v) => v.taxId === row.taxId);
+        if (existingIdx >= 0) {
+          combined[existingIdx] = { ...row, _duplicate: true };
+        } else {
+          combined.push(row);
+        }
+      }
+      return combined;
     });
-    const json = await res.json();
-    if (json.success) {
-      // Reload vendor list
-      const loadRes = await fetch(`/api/tenants/${tenantId}/vendors`, {
-        headers: { "x-tenant-id": tenantId },
-      });
-      const loadJson = await loadRes.json();
-      if (loadJson.success) setVendors(loadJson.data || []);
-      setVendorMode("manual");
-    }
+    setVendorMode("manual");
   }
 
   async function handleCustomerImport(rows: Record<string, string>[]) {
-    if (!tenantId) return;
-    const res = await fetch(`/api/tenants/${tenantId}/customers/batch`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-tenant-id": tenantId },
-      body: JSON.stringify({ rows }),
+    const newRows: CustomerRow[] = rows.map((r) => ({
+      name: r.name || "",
+      taxId: r.taxId || "",
+      branchNumber: r.branchNumber || "",
+      address: r.address || "",
+      creditTermDays: r.creditTermDays || "30",
+      _local: true,
+    }));
+    setCustomers((prev) => {
+      const combined = [...prev];
+      for (const row of newRows) {
+        const existingIdx = combined.findIndex((c) => c.taxId === row.taxId);
+        if (existingIdx >= 0) {
+          combined[existingIdx] = { ...row, _duplicate: true };
+        } else {
+          combined.push(row);
+        }
+      }
+      return combined;
     });
-    const json = await res.json();
-    if (json.success) {
-      // Reload customer list
-      const loadRes = await fetch(`/api/tenants/${tenantId}/customers`, {
-        headers: { "x-tenant-id": tenantId },
-      });
-      const loadJson = await loadRes.json();
-      if (loadJson.success) setCustomers(loadJson.data || []);
-      setCustomerMode("manual");
-    }
+    setCustomerMode("manual");
   }
 
   async function patchOnboardingStep(step: number) {
@@ -214,58 +227,31 @@ export default function OnboardingVendorsCustomersPage() {
     setLoading(true);
     try {
       if (tenantId) {
-        // Save locally-added vendors (not yet persisted)
+        // Batch save all local vendors
         const localVendors = vendors.filter((v) => v._local);
-        for (const v of localVendors) {
-          const res = await fetch(`/api/tenants/${tenantId}/vendors`, {
+        if (localVendors.length > 0) {
+          const res = await fetch(`/api/tenants/${tenantId}/vendors/batch`, {
             method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "x-tenant-id": tenantId,
-            },
-            body: JSON.stringify({
-              name: v.name,
-              taxId: v.taxId,
-              vendorType: v.vendorType,
-              branchNumber: v.branchNumber,
-              address: v.address,
-              defaultWhtRate: v.defaultWhtRate
-                ? Number(v.defaultWhtRate)
-                : undefined,
-            }),
+            headers: { "Content-Type": "application/json", "x-tenant-id": tenantId },
+            body: JSON.stringify({ rows: localVendors }),
           });
           if (!res.ok) {
             const json = (await res.json()) as { error?: string };
-            throw new Error(
-              json.error ?? `Failed to save vendor "${v.name}".`
-            );
+            throw new Error(json.error ?? "Failed to save vendors.");
           }
         }
 
-        // Save locally-added customers (not yet persisted)
+        // Batch save all local customers
         const localCustomers = customers.filter((c) => c._local);
-        for (const c of localCustomers) {
-          const res = await fetch(`/api/tenants/${tenantId}/customers`, {
+        if (localCustomers.length > 0) {
+          const res = await fetch(`/api/tenants/${tenantId}/customers/batch`, {
             method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "x-tenant-id": tenantId,
-            },
-            body: JSON.stringify({
-              name: c.name,
-              taxId: c.taxId,
-              branchNumber: c.branchNumber,
-              address: c.address,
-              creditTermDays: c.creditTermDays
-                ? Number(c.creditTermDays)
-                : undefined,
-            }),
+            headers: { "Content-Type": "application/json", "x-tenant-id": tenantId },
+            body: JSON.stringify({ rows: localCustomers }),
           });
           if (!res.ok) {
             const json = (await res.json()) as { error?: string };
-            throw new Error(
-              json.error ?? `Failed to save customer "${c.name}".`
-            );
+            throw new Error(json.error ?? "Failed to save customers.");
           }
         }
       }
@@ -497,9 +483,10 @@ export default function OnboardingVendorsCustomersPage() {
                 </thead>
                 <tbody className="divide-y divide-[var(--border)]">
                   {vendors.map((row, i) => (
-                    <tr key={i} className="hover:bg-[var(--muted)]">
+                    <tr key={i} className={`hover:bg-[var(--muted)] ${row._duplicate ? "bg-[var(--warning-light)]" : ""}`}>
                       <td className="px-4 py-2.5 text-[var(--foreground)]">
                         {row.name}
+                        {row._duplicate && <span className="ml-1.5 text-[10px] font-medium text-[var(--warning)]">(updated)</span>}
                       </td>
                       <td className="px-4 py-2.5 font-mono text-xs text-[var(--muted-foreground)]">
                         {row.taxId}
@@ -555,9 +542,10 @@ export default function OnboardingVendorsCustomersPage() {
               </thead>
               <tbody className="divide-y divide-[var(--border)]">
                 {customers.map((row, i) => (
-                  <tr key={i} className="hover:bg-[var(--muted)]">
+                  <tr key={i} className={`hover:bg-[var(--muted)] ${row._duplicate ? "bg-[var(--warning-light)]" : ""}`}>
                     <td className="px-4 py-2.5 text-[var(--foreground)]">
                       {row.name}
+                      {row._duplicate && <span className="ml-1.5 text-[10px] font-medium text-[var(--warning)]">(updated)</span>}
                     </td>
                     <td className="px-4 py-2.5 font-mono text-xs text-[var(--muted-foreground)]">
                       {row.taxId}
