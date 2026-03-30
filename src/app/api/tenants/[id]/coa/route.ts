@@ -39,11 +39,13 @@ export async function POST(
       .returning();
     return NextResponse.json({ success: true, data: created }, { status: 201 });
   } catch (error) {
-    const msg = (error as Error).message || "";
-    if (msg.includes("duplicate key") || msg.includes("unique constraint")) {
+    const err = error as Record<string, unknown>;
+    const code = String(err.code ?? "");
+    const msg = String(err.message ?? "");
+    console.error("COA create error:", { code, msg, detail: err.detail });
+    if (code === "23505" || msg.includes("duplicate key") || msg.includes("unique constraint")) {
       return NextResponse.json({ success: false, error: "An account with this code already exists." }, { status: 409 });
     }
-    console.error("COA create error:", error);
     return NextResponse.json({ success: false, error: "Failed to create account." }, { status: 500 });
   }
 }
