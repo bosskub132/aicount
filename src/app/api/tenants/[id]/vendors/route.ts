@@ -64,7 +64,12 @@ export async function POST(
       .returning();
     return NextResponse.json({ success: true, data: created }, { status: 201 });
   } catch (error) {
-    return NextResponse.json({ success: false, error: (error as Error).message }, { status: 500 });
+    const cause = (error as { cause?: { code?: string } })?.cause;
+    if (cause?.code === "23505") {
+      return NextResponse.json({ success: false, error: "A vendor with this tax ID already exists." }, { status: 409 });
+    }
+    console.error("Vendor create error:", error);
+    return NextResponse.json({ success: false, error: "Failed to create vendor." }, { status: 500 });
   }
 }
 
