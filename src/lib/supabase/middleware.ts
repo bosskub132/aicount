@@ -66,9 +66,11 @@ export async function updateSession(request: NextRequest) {
     const roleRaw = String(user.user_metadata?.role || "maker");
     const role = roleRaw === "admin" || roleRaw === "checker" ? roleRaw : "maker";
     const pathTenantIdMatch = request.nextUrl.pathname.match(/^\/api\/tenants\/([^/]+)/);
+    const queryTenantId = request.nextUrl.searchParams.get("tenantId");
     const tenantId =
       request.headers.get("x-tenant-id") ||
       pathTenantIdMatch?.[1] ||
+      queryTenantId ||
       "00000000-0000-0000-0000-000000000000";
 
     requestHeaders.set("x-user-id", user.id);

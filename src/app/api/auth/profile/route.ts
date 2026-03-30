@@ -9,7 +9,7 @@ import { validateCsrf } from "@/lib/api/csrf";
 const PatchProfileSchema = z.object({
   name: z.string().min(1).max(200).optional(),
   isOnboardingComplete: z.boolean().optional(),
-  onboardingStep: z.number().int().min(0).max(6).optional(),
+  onboardingStep: z.number().int().min(0).max(10).optional(),
 });
 
 export async function GET(request: Request) {
