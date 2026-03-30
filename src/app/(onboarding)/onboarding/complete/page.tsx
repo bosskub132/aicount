@@ -34,7 +34,7 @@ export default function OnboardingCompletePage() {
       </p>
 
       {/* Product hint card */}
-      <div className="mt-8 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--info-light)] p-4">
+      <div className="mt-8 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--info-light)] p-4 text-left">
         <div className="flex items-start gap-3">
           <Lightbulb className="h-5 w-5 text-[var(--primary)] mt-0.5 shrink-0" />
           <div>
