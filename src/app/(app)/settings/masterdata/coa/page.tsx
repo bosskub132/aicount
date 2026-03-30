@@ -327,7 +327,7 @@ export default function MasterDataCoaPage() {
           />
           <div className="flex items-center gap-2">
             <Toggle checked={isSuspense} onChange={setIsSuspense} label="Suspense Account" />
-            <Tooltip content="A suspense account temporarily holds transactions when the correct account is unknown. Entries are moved to the proper account once identified.">
+            <Tooltip side="bottom" content="A suspense account temporarily holds transactions when the correct account is unknown. Entries are moved to the proper account once identified.">
               <HelpCircle className="h-4 w-4 text-[var(--muted-foreground)] cursor-help" />
             </Tooltip>
           </div>
