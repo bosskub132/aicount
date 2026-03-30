@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, Building2, FileText, Users } from "lucide-react";
+import { Button } from "@/components/button";
 
 const INFO_CARDS = [
   {
@@ -42,8 +43,8 @@ export default function OnboardingWelcomePage() {
 
   return (
     <div className="flex flex-col items-center text-center">
-      <h1 className="text-3xl font-bold text-slate-900">Welcome to AiCount</h1>
-      <p className="mt-3 max-w-md text-base text-slate-600">
+      <h1 className="text-3xl font-bold text-[var(--foreground)]">Welcome to AiCount</h1>
+      <p className="mt-3 max-w-md text-base text-[var(--muted-foreground)]">
         Let&apos;s set up your workspace in a few quick steps.
       </p>
 
@@ -51,25 +52,20 @@ export default function OnboardingWelcomePage() {
         {INFO_CARDS.map(({ icon: Icon, title, description }) => (
           <div
             key={title}
-            className="flex flex-col items-center gap-3 rounded-xl border border-slate-200 bg-white p-6 shadow-sm"
+            className="flex flex-col items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--card)] p-6 shadow-[var(--shadow-sm)]"
           >
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50">
-              <Icon className="h-6 w-6 text-blue-600" />
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--primary-light)]">
+              <Icon className="h-6 w-6 text-[var(--primary)]" />
             </div>
-            <h2 className="text-sm font-semibold text-slate-900">{title}</h2>
-            <p className="text-xs text-slate-500">{description}</p>
+            <h2 className="text-sm font-semibold text-[var(--foreground)]">{title}</h2>
+            <p className="text-xs text-[var(--muted-foreground)]">{description}</p>
           </div>
         ))}
       </div>
 
-      <button
-        onClick={handleStart}
-        disabled={loading}
-        className="mt-10 inline-flex items-center gap-2 rounded-lg bg-blue-600 px-6 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
-      >
-        {loading ? "Starting…" : "Let's get started"}
-        {!loading && <ArrowRight className="h-4 w-4" />}
-      </button>
+      <Button variant="primary" size="lg" loading={loading} icon={<ArrowRight className="h-4 w-4" />} onClick={handleStart} className="mt-10">
+        Let&apos;s get started
+      </Button>
     </div>
   );
 }
