@@ -23,6 +23,7 @@ export default function WorkspaceDeletePage() {
   const router = useRouter();
 
   const [tenantId, setTenantId] = useState("");
+  const [currentUserId, setCurrentUserId] = useState("");
   const [tenant, setTenant] = useState<TenantData | null>(null);
   const [members, setMembers] = useState<MemberRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -54,10 +55,15 @@ export default function WorkspaceDeletePage() {
 
     async function loadData() {
       try {
-        const [tenantRes, membersRes] = await Promise.all([
+        const [tenantRes, membersRes, profileRes] = await Promise.all([
           fetch(`/api/tenants/${id}`, { headers: { "x-tenant-id": id } }),
           fetch(`/api/tenants/${id}/assignments`, { headers: { "x-tenant-id": id } }),
+          fetch("/api/auth/profile"),
         ]);
+        const profileJson = await profileRes.json();
+        if (profileJson.success && profileJson.data?.id) {
+          setCurrentUserId(profileJson.data.id);
+        }
 
         const tenantJson = (await tenantRes.json()) as {
           success: boolean;
@@ -263,8 +269,12 @@ export default function WorkspaceDeletePage() {
     );
   }
 
-  const isSoleMember = members.length <= 1;
-  const otherMembers = members.filter((m) => m.userId !== tenantId);
+  // Deduplicate members (each user may have multiple role assignments: maker + checker)
+  const uniqueMembers = members.filter(
+    (m, i, arr) => arr.findIndex((x) => x.userId === m.userId) === i
+  );
+  const isSoleMember = uniqueMembers.length <= 1;
+  const otherMembers = uniqueMembers.filter((m) => m.userId !== currentUserId);
 
   return (
     <>
@@ -289,7 +299,7 @@ export default function WorkspaceDeletePage() {
               <p className="text-sm text-red-800">
                 This workspace has{" "}
                 <span className="font-medium">
-                  {members.length} member{members.length !== 1 ? "s" : ""}
+                  {uniqueMembers.length} member{uniqueMembers.length !== 1 ? "s" : ""}
                 </span>
                 .
               </p>
