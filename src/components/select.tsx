@@ -1,7 +1,8 @@
 // src/components/select.tsx
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { ChevronDown, Search, Check } from "lucide-react";
 
 interface SelectOption {
@@ -23,7 +24,9 @@ interface SelectProps {
 export function Select({ options, value, onChange, placeholder = "Select...", searchable, label, error, required }: SelectProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
-  const ref = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
 
   const filtered = searchable && search
     ? options.filter((o) => o.label.toLowerCase().includes(search.toLowerCase()))
@@ -31,20 +34,47 @@ export function Select({ options, value, onChange, placeholder = "Select...", se
 
   const selected = options.find((o) => o.value === value);
 
+  const updatePosition = useCallback(() => {
+    if (!buttonRef.current) return;
+    const rect = buttonRef.current.getBoundingClientRect();
+    setDropdownStyle({
+      position: "fixed",
+      top: rect.bottom + 4,
+      left: rect.left,
+      width: rect.width,
+      zIndex: 9999,
+    });
+  }, []);
+
   useEffect(() => {
     if (!open) return;
+    updatePosition();
+
     const handleClickOutside = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      if (
+        buttonRef.current && !buttonRef.current.contains(target) &&
+        dropdownRef.current && !dropdownRef.current.contains(target)
+      ) {
         setOpen(false);
         setSearch("");
       }
     };
+
+    const handleScroll = () => updatePosition();
+
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [open]);
+    window.addEventListener("scroll", handleScroll, true);
+    window.addEventListener("resize", handleScroll);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      window.removeEventListener("scroll", handleScroll, true);
+      window.removeEventListener("resize", handleScroll);
+    };
+  }, [open, updatePosition]);
 
   return (
-    <div ref={ref} className="relative flex flex-col gap-1">
+    <div className="flex flex-col gap-1">
       {label && (
         <label className="text-[13px] font-medium text-[var(--card-foreground)]">
           {label}
@@ -52,6 +82,7 @@ export function Select({ options, value, onChange, placeholder = "Select...", se
         </label>
       )}
       <button
+        ref={buttonRef}
         type="button"
         onClick={() => setOpen(!open)}
         className={`flex items-center justify-between w-full rounded-[var(--radius-input)] border bg-white px-3 py-2 text-sm cursor-pointer transition-colors ${
@@ -61,8 +92,12 @@ export function Select({ options, value, onChange, placeholder = "Select...", se
         {selected?.label || placeholder}
         <ChevronDown className={`h-4 w-4 text-[var(--muted-foreground)] transition-transform duration-150 ${open ? "rotate-180" : ""}`} />
       </button>
-      {open && (
-        <div className="absolute top-full left-0 right-0 z-50 mt-1 rounded-[var(--radius-card)] border border-[var(--border)] bg-white shadow-[var(--shadow-md)] max-h-60 overflow-auto">
+      {open && typeof document !== "undefined" && createPortal(
+        <div
+          ref={dropdownRef}
+          style={dropdownStyle}
+          className="rounded-[var(--radius-card)] border border-[var(--border)] bg-white shadow-[var(--shadow-md)] max-h-60 overflow-auto"
+        >
           {searchable && (
             <div className="flex items-center gap-2 border-b border-[var(--border)] px-3 py-2">
               <Search className="h-4 w-4 text-[var(--muted-foreground)]" />
@@ -97,7 +132,8 @@ export function Select({ options, value, onChange, placeholder = "Select...", se
               </button>
             ))
           )}
-        </div>
+        </div>,
+        document.body
       )}
       {error && <p className="text-xs text-[var(--destructive)]">{error}</p>}
     </div>
