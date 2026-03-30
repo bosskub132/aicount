@@ -131,11 +131,13 @@ export default function AccountingTemplatesPage() {
     } finally {
       setLoading(false);
     }
-  }, [tenantId, toast]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tenantId]);
 
   useEffect(() => {
     load();
-  }, [load]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tenantId]);
 
   function resetForm() {
     setTemplateName("");
