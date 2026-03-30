@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { Suspense, useState, useCallback } from "react";
+import { Suspense, useState, useCallback, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   ChevronDown,
@@ -15,7 +15,7 @@ import {
   BookOpen,
   Code,
   Copy,
-
+  AlertTriangle,
 } from "lucide-react";
 import { useDocument } from "@/lib/hooks/use-documents";
 import { useToast } from "@/lib/stores/ui-store";
@@ -28,6 +28,7 @@ import { Select } from "@/components/select";
 import { Button } from "@/components/button";
 import { Badge, StatusBadge } from "@/components/badge";
 import { Skeleton } from "@/components/skeleton";
+import { compareBuyerName } from "@/lib/services/buyer-name-matcher";
 
 /* ------------------------------------------------------------------ */
 /*  Constants                                                          */
@@ -245,6 +246,7 @@ function ExtractionsContent() {
 
   const [editValues, setEditValues] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+  const [tenantName, setTenantName] = useState("");
 
   const hasEdits = Object.keys(editValues).length > 0;
 
@@ -255,6 +257,21 @@ function ExtractionsContent() {
   const currency = doc?.currency || ocr.amounts?.currency || "THB";
   const lineItems = ocr.line_items || [];
   const canEdit = doc ? EDITABLE_STATUSES.includes(doc.status) : false;
+
+  /* ---- fetch tenant name for buyer mismatch check ---- */
+  useEffect(() => {
+    const tid = getWorkspaceTenantId();
+    if (!tid) return;
+    fetch(`/api/tenants/${tid}`, { headers: { "x-tenant-id": tid } })
+      .then((r) => r.json())
+      .then((json) => {
+        if (json.success) setTenantName(json.data?.name || "");
+      })
+      .catch(() => {});
+  }, []);
+
+  const buyerName = ocr.customer?.name || null;
+  const buyerCheck = compareBuyerName(buyerName, tenantName);
 
   const issuerName = doc?.issuerName || ocr.issuer?.name || "Unknown";
   const docNumber = doc?.documentNumber || ocr.document?.invoice_number || "No Number";
@@ -543,6 +560,22 @@ function ExtractionsContent() {
                 </Field>
               </div>
             </Section>
+
+            {/* --- Buyer Name Mismatch Alert --- */}
+            {!buyerCheck.match && (
+              <div className="mx-5 mt-3 rounded-[var(--radius-input)] border border-[var(--warning)] bg-[var(--warning-light)] px-3 py-2 text-sm">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="h-4 w-4 text-[var(--warning)] mt-0.5 shrink-0" />
+                  <div>
+                    <p className="font-medium text-amber-900">Buyer name mismatch</p>
+                    <p className="text-xs text-amber-800 mt-0.5">
+                      OCR detected: &quot;{buyerName}&quot; — Your workspace: &quot;{tenantName}&quot;.
+                      This document may have been uploaded to the wrong workspace.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* --- Transaction Details --- */}
             <Section
