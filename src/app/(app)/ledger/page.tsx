@@ -289,7 +289,7 @@ function LedgerPageContent() {
     let totalDebits = 0;
     let totalCredits = 0;
     let drafts = 0;
-    for (const r of rows) {
+    for (const r of (Array.isArray(rows) ? rows : [])) {
       totalDebits += Number(r.totalDebit ?? 0);
       totalCredits += Number(r.totalCredit ?? 0);
       if (String(r.status).toLowerCase() === "draft") drafts++;
