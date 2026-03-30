@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { Layers, Plus, Upload, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
 import { Modal } from "@/components/modal";
 import { DataTable, type Column } from "@/components/data-table";
 import { FileImport } from "@/components/file-import";
+import { Pagination } from "@/components/pagination";
 import { useToast } from "@/lib/stores/ui-store";
 
 interface DepartmentRow {
@@ -22,6 +23,10 @@ export default function MasterDataDepartmentsPage() {
   const [rows, setRows] = useState<DepartmentRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(50);
+  const [totalPages, setTotalPages] = useState(1);
 
   // Modal states
   const [modalOpen, setModalOpen] = useState(false);
@@ -39,30 +44,37 @@ export default function MasterDataDepartmentsPage() {
     setTenantId(id);
   }, []);
 
-  async function load() {
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  const load = useCallback(async () => {
     if (!tenantId) return;
     setLoading(true);
     try {
-      const response = await fetch(`/api/tenants/${tenantId}/departments`, {
+      const sp = new URLSearchParams({ page: String(page), limit: String(limit) });
+      if (debouncedSearch) sp.set("search", debouncedSearch);
+      const response = await fetch(`/api/tenants/${tenantId}/departments?${sp}`, {
         headers: { "x-tenant-id": tenantId },
       });
-      const json = (await response.json()) as { success: boolean; data?: DepartmentRow[]; error?: string };
+      const json = (await response.json()) as { success: boolean; data?: DepartmentRow[]; meta?: { total: number; totalPages: number }; error?: string };
       if (json.success) {
         setRows(json.data || []);
-      } else {
-        toast.error(json.error || "Failed to load departments");
+        setTotalPages(json.meta?.totalPages ?? 1);
       }
     } catch {
-      toast.error("Failed to load departments");
+      // silently handle
     } finally {
       setLoading(false);
     }
-  }
+  }, [tenantId, page, limit, debouncedSearch]);
 
-  useEffect(() => {
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tenantId]);
+  useEffect(() => { load(); }, [load]);
 
   function resetForm() {
     setDeptCode("");
@@ -150,23 +162,14 @@ export default function MasterDataDepartmentsPage() {
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
 
-  const filtered = useMemo(() => {
-    let result = rows;
-    if (search) {
-      const q = search.toLowerCase();
-      result = result.filter(
-        (r) => r.deptCode.toLowerCase().includes(q) || r.deptName.toLowerCase().includes(q)
-      );
-    }
-    if (sortKey) {
-      result = [...result].sort((a, b) => {
-        const aVal = String(a[sortKey as keyof DepartmentRow] ?? "");
-        const bVal = String(b[sortKey as keyof DepartmentRow] ?? "");
-        return sortDir === "asc" ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
-      });
-    }
-    return result;
-  }, [rows, search, sortKey, sortDir]);
+  const sorted = useMemo(() => {
+    if (!sortKey) return rows;
+    return [...rows].sort((a, b) => {
+      const aVal = String(a[sortKey as keyof DepartmentRow] ?? "");
+      const bVal = String(b[sortKey as keyof DepartmentRow] ?? "");
+      return sortDir === "asc" ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+    });
+  }, [rows, sortKey, sortDir]);
 
   const columns: Column<DepartmentRow>[] = [
     { key: "deptCode", header: "Code", width: "120px", sortable: true },
@@ -261,13 +264,21 @@ export default function MasterDataDepartmentsPage() {
       <div className="max-h-[calc(100vh-280px)] overflow-auto">
         <DataTable<DepartmentRow>
           columns={columns}
-          data={filtered}
+          data={sorted}
           keyField="id"
           sortable
           onSort={(key, dir) => { setSortKey(key); setSortDir(dir); }}
           emptyMessage={loading ? "Loading departments..." : "No departments found."}
         />
       </div>
+
+      <Pagination
+        currentPage={page}
+        totalPages={totalPages}
+        onPageChange={setPage}
+        perPage={limit}
+        onPerPageChange={(n) => { setLimit(n); setPage(1); }}
+      />
 
       {/* Create/Edit Modal */}
       <Modal

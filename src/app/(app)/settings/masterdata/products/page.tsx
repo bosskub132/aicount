@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { Package, Plus, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
 import { Modal } from "@/components/modal";
 import { DataTable, type Column } from "@/components/data-table";
+import { Pagination } from "@/components/pagination";
 import { useToast } from "@/lib/stores/ui-store";
 
 interface ProductRow {
@@ -24,6 +25,10 @@ export default function MasterDataProductsPage() {
   const [rows, setRows] = useState<ProductRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(50);
+  const [totalPages, setTotalPages] = useState(1);
 
   // Modal states
   const [modalOpen, setModalOpen] = useState(false);
@@ -43,30 +48,37 @@ export default function MasterDataProductsPage() {
     setTenantId(id);
   }, []);
 
-  async function load() {
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  const load = useCallback(async () => {
     if (!tenantId) return;
     setLoading(true);
     try {
-      const response = await fetch(`/api/tenants/${tenantId}/products`, {
+      const sp = new URLSearchParams({ page: String(page), limit: String(limit) });
+      if (debouncedSearch) sp.set("search", debouncedSearch);
+      const response = await fetch(`/api/tenants/${tenantId}/products?${sp}`, {
         headers: { "x-tenant-id": tenantId },
       });
-      const json = (await response.json()) as { success: boolean; data?: ProductRow[]; error?: string };
+      const json = (await response.json()) as { success: boolean; data?: ProductRow[]; meta?: { total: number; totalPages: number }; error?: string };
       if (json.success) {
         setRows(json.data || []);
-      } else {
-        toast.error(json.error || "Failed to load products");
+        setTotalPages(json.meta?.totalPages ?? 1);
       }
     } catch {
-      toast.error("Failed to load products");
+      // silently handle
     } finally {
       setLoading(false);
     }
-  }
+  }, [tenantId, page, limit, debouncedSearch]);
 
-  useEffect(() => {
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tenantId]);
+  useEffect(() => { load(); }, [load]);
 
   function resetForm() {
     setItemCode("");
@@ -174,23 +186,14 @@ export default function MasterDataProductsPage() {
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
 
-  const filtered = useMemo(() => {
-    let result = rows;
-    if (search) {
-      const q = search.toLowerCase();
-      result = result.filter(
-        (r) => r.itemCode.toLowerCase().includes(q) || r.itemName.toLowerCase().includes(q)
-      );
-    }
-    if (sortKey) {
-      result = [...result].sort((a, b) => {
-        const aVal = String(a[sortKey as keyof ProductRow] ?? "");
-        const bVal = String(b[sortKey as keyof ProductRow] ?? "");
-        return sortDir === "asc" ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
-      });
-    }
-    return result;
-  }, [rows, search, sortKey, sortDir]);
+  const sorted = useMemo(() => {
+    if (!sortKey) return rows;
+    return [...rows].sort((a, b) => {
+      const aVal = String(a[sortKey as keyof ProductRow] ?? "");
+      const bVal = String(b[sortKey as keyof ProductRow] ?? "");
+      return sortDir === "asc" ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+    });
+  }, [rows, sortKey, sortDir]);
 
   const columns: Column<ProductRow>[] = [
     { key: "itemCode", header: "Code", width: "120px", sortable: true },
@@ -304,13 +307,21 @@ export default function MasterDataProductsPage() {
       <div className="max-h-[calc(100vh-280px)] overflow-auto">
         <DataTable<ProductRow>
           columns={columns}
-          data={filtered}
+          data={sorted}
           keyField="id"
           sortable
           onSort={(key, dir) => { setSortKey(key); setSortDir(dir); }}
           emptyMessage={loading ? "Loading products..." : "No products found."}
         />
       </div>
+
+      <Pagination
+        currentPage={page}
+        totalPages={totalPages}
+        onPageChange={setPage}
+        perPage={limit}
+        onPerPageChange={(n) => { setLimit(n); setPage(1); }}
+      />
 
       {/* Create/Edit Modal */}
       <Modal

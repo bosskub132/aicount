@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { BookOpen, Plus, Upload, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
@@ -11,6 +11,7 @@ import { Badge } from "@/components/badge";
 import { Toggle } from "@/components/toggle";
 
 import { FileImport } from "@/components/file-import";
+import { Pagination } from "@/components/pagination";
 import { useToast } from "@/lib/stores/ui-store";
 
 type CoaCategory = "asset" | "liability" | "equity" | "revenue" | "expense";
@@ -38,6 +39,10 @@ export default function MasterDataCoaPage() {
   const [rows, setRows] = useState<CoaRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(50);
+  const [totalPages, setTotalPages] = useState(1);
 
   // Modal states
   const [modalOpen, setModalOpen] = useState(false);
@@ -57,30 +62,37 @@ export default function MasterDataCoaPage() {
     setTenantId(id);
   }, []);
 
-  async function load() {
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  const load = useCallback(async () => {
     if (!tenantId) return;
     setLoading(true);
     try {
-      const response = await fetch(`/api/tenants/${tenantId}/coa`, {
+      const sp = new URLSearchParams({ page: String(page), limit: String(limit) });
+      if (debouncedSearch) sp.set("search", debouncedSearch);
+      const response = await fetch(`/api/tenants/${tenantId}/coa?${sp}`, {
         headers: { "x-tenant-id": tenantId },
       });
-      const json = (await response.json()) as { success: boolean; data?: CoaRow[]; error?: string };
+      const json = (await response.json()) as { success: boolean; data?: CoaRow[]; meta?: { total: number; totalPages: number }; error?: string };
       if (json.success) {
         setRows(json.data || []);
-      } else {
-        toast.error(json.error || "Failed to load COA");
+        setTotalPages(json.meta?.totalPages ?? 1);
       }
     } catch {
-      toast.error("Failed to load chart of accounts");
+      // silently handle
     } finally {
       setLoading(false);
     }
-  }
+  }, [tenantId, page, limit, debouncedSearch]);
 
-  useEffect(() => {
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tenantId]);
+  useEffect(() => { load(); }, [load]);
 
   function resetForm() {
     setAccountCode("");
@@ -174,23 +186,14 @@ export default function MasterDataCoaPage() {
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
 
-  const filtered = useMemo(() => {
-    let result = rows;
-    if (search) {
-      const q = search.toLowerCase();
-      result = result.filter(
-        (r) => r.accountCode.toLowerCase().includes(q) || r.accountName.toLowerCase().includes(q)
-      );
-    }
-    if (sortKey) {
-      result = [...result].sort((a, b) => {
-        const aVal = String(a[sortKey as keyof CoaRow] ?? "");
-        const bVal = String(b[sortKey as keyof CoaRow] ?? "");
-        return sortDir === "asc" ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
-      });
-    }
-    return result;
-  }, [rows, search, sortKey, sortDir]);
+  const sorted = useMemo(() => {
+    if (!sortKey) return rows;
+    return [...rows].sort((a, b) => {
+      const aVal = String(a[sortKey as keyof CoaRow] ?? "");
+      const bVal = String(b[sortKey as keyof CoaRow] ?? "");
+      return sortDir === "asc" ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+    });
+  }, [rows, sortKey, sortDir]);
 
   const columns: Column<CoaRow>[] = [
     { key: "accountCode", header: "Code", width: "120px", sortable: true },
@@ -299,13 +302,21 @@ export default function MasterDataCoaPage() {
       <div className="max-h-[calc(100vh-280px)] overflow-auto">
         <DataTable<CoaRow>
           columns={columns}
-          data={filtered}
+          data={sorted}
           keyField="id"
           sortable
           onSort={(key, dir) => { setSortKey(key); setSortDir(dir); }}
           emptyMessage={loading ? "Loading accounts..." : "No accounts found."}
         />
       </div>
+
+      <Pagination
+        currentPage={page}
+        totalPages={totalPages}
+        onPageChange={setPage}
+        perPage={limit}
+        onPerPageChange={(n) => { setLimit(n); setPage(1); }}
+      />
 
       {/* Create/Edit Modal */}
       <Modal
