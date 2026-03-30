@@ -45,12 +45,12 @@ export default function OnboardingTemplatePage() {
           },
           body: JSON.stringify(body),
         });
-        if (!res.ok) {
-          const json = (await res.json()) as { error?: string };
-          // Non-fatal — template endpoint may not be implemented yet
-          if (res.status !== 404) {
-            throw new Error(json.error ?? "Failed to save template selection.");
-          }
+        // Non-fatal — template endpoint may not be implemented yet
+        if (!res.ok && res.status !== 404) {
+          const text = await res.text();
+          let errorMsg = "Failed to save template selection.";
+          try { errorMsg = JSON.parse(text).error || errorMsg; } catch { /* ignore */ }
+          throw new Error(errorMsg);
         }
       }
       await patchOnboardingStep(7);
