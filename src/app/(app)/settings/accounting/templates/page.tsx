@@ -464,7 +464,7 @@ export default function AccountingTemplatesPage() {
         open={modalOpen}
         onClose={closeModal}
         title={editTarget ? "Edit Template" : "Create Template"}
-        size="lg"
+        size="xl"
         actions={
           <>
             <Button variant="secondary" onClick={closeModal}>
