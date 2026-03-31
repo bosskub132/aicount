@@ -318,6 +318,16 @@ export const documents = pgTable(
     whtRate: decimal("wht_rate", { precision: 5, scale: 2 }),
     dueDate: date("due_date"),
 
+    // Phase 6A: New extraction fields
+    customerTaxId: varchar("customer_tax_id", { length: 13 }),
+    referencePo: varchar("reference_po", { length: 100 }),
+    creditDueDate: date("credit_due_date"),
+    discountAmount: decimal("discount_amount", { precision: 15, scale: 2 }).default("0"),
+
+    // Phase 6A: Extraction pipeline tracking
+    extractionStatus: text("extraction_status").default("pending"),
+    extractionFailureReason: text("extraction_failure_reason"),
+
     // Classification
     direction: directionEnum("direction"),
     docType: docTypeEnum("doc_type"),
@@ -816,6 +826,24 @@ export const customExportTemplates = pgTable("custom_export_templates", {
       }>
     >()
     .default([]),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// ── AI Extraction Rules ────────────────────────────────────────────────────
+
+export const aiExtractionRules = pgTable("ai_extraction_rules", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").references(() => tenants.id),
+  ruleType: text("rule_type").notNull(),
+  triggerKey: text("trigger_key").notNull(),
+  triggerValue: text("trigger_value").notNull(),
+  fieldName: text("field_name").notNull(),
+  ruleText: text("rule_text").notNull(),
+  deterministicValue: text("deterministic_value"),
+  sampleCount: integer("sample_count").default(1).notNull(),
+  confidence: decimal("confidence", { precision: 3, scale: 2 }).default("0.50").notNull(),
+  isGraduated: boolean("is_graduated").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

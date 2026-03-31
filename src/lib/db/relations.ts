@@ -21,6 +21,7 @@ import {
   exportTemplateSelections,
   notifications,
   notificationPreferences,
+  aiExtractionRules,
 } from "./schema";
 
 export const tenantsRelations = relations(tenants, ({ many }) => ({
@@ -38,6 +39,7 @@ export const tenantsRelations = relations(tenants, ({ many }) => ({
   periodLocks: many(periodLocks),
   bankStatements: many(bankStatements),
   expressTemplates: many(expressTemplates),
+  aiExtractionRules: many(aiExtractionRules),
 }));
 
 export const profilesRelations = relations(profiles, ({ many }) => ({
@@ -246,6 +248,16 @@ export const bankReconMatchesRelations = relations(
     confirmedByUser: one(profiles, {
       fields: [bankReconMatches.confirmedBy],
       references: [profiles.id],
+    }),
+  })
+);
+
+export const aiExtractionRulesRelations = relations(
+  aiExtractionRules,
+  ({ one }) => ({
+    tenant: one(tenants, {
+      fields: [aiExtractionRules.tenantId],
+      references: [tenants.id],
     }),
   })
 );
