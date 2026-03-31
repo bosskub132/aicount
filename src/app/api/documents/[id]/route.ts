@@ -12,6 +12,7 @@ import {
 } from "@/lib/api/request-context";
 import { writeAuditLog } from "@/lib/services/audit";
 import { isDocumentMonthLocked } from "@/lib/services/period-lock";
+import { learnFromCorrections } from "@/lib/services/extraction/rules/rule-learner";
 
 type PatchBody = {
   tenantId: string;
@@ -34,6 +35,11 @@ type PatchBody = {
     | "DEBIT_NOTE"
     | "OTHER"
     | null;
+  customerTaxId?: string | null;
+  discountAmount?: number | null;
+  referencePo?: string | null;
+  creditDueDate?: string | null;
+  extractionStatus?: string;
   ocrRaw?: Record<string, unknown> | null;
   status?:
     | "DRAFT"
@@ -146,6 +152,11 @@ export async function PATCH(
         vatAmount: body.vatAmount != null ? String(body.vatAmount) : null,
         whtAmount: body.whtAmount != null ? String(body.whtAmount) : null,
         grandTotal: body.grandTotal != null ? String(body.grandTotal) : null,
+        ...(body.customerTaxId !== undefined && { customerTaxId: body.customerTaxId }),
+        ...(body.discountAmount !== undefined && { discountAmount: body.discountAmount?.toString() }),
+        ...(body.referencePo !== undefined && { referencePo: body.referencePo }),
+        ...(body.creditDueDate !== undefined && { creditDueDate: body.creditDueDate }),
+        ...(body.extractionStatus !== undefined && { extractionStatus: body.extractionStatus }),
         journalType: body.journalType ?? null,
         direction: body.direction ?? null,
         docType: body.docType ?? null,
@@ -170,6 +181,27 @@ export async function PATCH(
       metadata: { patchedFields: Object.keys(body).filter((k) => k !== "tenantId") },
       ipAddress: ctx.ipAddress,
     });
+
+    // Build map of edited fields for rule learning
+    const editedFields: Record<string, unknown> = {};
+    if (body.issuerName !== undefined) editedFields.issuerName = body.issuerName;
+    if (body.issuerTaxId !== undefined) editedFields.issuerTaxId = body.issuerTaxId;
+    if (body.issuerBranch !== undefined) editedFields.issuerBranch = body.issuerBranch;
+    if (body.documentNumber !== undefined) editedFields.documentNumber = body.documentNumber;
+    if (body.documentDate !== undefined) editedFields.documentDate = body.documentDate;
+    if (body.subtotal !== undefined) editedFields.subtotal = body.subtotal;
+    if (body.vatAmount !== undefined) editedFields.vatAmount = body.vatAmount;
+    if (body.grandTotal !== undefined) editedFields.grandTotal = body.grandTotal;
+    if (body.customerTaxId !== undefined) editedFields.customerTaxId = body.customerTaxId;
+    if (body.discountAmount !== undefined) editedFields.discountAmount = body.discountAmount;
+    if (body.referencePo !== undefined) editedFields.referencePo = body.referencePo;
+
+    // Trigger rule learning in background (don't block response)
+    const existingOcrRaw = existing.ocrRaw as Record<string, unknown> | null;
+    if (existingOcrRaw && Object.keys(editedFields).length > 0) {
+      learnFromCorrections(ctx.tenantId, existingOcrRaw, editedFields)
+        .catch((err) => console.error("[Rule Learning] Failed:", err));
+    }
 
     return NextResponse.json({ success: true, data: updated });
   } catch (error) {
