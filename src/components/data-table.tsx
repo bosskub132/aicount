@@ -21,6 +21,7 @@ interface DataTableProps<T> {
   onSort?: (key: string, direction: "asc" | "desc") => void;
   onSelect?: (selected: T[]) => void;
   onRowClick?: (row: T) => void;
+  onRowDoubleClick?: (row: T) => void;
   emptyMessage?: string;
   footer?: React.ReactNode;
   keyField?: string;
@@ -43,6 +44,7 @@ export function DataTable<T extends Record<string, unknown>>(props: DataTablePro
     onSort,
     onSelect,
     onRowClick,
+    onRowDoubleClick,
     emptyMessage = "No data",
     footer,
     keyField = "id",
@@ -148,8 +150,9 @@ export function DataTable<T extends Record<string, unknown>>(props: DataTablePro
                 <Fragment key={rowId || i}>
                   <tr
                     onClick={() => onRowClick?.(row)}
+                    onDoubleClick={() => onRowDoubleClick?.(row)}
                     className={`border-b border-[var(--muted)] last:border-0 transition-colors duration-100 ${
-                      onRowClick ? "cursor-pointer hover:bg-[var(--primary-light)]" : "hover:bg-[var(--muted)]/50"
+                      onRowClick || onRowDoubleClick ? "cursor-pointer hover:bg-[var(--primary-light)]" : "hover:bg-[var(--muted)]/50"
                     } ${
                       selected.has(String(row[keyField])) ? "bg-[var(--primary-light)]" : ""
                     }`}

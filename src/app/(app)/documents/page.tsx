@@ -15,7 +15,7 @@ import { StatusBadge, Badge } from "@/components/badge";
 import { Modal } from "@/components/modal";
 import { Skeleton } from "@/components/skeleton";
 import { EmptyState } from "@/components/empty-state";
-import { FileText, Search, Upload, CheckCircle } from "lucide-react";
+import { FileText, Search, Upload, CheckCircle, ExternalLink } from "lucide-react";
 
 const STATUS_TABS = [
   { id: "all", label: "All" },
@@ -175,6 +175,24 @@ function DocumentsPageContent() {
               })
             : "\u2014",
       },
+      {
+        key: "actions",
+        header: "",
+        align: "center" as const,
+        render: (row) => (
+          <button
+            className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs text-[var(--primary)] hover:bg-[var(--primary)]/10 transition-colors"
+            onClick={(e) => {
+              e.stopPropagation();
+              router.push(`/extractions?docId=${row.id as string}`);
+            }}
+            title="Open extraction details"
+          >
+            <ExternalLink className="h-3.5 w-3.5" />
+            <span>Details</span>
+          </button>
+        ),
+      },
     ],
     []
   );
@@ -197,6 +215,13 @@ function DocumentsPageContent() {
       setSelectedDocId(docId === selectedDocId ? null : docId);
     },
     [selectedDocId]
+  );
+
+  const handleRowDoubleClick = useCallback(
+    (row: Record<string, unknown>) => {
+      router.push(`/extractions?docId=${row.id as string}`);
+    },
+    [router]
   );
 
   const handleAction = useCallback(
@@ -347,6 +372,7 @@ function DocumentsPageContent() {
             selectable={permissions.canApprove}
             onSelect={handleSelect}
             onRowClick={handleRowClick}
+            onRowDoubleClick={handleRowDoubleClick}
             sortable
             emptyMessage="No documents found"
           />
