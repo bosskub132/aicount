@@ -23,14 +23,15 @@ export async function POST(
     if (!ctx) return unauthorized();
 
     const { id } = await context.params;
-    const body = (await request.json()) as { tenantId: string; approvedBy: string };
+    const body = (await request.json()) as { tenantId: string; approvedBy?: string };
+    const approvedBy = body.approvedBy || ctx.userId;
 
     const realRole = await resolveUserRole(ctx.userId, body.tenantId || ctx.tenantId);
     if (!ensureRole(realRole, ["admin", "checker"])) return forbidden("Only checker/admin can approve");
 
-    if (!body.tenantId || !body.approvedBy) {
+    if (!body.tenantId) {
       return NextResponse.json(
-        { success: false, error: "tenantId and approvedBy are required" },
+        { success: false, error: "tenantId is required" },
         { status: 400 }
       );
     }
@@ -74,7 +75,7 @@ export async function POST(
       .update(documents)
       .set({
         status: "APPROVED",
-        approvedBy: body.approvedBy,
+        approvedBy,
         approvedAt: new Date(),
         updatedAt: new Date(),
       })

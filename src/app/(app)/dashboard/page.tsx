@@ -172,18 +172,22 @@ export default function DashboardPage() {
   };
 
   const recentColumns: Column<DocRow>[] = [
-    { key: "title", header: "Title" },
+    {
+      key: "issuerName",
+      header: "Issuer",
+      render: (row) => (row.issuerName as string) || (row.documentNumber as string) || "—",
+    },
     {
       key: "status",
       header: "Status",
       render: (row) => <StatusBadge status={String(row.status ?? "")} />,
     },
     {
-      key: "totalAmount",
+      key: "grandTotal",
       header: "Amount",
       align: "right",
       render: (row) => {
-        const amt = Number(row.totalAmount || 0);
+        const amt = Number(row.grandTotal || 0);
         return amt > 0 ? `฿${amt.toLocaleString()}` : "—";
       },
     },
@@ -198,13 +202,17 @@ export default function DashboardPage() {
   ];
 
   const approvalColumns: Column<DocRow>[] = [
-    { key: "title", header: "Title" },
     {
-      key: "totalAmount",
+      key: "issuerName",
+      header: "Issuer",
+      render: (row) => (row.issuerName as string) || (row.documentNumber as string) || "—",
+    },
+    {
+      key: "grandTotal",
       header: "Amount",
       align: "right",
       render: (row) => {
-        const amt = Number(row.totalAmount || 0);
+        const amt = Number(row.grandTotal || 0);
         return amt > 0 ? `฿${amt.toLocaleString()}` : "—";
       },
     },
@@ -236,7 +244,11 @@ export default function DashboardPage() {
   ];
 
   const queryColumns: Column<DocRow>[] = [
-    { key: "title", header: "Title" },
+    {
+      key: "issuerName",
+      header: "Issuer",
+      render: (row) => (row.issuerName as string) || (row.documentNumber as string) || "—",
+    },
     {
       key: "status",
       header: "Status",
@@ -270,7 +282,11 @@ export default function DashboardPage() {
   ];
 
   const stuckColumns: Column<DocRow>[] = [
-    { key: "title", header: "Title" },
+    {
+      key: "issuerName",
+      header: "Issuer",
+      render: (row) => (row.issuerName as string) || (row.documentNumber as string) || "—",
+    },
     {
       key: "updatedAt",
       header: "Last Updated",
@@ -280,11 +296,11 @@ export default function DashboardPage() {
       },
     },
     {
-      key: "totalAmount",
+      key: "grandTotal",
       header: "Amount",
       align: "right",
       render: (row) => {
-        const amt = Number(row.totalAmount || 0);
+        const amt = Number(row.grandTotal || 0);
         return amt > 0 ? `฿${amt.toLocaleString()}` : "—";
       },
     },
@@ -441,7 +457,7 @@ export default function DashboardPage() {
               <DataTable
                 columns={recentColumns}
                 data={(recentDocs.data?.data ?? []) as DocRow[]}
-                onRowClick={(row) => router.push(`/documents/${row.id}`)}
+                onRowClick={(row) => router.push(`/extractions?docId=${row.id}`)}
                 emptyMessage="No documents yet"
               />
             )}
@@ -542,7 +558,7 @@ export default function DashboardPage() {
               <DataTable
                 columns={approvalColumns}
                 data={(approvalQueue.data ?? []) as DocRow[]}
-                onRowClick={(row) => router.push(`/documents/${row.id}`)}
+                onRowClick={(row) => router.push(`/extractions?docId=${row.id}`)}
                 emptyMessage="No pending approvals"
               />
             )}
@@ -560,7 +576,7 @@ export default function DashboardPage() {
               <DataTable
                 columns={queryColumns}
                 data={(queryDocs.data?.data ?? []) as DocRow[]}
-                onRowClick={(row) => router.push(`/documents/${row.id}`)}
+                onRowClick={(row) => router.push(`/extractions?docId=${row.id}`)}
                 emptyMessage="No query documents"
               />
             )}
@@ -578,7 +594,7 @@ export default function DashboardPage() {
               <DataTable
                 columns={stuckColumns}
                 data={stuckDocs}
-                onRowClick={(row) => router.push(`/documents/${row.id}`)}
+                onRowClick={(row) => router.push(`/extractions?docId=${row.id}`)}
                 emptyMessage="No stuck documents"
               />
             ) : (

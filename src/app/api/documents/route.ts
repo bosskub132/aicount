@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { and, asc, desc, eq, ilike, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { documents } from "@/lib/db/schema";
@@ -26,9 +26,10 @@ export async function GET(request: Request) {
     }
     if (!ensureTenantScope(ctx.tenantId, tenantId)) return forbidden("Cross-tenant access denied");
 
-    const status = searchParams.get("status");
+    const statusParam = searchParams.get("status");
     const VALID_STATUSES = new Set(["DRAFT","OCR_PROCESSING","ACTION_REQUIRED","QUERY","PENDING_APPROVAL","APPROVED","EXPORTED","REJECTED","VOID"]);
-    if (status && !VALID_STATUSES.has(status)) {
+    const statuses = statusParam ? statusParam.split(",").map((s) => s.trim()).filter(Boolean) : [];
+    if (statuses.length > 0 && !statuses.every((s) => VALID_STATUSES.has(s))) {
       return NextResponse.json({ success: false, error: "Invalid status" }, { status: 400 });
     }
     // Cap search length to prevent DB load
@@ -40,8 +41,10 @@ export async function GET(request: Request) {
 
     const conditions = [eq(documents.tenantId, tenantId)];
 
-    if (status) {
-      conditions.push(eq(documents.status, status as any));
+    if (statuses.length === 1) {
+      conditions.push(eq(documents.status, statuses[0] as any));
+    } else if (statuses.length > 1) {
+      conditions.push(inArray(documents.status, statuses as any));
     }
 
     if (search) {

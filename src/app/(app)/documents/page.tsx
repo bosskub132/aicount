@@ -41,9 +41,13 @@ function DocumentsPageContent() {
   const toast = useToast();
   const tenantId = getWorkspaceTenantId();
 
-  // Tab from URL - defaults to "all"
-  const initialTab = searchParams.get("tab") || "all";
-  const [activeTab, setActiveTab] = useState(initialTab);
+  // Tab from URL - sync with searchParams
+  const urlTab = searchParams.get("tab") || "all";
+  const [activeTab, setActiveTab] = useState(urlTab);
+
+  useEffect(() => {
+    setActiveTab(urlTab);
+  }, [urlTab]);
 
   // Pagination + search
   const [page, setPage] = useState(1);
@@ -86,22 +90,24 @@ function DocumentsPageContent() {
       .catch(() => {});
   }, [tenantId]);
 
-  // Map tab to status filter
-  const statusFilter = useMemo(() => {
-    const tab = STATUS_TABS.find((t) => t.id === activeTab);
-    if (!tab || !("filterStatuses" in tab)) return undefined;
-    return (tab as { filterStatuses: readonly string[] }).filterStatuses.join(",");
-  }, [activeTab]);
-
+  // Fetch all documents once — filter by tab client-side
   const { data, isLoading } = useDocuments({
-    status: statusFilter,
     page,
-    limit: 20,
+    limit: 100,
     search: debouncedSearch || undefined,
   });
 
-  const rows = data?.data ?? [];
-  const meta = data?.meta ?? { total: 0, page: 1, limit: 20, totalPages: 1 };
+  const allRows = useMemo(() => (data?.data ?? []) as Record<string, unknown>[], [data]);
+
+  // Client-side tab filtering
+  const rows = useMemo(() => {
+    const tab = STATUS_TABS.find((t) => t.id === activeTab);
+    if (!tab || !("filterStatuses" in tab)) return allRows;
+    const allowed = new Set((tab as { filterStatuses: readonly string[] }).filterStatuses);
+    return allRows.filter((r) => allowed.has(r.status as string));
+  }, [allRows, activeTab]);
+
+  const meta = data?.meta ?? { total: 0, page: 1, limit: 100, totalPages: 1 };
 
   const { submit, approve, reject, reOcr } = useDocumentMutations();
 
@@ -113,14 +119,14 @@ function DocumentsPageContent() {
         header: "Issuer",
         render: (row) => (
           <span className="font-medium text-[var(--foreground)]">
-            {(row.issuerName as string) || "\u2014"}
+            {(row.issuerName as string) || "—"}
           </span>
         ),
       },
       {
         key: "documentNumber",
         header: "Doc No.",
-        render: (row) => (row.documentNumber as string) || "\u2014",
+        render: (row) => (row.documentNumber as string) || "—",
       },
       {
         key: "grandTotal",
@@ -133,7 +139,7 @@ function DocumentsPageContent() {
               {Number(row.grandTotal).toLocaleString("th-TH", { minimumFractionDigits: 2 })}
             </span>
           ) : (
-            "\u2014"
+            "—"
           ),
       },
       {
@@ -145,7 +151,7 @@ function DocumentsPageContent() {
               {row.direction as string}
             </Badge>
           ) : (
-            "\u2014"
+            "—"
           ),
       },
       {
@@ -159,7 +165,7 @@ function DocumentsPageContent() {
         render: (row) =>
           row.documentDate
             ? new Date(row.documentDate as string).toLocaleDateString("th-TH")
-            : "\u2014",
+            : "—",
       },
       {
         key: "createdAt",
@@ -173,7 +179,7 @@ function DocumentsPageContent() {
                 hour: "2-digit",
                 minute: "2-digit",
               })
-            : "\u2014",
+            : "—",
       },
       {
         key: "actions",
@@ -201,7 +207,6 @@ function DocumentsPageContent() {
   const handleTabChange = useCallback(
     (tabId: string) => {
       setActiveTab(tabId);
-      setPage(1);
       setSelectedDocId(null);
       setSelectedIds([]);
       router.push(`/documents?tab=${tabId}`, { scroll: false });
@@ -235,6 +240,7 @@ function DocumentsPageContent() {
         } else if (action === "approve") {
           await approve.mutateAsync(docId);
           toast.success("Document approved");
+          setSelectedDocId(null);
         } else if (action === "reject") {
           setRejectModal({ docId });
         } else if (action === "re-ocr") {

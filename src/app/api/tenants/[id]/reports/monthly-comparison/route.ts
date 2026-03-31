@@ -1,4 +1,4 @@
-import { and, between, eq, gte, sql } from "drizzle-orm";
+import { and, between, eq, gte, ne, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { documents } from "@/lib/db/schema";
@@ -39,7 +39,7 @@ export async function GET(
         .where(
           and(
             eq(documents.tenantId, id),
-            eq(documents.status, "APPROVED"),
+            ne(documents.status, "VOID"),
             between(documents.documentDate, startDate, endDate)
           )
         )

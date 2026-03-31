@@ -52,11 +52,13 @@ export function useDocumentMutations() {
     queryClient.invalidateQueries({ queryKey: ["document"] });
   };
 
+  const headers = { "Content-Type": "application/json", "x-tenant-id": tenantId };
+
   const submit = useMutation({
     mutationFn: async (docId: string) => {
       const res = await fetch(`/api/documents/${docId}/submit`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({ tenantId }),
       });
       const json = await res.json();
@@ -70,7 +72,7 @@ export function useDocumentMutations() {
     mutationFn: async (docId: string) => {
       const res = await fetch(`/api/documents/${docId}/approve`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({ tenantId }),
       });
       const json = await res.json();
@@ -84,7 +86,7 @@ export function useDocumentMutations() {
     mutationFn: async ({ docId, comment }: { docId: string; comment: string }) => {
       const res = await fetch(`/api/documents/${docId}/reject`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({ tenantId, comment }),
       });
       const json = await res.json();
@@ -98,7 +100,7 @@ export function useDocumentMutations() {
     mutationFn: async (docId: string) => {
       const res = await fetch(`/api/documents/${docId}/re-ocr`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({ tenantId }),
       });
       const json = await res.json();

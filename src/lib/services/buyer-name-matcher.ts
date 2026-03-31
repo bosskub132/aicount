@@ -1,5 +1,5 @@
 /**
- * Compare OCR-detected buyer name with workspace (tenant) company name.
+ * Compare OCR-detected buyer name against a reference name (e.g. customer master data).
  * Uses token-based Jaccard similarity after normalizing Thai/English company suffixes.
  */
 
@@ -24,14 +24,14 @@ function normalizeCompanyName(name: string): string[] {
 
 export function compareBuyerName(
   ocrBuyerName: string | null | undefined,
-  tenantName: string | null | undefined
+  referenceName: string | null | undefined
 ): { match: boolean; similarity: number } {
-  if (!ocrBuyerName || !tenantName) return { match: true, similarity: 1 }; // Can't compare, assume OK
+  if (!ocrBuyerName || !referenceName) return { match: false, similarity: 0 };
 
   const tokensA = new Set(normalizeCompanyName(ocrBuyerName));
-  const tokensB = new Set(normalizeCompanyName(tenantName));
+  const tokensB = new Set(normalizeCompanyName(referenceName));
 
-  if (tokensA.size === 0 || tokensB.size === 0) return { match: true, similarity: 1 };
+  if (tokensA.size === 0 || tokensB.size === 0) return { match: false, similarity: 0 };
 
   const intersection = new Set([...tokensA].filter((t) => tokensB.has(t)));
   const union = new Set([...tokensA, ...tokensB]);

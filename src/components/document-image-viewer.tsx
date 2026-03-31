@@ -2,7 +2,6 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import { ZoomIn, ZoomOut, RotateCw, Download } from "lucide-react";
 import { Button } from "@/components/button";
 
@@ -49,14 +48,12 @@ export function DocumentImageViewer({ src, alt = "Document" }: DocumentImageView
           isPdf ? (
             <iframe src={src} className="w-full h-full border-0 rounded-[var(--radius-card)]" title={alt} />
           ) : (
-            <Image
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
               src={src}
               alt={alt}
-              width={800}
-              height={1000}
               className="max-w-full transition-transform duration-200"
               style={{ transform: `scale(${zoom}) rotate(${rotation}deg)` }}
-              unoptimized
             />
           )
         ) : (

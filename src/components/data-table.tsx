@@ -38,7 +38,7 @@ interface DataTableProps<T> {
 export function DataTable<T extends Record<string, unknown>>(props: DataTableProps<T>) {
   const {
     columns,
-    data,
+    data: rawData,
     sortable,
     selectable,
     onSort,
@@ -52,6 +52,7 @@ export function DataTable<T extends Record<string, unknown>>(props: DataTablePro
     expandedRowIds,
     getRowId,
   } = props;
+  const data = Array.isArray(rawData) ? rawData : [];
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [selected, setSelected] = useState<Set<string>>(new Set());

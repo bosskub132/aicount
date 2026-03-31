@@ -2,7 +2,7 @@
 "use client";
 
 import { Suspense, useState, useCallback, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import {
   ChevronDown,
   Save,
@@ -64,7 +64,7 @@ function formatCurrency(value: number | string | null | undefined, currency = "T
   if (value === null || value === undefined) return null;
   const num = typeof value === "string" ? Number(value) : value;
   if (!Number.isFinite(num)) return null;
-  const symbol = currency === "THB" ? "\u0E3F" : currency + " ";
+  const symbol = currency === "THB" ? "฿" : currency + " ";
   return `${symbol}${num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
@@ -122,7 +122,7 @@ function ValidationIndicator({ label, isValid, detail }: { label: string; isVali
   return (
     <div className="flex items-center gap-2">
       <span className={isValid ? "text-[var(--success)]" : "text-[var(--destructive)]"}>
-        {isValid ? "\u2713" : "\u2717"}
+        {isValid ? "✓" : "✗"}
       </span>
       <span className="text-sm">{label}</span>
       {detail && <span className="text-[var(--muted-foreground)] text-xs">({detail})</span>}
@@ -173,7 +173,7 @@ function LineItemsTable({ items, currency }: { items: any[]; currency: string })
                   {unitPrice !== "" ? formatCurrency(unitPrice, currency) || unitPrice : "-"}
                 </td>
                 <td className="px-3 py-2 text-right tabular-nums text-[var(--foreground)]">
-                  {discount != null ? formatCurrency(discount, currency) || String(discount) : "\u2014"}
+                  {discount != null ? formatCurrency(discount, currency) || String(discount) : "—"}
                 </td>
                 <td className="px-3 py-2 text-right font-medium text-[var(--foreground)]">
                   {total !== "" ? formatCurrency(total, currency) || total : "-"}
@@ -191,14 +191,15 @@ function LineItemsTable({ items, currency }: { items: any[]; currency: string })
 /*  Journal Entries (auto-generated, read-only)                        */
 /* ------------------------------------------------------------------ */
 
-function JournalEntries({ doc }: { doc: any }) {
+function JournalEntries({ doc, editValues }: { doc: any; editValues: Record<string, string> }) {
   const ocr = doc.ocrRaw || {};
-  const currency = doc.currency || ocr.amounts?.currency || "THB";
-  const grandTotal = doc.grandTotal || ocr.amounts?.total_amount;
-  const vatAmount = doc.vatAmount || ocr.amounts?.vat_amount;
-  const subtotal = doc.subtotal || ocr.amounts?.net_amount_ex_vat;
-  const direction = doc.direction;
-  const journalType = doc.journalType;
+  const v = (key: string, fallback: any) => (key in editValues ? editValues[key] : fallback) ?? "";
+  const currency = v("currency", doc.currency || ocr.amounts?.currency || "THB");
+  const grandTotal = v("grandTotal", doc.grandTotal || ocr.amounts?.total_amount);
+  const vatAmount = v("vatAmount", doc.vatAmount || ocr.amounts?.vat_amount);
+  const subtotal = v("subtotal", doc.subtotal || ocr.amounts?.net_amount_ex_vat);
+  const direction = v("direction", doc.direction);
+  const journalType = v("journalType", doc.journalType);
 
   if (!grandTotal) {
     return (
@@ -259,13 +260,14 @@ function JournalEntries({ doc }: { doc: any }) {
 
 function ExtractionsContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const docId = searchParams.get("docId");
   const { data: doc, isLoading, refetch } = useDocument(docId);
   const toast = useToast();
 
   const [editValues, setEditValues] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
-  const [tenantName, setTenantName] = useState("");
+  const [customers, setCustomers] = useState<{ name: string; taxId: string | null }[]>([]);
 
   const hasEdits = Object.keys(editValues).length > 0;
 
@@ -277,20 +279,19 @@ function ExtractionsContent() {
   const lineItems = ocr.line_items || [];
   const canEdit = doc ? EDITABLE_STATUSES.includes(doc.status) : false;
 
-  /* ---- fetch tenant name for buyer mismatch check ---- */
+  /* ---- fetch customer master data for buyer mismatch check ---- */
   useEffect(() => {
     const tid = getWorkspaceTenantId();
     if (!tid) return;
-    fetch(`/api/tenants/${tid}`, { headers: { "x-tenant-id": tid } })
+    fetch(`/api/tenants/${tid}/customers?limit=100`)
       .then((r) => r.json())
       .then((json) => {
-        if (json.success) setTenantName(json.data?.name || "");
+        if (json.success && json.data) {
+          setCustomers(json.data.map((c: { name: string; taxId: string | null }) => ({ name: c.name, taxId: c.taxId })));
+        }
       })
       .catch(() => {});
   }, []);
-
-  const buyerName = ocr.customer?.name || null;
-  const buyerCheck = compareBuyerName(buyerName, tenantName);
 
   const issuerName = doc?.issuerName || ocr.issuer?.name || "Unknown";
   const docNumber = doc?.documentNumber || ocr.document?.invoice_number || "No Number";
@@ -307,6 +308,28 @@ function ExtractionsContent() {
   const onFieldChange = useCallback((key: string, value: string) => {
     setEditValues((prev) => ({ ...prev, [key]: value }));
   }, []);
+
+  const buyerName = val("customerName", ocr.customer?.name) || null;
+  const buyerTaxId = val("customerTaxId", doc?.customerTaxId ?? ocr.customer?.tax_id) || null;
+  const buyerCheck = (() => {
+    if (!buyerName && !buyerTaxId) return { match: true, similarity: 1, matchedName: "" };
+    if (customers.length === 0) return { match: true, similarity: 1, matchedName: "" };
+    // Exact tax ID match takes priority
+    if (buyerTaxId) {
+      const taxMatch = customers.find((c) => c.taxId && c.taxId === buyerTaxId);
+      if (taxMatch) return { match: true, similarity: 1, matchedName: taxMatch.name };
+    }
+    // Fall back to name similarity
+    if (!buyerName) return { match: false, similarity: 0, matchedName: "" };
+    let best = { match: false, similarity: 0, matchedName: "" };
+    for (const c of customers) {
+      const result = compareBuyerName(buyerName, c.name);
+      if (result.similarity > best.similarity) {
+        best = { ...result, matchedName: c.name };
+      }
+    }
+    return best;
+  })();
 
   /* ---- API actions ---- */
   const tenantId = getWorkspaceTenantId();
@@ -330,6 +353,13 @@ function ExtractionsContent() {
           ...updatedOcrRaw.document,
           invoice_number: editValues.documentNumber ?? updatedOcrRaw.document?.invoice_number,
           issue_date: editValues.documentDate ?? updatedOcrRaw.document?.issue_date,
+        };
+      }
+      if ("customerName" in editValues || "customerTaxId" in editValues) {
+        updatedOcrRaw.customer = {
+          ...updatedOcrRaw.customer,
+          name: editValues.customerName ?? updatedOcrRaw.customer?.name,
+          tax_id: editValues.customerTaxId ?? updatedOcrRaw.customer?.tax_id,
         };
       }
       if ("subtotal" in editValues || "vatAmount" in editValues || "grandTotal" in editValues || "whtAmount" in editValues) {
@@ -370,8 +400,8 @@ function ExtractionsContent() {
       const json = await res.json();
       if (!json.success) throw new Error(json.error);
       toast.success("Draft saved successfully");
+      await refetch();
       setEditValues({});
-      refetch();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to save");
     } finally {
@@ -394,7 +424,7 @@ function ExtractionsContent() {
       const json = await res.json();
       if (!json.success) throw new Error(json.error);
       toast.success("Submitted for approval");
-      refetch();
+      router.push("/documents");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Submit failed");
     }
@@ -411,8 +441,8 @@ function ExtractionsContent() {
       const json = await res.json();
       if (!json.success) throw new Error(json.error);
       toast.success("Changes reverted");
+      await refetch();
       setEditValues({});
-      refetch();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Revert failed");
     }
@@ -482,7 +512,7 @@ function ExtractionsContent() {
         <Breadcrumbs
           items={[
             { label: "Documents", href: "/documents" },
-            { label: `${issuerName} \u2014 ${docNumber}` },
+            { label: `${issuerName} — ${docNumber}` },
           ]}
         />
         <div className="flex items-center gap-2">
@@ -574,7 +604,7 @@ function ExtractionsContent() {
               title="Issuer Information"
             >
               <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-                <Field label="Issuer Name / \u0E0A\u0E37\u0E48\u0E2D\u0E1C\u0E39\u0E49\u0E2D\u0E2D\u0E01">
+                <Field label="Issuer Name / ชื่อผู้ออก">
                   {canEdit ? (
                     <Input
                       value={val("issuerName", doc.issuerName || ocr.issuer?.name)}
@@ -587,7 +617,7 @@ function ExtractionsContent() {
                     </p>
                   )}
                 </Field>
-                <Field label="Tax ID / \u0E40\u0E25\u0E02\u0E1B\u0E23\u0E30\u0E08\u0E33\u0E15\u0E31\u0E27\u0E1C\u0E39\u0E49\u0E40\u0E2A\u0E35\u0E22\u0E20\u0E32\u0E29\u0E35">
+                <Field label="Tax ID / เลขประจำตัวผู้เสียภาษี">
                   {canEdit ? (
                     <Input
                       value={val("issuerTaxId", doc.issuerTaxId || ocr.issuer?.tax_id)}
@@ -600,7 +630,7 @@ function ExtractionsContent() {
                     </p>
                   )}
                 </Field>
-                <Field label="Branch / \u0E2A\u0E32\u0E02\u0E32">
+                <Field label="Branch / สาขา">
                   {canEdit ? (
                     <Input
                       value={val("issuerBranch", ocr.issuer?.branch_id || ocr.issuer?.branch)}
@@ -613,7 +643,7 @@ function ExtractionsContent() {
                     </p>
                   )}
                 </Field>
-                <Field label="Address / \u0E17\u0E35\u0E48\u0E2D\u0E22\u0E39\u0E48">
+                <Field label="Address / ที่อยู่">
                   {canEdit ? (
                     <Input
                       value={val("issuerAddress", ocr.issuer?.address)}
@@ -635,10 +665,10 @@ function ExtractionsContent() {
                 <div className="flex items-start gap-2">
                   <AlertTriangle className="h-4 w-4 text-[var(--warning)] mt-0.5 shrink-0" />
                   <div>
-                    <p className="font-medium text-amber-900">Buyer name mismatch</p>
+                    <p className="font-medium text-amber-900">Buyer name not found in master data</p>
                     <p className="text-xs text-amber-800 mt-0.5">
-                      OCR detected: &quot;{buyerName}&quot; — Your workspace: &quot;{tenantName}&quot;.
-                      This document may have been uploaded to the wrong workspace.
+                      OCR detected: &quot;{buyerName}&quot;{buyerCheck.matchedName ? <> — closest match: &quot;{buyerCheck.matchedName}&quot;</> : null}.
+                      Please verify this customer exists in your master data.
                     </p>
                   </div>
                 </div>
@@ -651,12 +681,20 @@ function ExtractionsContent() {
               title="Customer Information"
             >
               <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-                <Field label="Name / \u0E0A\u0E37\u0E48\u0E2D\u0E25\u0E39\u0E01\u0E04\u0E49\u0E32">
-                  <p className="rounded-[var(--radius-input)] bg-[var(--muted)] px-3 py-2 text-sm">
-                    {ocr.customer?.name || <span className="text-[var(--muted-foreground)]">Not extracted</span>}
-                  </p>
+                <Field label="Name / ชื่อลูกค้า">
+                  {canEdit ? (
+                    <Input
+                      value={val("customerName", ocr.customer?.name)}
+                      onChange={(e) => onFieldChange("customerName", e.target.value)}
+                      placeholder="Customer name"
+                    />
+                  ) : (
+                    <p className="rounded-[var(--radius-input)] bg-[var(--muted)] px-3 py-2 text-sm">
+                      {ocr.customer?.name || <span className="text-[var(--muted-foreground)]">Not extracted</span>}
+                    </p>
+                  )}
                 </Field>
-                <Field label="Tax ID / \u0E40\u0E25\u0E02\u0E1B\u0E23\u0E30\u0E08\u0E33\u0E15\u0E31\u0E27\u0E1C\u0E39\u0E49\u0E40\u0E2A\u0E35\u0E22\u0E20\u0E32\u0E29\u0E35">
+                <Field label="Tax ID / เลขประจำตัวผู้เสียภาษี">
                   {canEdit ? (
                     <Input
                       value={val("customerTaxId", doc.customerTaxId ?? ocr.customer?.tax_id)}
@@ -678,7 +716,7 @@ function ExtractionsContent() {
               title="Transaction Details"
             >
               <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-                <Field label="Document Number / \u0E40\u0E25\u0E02\u0E17\u0E35\u0E48\u0E40\u0E2D\u0E01\u0E2A\u0E32\u0E23">
+                <Field label="Document Number / เลขที่เอกสาร">
                   {canEdit ? (
                     <Input
                       value={val("documentNumber", doc.documentNumber || ocr.document?.invoice_number)}
@@ -691,7 +729,7 @@ function ExtractionsContent() {
                     </p>
                   )}
                 </Field>
-                <Field label="Document Date / \u0E27\u0E31\u0E19\u0E17\u0E35\u0E48">
+                <Field label="Document Date / วันที่">
                   {canEdit ? (
                     <Input
                       type="date"
@@ -704,7 +742,7 @@ function ExtractionsContent() {
                     </p>
                   )}
                 </Field>
-                <Field label="Document Type / \u0E1B\u0E23\u0E30\u0E40\u0E20\u0E17\u0E40\u0E2D\u0E01\u0E2A\u0E32\u0E23">
+                <Field label="Document Type / ประเภทเอกสาร">
                   {canEdit ? (
                     <Select
                       options={DOC_TYPE_OPTIONS}
@@ -718,7 +756,7 @@ function ExtractionsContent() {
                     </p>
                   )}
                 </Field>
-                <Field label="Direction / \u0E1B\u0E23\u0E30\u0E40\u0E20\u0E17">
+                <Field label="Direction / ประเภท">
                   {canEdit ? (
                     <Select
                       options={DIRECTION_OPTIONS}
@@ -732,7 +770,7 @@ function ExtractionsContent() {
                     </p>
                   )}
                 </Field>
-                <Field label="Journal Type / \u0E1B\u0E23\u0E30\u0E40\u0E20\u0E17\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01">
+                <Field label="Journal Type / ประเภทบันทึก">
                   {canEdit ? (
                     <Select
                       options={JOURNAL_TYPE_OPTIONS}
@@ -746,7 +784,7 @@ function ExtractionsContent() {
                     </p>
                   )}
                 </Field>
-                <Field label="Currency / \u0E2A\u0E01\u0E38\u0E25\u0E40\u0E07\u0E34\u0E19">
+                <Field label="Currency / สกุลเงิน">
                   {canEdit ? (
                     <Input
                       value={val("currency", currency)}
@@ -759,7 +797,7 @@ function ExtractionsContent() {
                     </p>
                   )}
                 </Field>
-                <Field label="Reference PO / \u0E40\u0E25\u0E02\u0E17\u0E35\u0E48\u0E43\u0E1A\u0E2A\u0E31\u0E48\u0E07\u0E0B\u0E37\u0E49\u0E2D">
+                <Field label="Reference PO / เลขที่ใบสั่งซื้อ">
                   {canEdit ? (
                     <Input
                       value={val("referencePo", doc.referencePo ?? ocr.document?.reference_po)}
@@ -772,7 +810,7 @@ function ExtractionsContent() {
                     </p>
                   )}
                 </Field>
-                <Field label="Credit Due Date / \u0E27\u0E31\u0E19\u0E04\u0E23\u0E1A\u0E01\u0E33\u0E2B\u0E19\u0E14\u0E0A\u0E33\u0E23\u0E30">
+                <Field label="Credit Due Date / วันครบกำหนดชำระ">
                   {canEdit ? (
                     <Input
                       type="date"
@@ -794,7 +832,7 @@ function ExtractionsContent() {
               title="Pricing & VAT"
             >
               <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-                <Field label="Subtotal / \u0E22\u0E2D\u0E14\u0E23\u0E27\u0E21\u0E01\u0E48\u0E2D\u0E19\u0E20\u0E32\u0E29\u0E35">
+                <Field label="Subtotal / ยอดรวมก่อนภาษี">
                   {canEdit ? (
                     <Input
                       type="number"
@@ -809,7 +847,7 @@ function ExtractionsContent() {
                     </p>
                   )}
                 </Field>
-                <Field label="Discount / \u0E2A\u0E48\u0E27\u0E19\u0E25\u0E14">
+                <Field label="Discount / ส่วนลด">
                   {canEdit ? (
                     <Input
                       type="number"
@@ -824,7 +862,7 @@ function ExtractionsContent() {
                     </p>
                   )}
                 </Field>
-                <Field label="VAT Amount / \u0E20\u0E32\u0E29\u0E35\u0E21\u0E39\u0E25\u0E04\u0E48\u0E32\u0E40\u0E1E\u0E34\u0E48\u0E21">
+                <Field label="VAT Amount / ภาษีมูลค่าเพิ่ม">
                   {canEdit ? (
                     <Input
                       type="number"
@@ -839,7 +877,7 @@ function ExtractionsContent() {
                     </p>
                   )}
                 </Field>
-                <Field label="Grand Total / \u0E22\u0E2D\u0E14\u0E23\u0E27\u0E21\u0E17\u0E31\u0E49\u0E07\u0E2A\u0E34\u0E49\u0E19">
+                <Field label="Grand Total / ยอดรวมทั้งสิ้น">
                   {canEdit ? (
                     <Input
                       type="number"
@@ -854,7 +892,7 @@ function ExtractionsContent() {
                     </p>
                   )}
                 </Field>
-                <Field label="WHT Amount / \u0E20\u0E32\u0E29\u0E35\u0E2B\u0E31\u0E01 \u0E13 \u0E17\u0E35\u0E48\u0E08\u0E48\u0E32\u0E22">
+                <Field label="WHT Amount / ภาษีหัก ณ ที่จ่าย">
                   {canEdit ? (
                     <Input
                       type="number"
@@ -870,12 +908,21 @@ function ExtractionsContent() {
                   )}
                 </Field>
               </div>
-              {ocr.validation && !ocr.validation.amount_equation?.isValid && (
-                <div className="mt-3 space-y-1 border-t border-[var(--border)] pt-3">
-                  <p className="text-sm font-medium text-[var(--muted-foreground)] mb-1">Validation</p>
-                  <ValidationIndicator label="Amount equation" isValid={false} detail="Subtotal + VAT \u2260 Total" />
-                </div>
-              )}
+              {(() => {
+                const sub = Number(val("subtotal", doc.subtotal || ocr.amounts?.net_amount_ex_vat) || 0);
+                const vat = Number(val("vatAmount", doc.vatAmount || ocr.amounts?.vat_amount) || 0);
+                const total = Number(val("grandTotal", doc.grandTotal || ocr.amounts?.total_amount) || 0);
+                const expected = Number((sub + vat).toFixed(2));
+                const diff = Number((total - expected).toFixed(2));
+                const isValid = Math.abs(diff) <= 0.05;
+                if (isValid) return null;
+                return (
+                  <div className="mt-3 space-y-1 border-t border-[var(--border)] pt-3">
+                    <p className="text-sm font-medium text-[var(--muted-foreground)] mb-1">Validation</p>
+                    <ValidationIndicator label="Amount equation" isValid={false} detail={`${sub} + ${vat} = ${expected}, but Total = ${total} (diff ${diff})`} />
+                  </div>
+                );
+              })()}
             </Section>
 
             {/* --- Line Items --- */}
@@ -891,7 +938,7 @@ function ExtractionsContent() {
               icon={<BookOpen className="h-4 w-4 text-[var(--muted-foreground)]" />}
               title="Journal Entries"
             >
-              <JournalEntries doc={doc} />
+              <JournalEntries doc={doc} editValues={editValues} />
             </Section>
 
           </div>
