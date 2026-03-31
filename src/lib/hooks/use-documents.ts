@@ -30,15 +30,16 @@ export function useDocuments(params: DocumentsParams = {}) {
 }
 
 export function useDocument(id: string | null) {
+  const tenantId = getWorkspaceTenantId();
   return useQuery({
-    queryKey: ["document", id],
+    queryKey: ["document", id, tenantId],
     queryFn: async () => {
-      const res = await fetch(`/api/documents/${id}`);
+      const res = await fetch(`/api/documents/${id}?tenantId=${tenantId}`);
       const json = await res.json();
       if (!json.success) throw new Error(json.error);
       return json.data;
     },
-    enabled: !!id,
+    enabled: !!id && !!tenantId && tenantId !== "00000000-0000-0000-0000-000000000000",
   });
 }
 

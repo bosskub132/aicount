@@ -142,24 +142,27 @@ export default function UploadPage() {
 
     const timer = setInterval(async () => {
       try {
-        const res = await fetch(`/api/documents/${documentId}`, {
-          headers: { "x-tenant-id": getWorkspaceTenantId() },
+        const tid = getWorkspaceTenantId();
+        const res = await fetch(`/api/documents/${documentId}?tenantId=${tid}`, {
+          headers: { "x-tenant-id": tid },
         });
         if (!res.ok) return;
 
         const json = await res.json();
         const doc = json.data;
 
-        if (doc && doc.ocrStatus !== "OCR_PROCESSING") {
+        // Poll uses document status (not ocrStatus which doesn't exist)
+        // DRAFT = still processing, anything else = OCR finished
+        if (doc && doc.status !== "DRAFT") {
           // OCR finished — stop polling
           clearInterval(timer);
           pollTimers.current.delete(fileId);
 
-          const isDone = doc.ocrStatus === "OCR_DONE" || doc.ocrStatus === "VERIFIED";
+          const isDone = doc.status !== "QUERY" || doc.extractionStatus === "completed";
           const extractedData = isDone
             ? {
-                issuerName: doc.issuerName || doc.extractedData?.issuerName,
-                grandTotal: doc.grandTotal?.toString() || doc.extractedData?.grandTotal?.toString(),
+                issuerName: doc.issuerName,
+                grandTotal: doc.grandTotal?.toString(),
               }
             : undefined;
 
@@ -170,7 +173,7 @@ export default function UploadPage() {
                     ...f,
                     status: isDone ? "done" : "failed",
                     extractedData,
-                    error: isDone ? undefined : `OCR failed: ${doc.ocrStatus}`,
+                    error: isDone ? undefined : `OCR failed: ${doc.extractionFailureReason || doc.status}`,
                   }
                 : f
             )
