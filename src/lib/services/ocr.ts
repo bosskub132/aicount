@@ -761,3 +761,49 @@ export async function extractBillData(imageBuffer: Buffer, mimeType = "image/jpe
   return buildResponse({ tier1: tier1Data, tier2: tier2Data, earlyTerminated: false });
 }
 
+/**
+ * Extract raw text from an image using Google Vision DOCUMENT_TEXT_DETECTION.
+ * Returns only the OCR text — no regex parsing or field extraction.
+ */
+export async function extractRawTextGoogleVision(
+  imageBuffer: Buffer,
+  mimeType = "image/jpeg"
+): Promise<{ rawText: string; provider: string }> {
+  const apiKey = process.env.GOOGLE_VISION_API_KEY;
+  if (!apiKey) {
+    throw new Error("GOOGLE_VISION_API_KEY is missing");
+  }
+
+  const endpoint = `https://vision.googleapis.com/v1/images:annotate?key=${apiKey}`;
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      requests: [
+        {
+          image: { content: imageBuffer.toString("base64") },
+          features: [{ type: "DOCUMENT_TEXT_DETECTION" }],
+          imageContext: { languageHints: ["th", "en"] },
+        },
+      ],
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Google Vision OCR failed: HTTP ${response.status}`);
+  }
+
+  const json = (await response.json()) as {
+    responses?: Array<{
+      fullTextAnnotation?: { text?: string };
+      error?: { message?: string };
+    }>;
+  };
+  const first = json.responses?.[0];
+  if (first?.error?.message) {
+    throw new Error(`Google Vision OCR error: ${first.error.message}`);
+  }
+  const rawText = first?.fullTextAnnotation?.text || "";
+  return { rawText, provider: "google_vision" };
+}
+
