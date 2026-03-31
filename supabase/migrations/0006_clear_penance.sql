@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "uq_extraction_rules_lookup" ON "ai_extraction_rules" USING btree ("tenant_id","trigger_key","trigger_value","field_name");

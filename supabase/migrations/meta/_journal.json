@@ -36,6 +36,20 @@
       "when": 1774388480436,
       "tag": "0004_cuddly_doomsday",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1774977466065,
+      "tag": "0005_nappy_matthew_murdock",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1774977719129,
+      "tag": "0006_clear_penance",
+      "breakpoints": true
     }
   ]
 }
