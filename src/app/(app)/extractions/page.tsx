@@ -556,10 +556,10 @@ function ExtractionsContent() {
                 {doc.extractionFailureReason ?? "Some fields could not be extracted automatically."}
               </p>
               <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={handleRetryExtraction}>
+                <Button variant="secondary" size="sm" onClick={handleRetryExtraction}>
                   Retry Extraction
                 </Button>
-                <Button variant="outline" size="sm" onClick={handleEnterManually}>
+                <Button variant="secondary" size="sm" onClick={handleEnterManually}>
                   Enter Manually
                 </Button>
               </div>

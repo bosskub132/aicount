@@ -1,4 +1,4 @@
-import type { ExtractedData, LearnedRule } from "../types";
+import type { LearnedRule } from "../types";
 import { upsertExtractionRule } from "@/lib/db/queries/extraction-rules";
 
 export interface Correction {
@@ -24,7 +24,7 @@ const FIELD_MAP: Record<string, { section: string; field: string }> = {
 };
 
 export function detectCorrections(
-  ocrRaw: ExtractedData,
+  ocrRaw: Record<string, unknown>,
   editedFields: Record<string, unknown>,
   issuerTaxId: string
 ): Correction[] {
@@ -34,7 +34,7 @@ export function detectCorrections(
     const mapping = FIELD_MAP[key];
     if (!mapping) continue;
 
-    const section = ocrRaw[mapping.section as keyof ExtractedData];
+    const section = ocrRaw[mapping.section];
     if (section === null || section === undefined || typeof section !== "object") continue;
 
     const originalValue = (section as unknown as Record<string, unknown>)[mapping.field];
@@ -57,10 +57,11 @@ export function detectCorrections(
 
 export async function learnFromCorrections(
   tenantId: string,
-  ocrRaw: ExtractedData,
+  ocrRaw: Record<string, unknown>,
   editedFields: Record<string, unknown>
 ): Promise<void> {
-  const issuerTaxId = ocrRaw.issuer?.tax_id ?? "";
+  const issuerSection = (ocrRaw.issuer ?? {}) as Record<string, unknown>;
+  const issuerTaxId = (issuerSection.tax_id as string) ?? "";
   const corrections = detectCorrections(ocrRaw, editedFields, issuerTaxId);
 
   for (const correction of corrections) {
