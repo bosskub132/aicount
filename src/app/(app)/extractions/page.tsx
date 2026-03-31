@@ -13,8 +13,6 @@ import {
   DollarSign,
   Package,
   BookOpen,
-  Code,
-  Copy,
   AlertTriangle,
 } from "lucide-react";
 import { useDocument } from "@/lib/hooks/use-documents";
@@ -117,6 +115,22 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 }
 
 /* ------------------------------------------------------------------ */
+/*  Validation Indicator                                               */
+/* ------------------------------------------------------------------ */
+
+function ValidationIndicator({ label, isValid, detail }: { label: string; isValid: boolean; detail?: string }) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className={isValid ? "text-[var(--success)]" : "text-[var(--destructive)]"}>
+        {isValid ? "\u2713" : "\u2717"}
+      </span>
+      <span className="text-sm">{label}</span>
+      {detail && <span className="text-[var(--muted-foreground)] text-xs">({detail})</span>}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /*  Line Items Table                                                   */
 /* ------------------------------------------------------------------ */
 
@@ -139,6 +153,7 @@ function LineItemsTable({ items, currency }: { items: any[]; currency: string })
             <th className="px-3 py-2 font-medium">Description</th>
             <th className="px-3 py-2 text-right font-medium">Qty</th>
             <th className="px-3 py-2 text-right font-medium">Unit Price</th>
+            <th className="px-3 py-2 text-right font-medium">Discount</th>
             <th className="px-3 py-2 text-right font-medium">Total</th>
           </tr>
         </thead>
@@ -147,6 +162,7 @@ function LineItemsTable({ items, currency }: { items: any[]; currency: string })
             const desc = typeof item === "string" ? item : item?.description || item?.name || "-";
             const qty = item?.quantity ?? item?.qty ?? "";
             const unitPrice = item?.unit_price ?? item?.price ?? "";
+            const discount = item?.discount;
             const total = item?.total ?? item?.amount ?? "";
             return (
               <tr key={idx} className="border-t border-[var(--border)]">
@@ -155,6 +171,9 @@ function LineItemsTable({ items, currency }: { items: any[]; currency: string })
                 <td className="px-3 py-2 text-right text-[var(--foreground)]">{qty}</td>
                 <td className="px-3 py-2 text-right text-[var(--foreground)]">
                   {unitPrice !== "" ? formatCurrency(unitPrice, currency) || unitPrice : "-"}
+                </td>
+                <td className="px-3 py-2 text-right tabular-nums text-[var(--foreground)]">
+                  {discount != null ? formatCurrency(discount, currency) || String(discount) : "\u2014"}
                 </td>
                 <td className="px-3 py-2 text-right font-medium text-[var(--foreground)]">
                   {total !== "" ? formatCurrency(total, currency) || total : "-"}
@@ -341,6 +360,10 @@ function ExtractionsContent() {
           journalType: editValues.journalType ?? doc.journalType ?? null,
           docType: editValues.docType ?? doc.docType ?? null,
           currency: editValues.currency ?? doc.currency ?? null,
+          ...(editValues.customerTaxId !== undefined && { customerTaxId: editValues.customerTaxId }),
+          ...(editValues.discountAmount !== undefined && { discountAmount: Number(editValues.discountAmount) }),
+          ...(editValues.referencePo !== undefined && { referencePo: editValues.referencePo }),
+          ...(editValues.creditDueDate !== undefined && { creditDueDate: editValues.creditDueDate }),
           ocrRaw: updatedOcrRaw,
         }),
       });
@@ -393,6 +416,30 @@ function ExtractionsContent() {
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Revert failed");
     }
+  }
+
+  async function handleRetryExtraction() {
+    if (!doc) return;
+    const res = await fetch(`/api/documents/${doc.id}/retry`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-tenant-id": tenantId },
+      body: JSON.stringify({ tenantId }),
+    });
+    if (res.ok) {
+      toast.success("Re-extraction started");
+      setTimeout(() => refetch(), 3000);
+    } else {
+      toast.error("Failed to start re-extraction");
+    }
+  }
+
+  function handleEnterManually() {
+    if (!doc) return;
+    fetch(`/api/documents/${doc.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", "x-tenant-id": tenantId },
+      body: JSON.stringify({ tenantId, extractionStatus: "manual" }),
+    });
   }
 
   /* ---- Loading skeleton ---- */
@@ -498,6 +545,27 @@ function ExtractionsContent() {
             </div>
           </div>
 
+          {/* Extraction failure banner */}
+          {(doc.extractionStatus === "failed" || doc.extractionStatus === "partial") && (
+            <div className="mx-5 mt-4 rounded-lg border border-[var(--warning)]/30 bg-[var(--warning)]/5 p-4 mb-4">
+              <div className="flex items-center gap-2 mb-2">
+                <AlertTriangle className="h-4 w-4 text-[var(--warning)]" />
+                <span className="font-medium">Extraction incomplete</span>
+              </div>
+              <p className="text-sm text-[var(--muted-foreground)] mb-3">
+                {doc.extractionFailureReason ?? "Some fields could not be extracted automatically."}
+              </p>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={handleRetryExtraction}>
+                  Retry Extraction
+                </Button>
+                <Button variant="outline" size="sm" onClick={handleEnterManually}>
+                  Enter Manually
+                </Button>
+              </div>
+            </div>
+          )}
+
           {/* Sections */}
           <div>
             {/* --- Issuer Information --- */}
@@ -576,6 +644,33 @@ function ExtractionsContent() {
                 </div>
               </div>
             )}
+
+            {/* --- Customer Information --- */}
+            <Section
+              icon={<User className="h-4 w-4 text-[var(--muted-foreground)]" />}
+              title="Customer Information"
+            >
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                <Field label="Name / \u0E0A\u0E37\u0E48\u0E2D\u0E25\u0E39\u0E01\u0E04\u0E49\u0E32">
+                  <p className="rounded-[var(--radius-input)] bg-[var(--muted)] px-3 py-2 text-sm">
+                    {ocr.customer?.name || <span className="text-[var(--muted-foreground)]">Not extracted</span>}
+                  </p>
+                </Field>
+                <Field label="Tax ID / \u0E40\u0E25\u0E02\u0E1B\u0E23\u0E30\u0E08\u0E33\u0E15\u0E31\u0E27\u0E1C\u0E39\u0E49\u0E40\u0E2A\u0E35\u0E22\u0E20\u0E32\u0E29\u0E35">
+                  {canEdit ? (
+                    <Input
+                      value={val("customerTaxId", doc.customerTaxId ?? ocr.customer?.tax_id)}
+                      onChange={(e) => onFieldChange("customerTaxId", e.target.value)}
+                      placeholder="13-digit tax ID"
+                    />
+                  ) : (
+                    <p className="rounded-[var(--radius-input)] bg-[var(--muted)] px-3 py-2 text-sm">
+                      {doc.customerTaxId ?? ocr.customer?.tax_id ?? <span className="text-[var(--muted-foreground)]">Not extracted</span>}
+                    </p>
+                  )}
+                </Field>
+              </div>
+            </Section>
 
             {/* --- Transaction Details --- */}
             <Section
@@ -664,6 +759,32 @@ function ExtractionsContent() {
                     </p>
                   )}
                 </Field>
+                <Field label="Reference PO / \u0E40\u0E25\u0E02\u0E17\u0E35\u0E48\u0E43\u0E1A\u0E2A\u0E31\u0E48\u0E07\u0E0B\u0E37\u0E49\u0E2D">
+                  {canEdit ? (
+                    <Input
+                      value={val("referencePo", doc.referencePo ?? ocr.document?.reference_po)}
+                      onChange={(e) => onFieldChange("referencePo", e.target.value)}
+                      placeholder="PO number"
+                    />
+                  ) : (
+                    <p className="rounded-[var(--radius-input)] bg-[var(--muted)] px-3 py-2 text-sm">
+                      {doc.referencePo ?? ocr.document?.reference_po ?? <span className="text-[var(--muted-foreground)]">Not extracted</span>}
+                    </p>
+                  )}
+                </Field>
+                <Field label="Credit Due Date / \u0E27\u0E31\u0E19\u0E04\u0E23\u0E1A\u0E01\u0E33\u0E2B\u0E19\u0E14\u0E0A\u0E33\u0E23\u0E30">
+                  {canEdit ? (
+                    <Input
+                      type="date"
+                      value={val("creditDueDate", doc.creditDueDate ?? ocr.document?.credit_due_date)}
+                      onChange={(e) => onFieldChange("creditDueDate", e.target.value)}
+                    />
+                  ) : (
+                    <p className="rounded-[var(--radius-input)] bg-[var(--muted)] px-3 py-2 text-sm">
+                      {doc.creditDueDate ?? ocr.document?.credit_due_date ?? <span className="text-[var(--muted-foreground)]">Not extracted</span>}
+                    </p>
+                  )}
+                </Field>
               </div>
             </Section>
 
@@ -685,6 +806,21 @@ function ExtractionsContent() {
                   ) : (
                     <p className="rounded-[var(--radius-input)] bg-[var(--muted)] px-3 py-2 text-sm">
                       {formatCurrency(doc.subtotal || ocr.amounts?.net_amount_ex_vat, currency) || <span className="text-[var(--muted-foreground)]">-</span>}
+                    </p>
+                  )}
+                </Field>
+                <Field label="Discount / \u0E2A\u0E48\u0E27\u0E19\u0E25\u0E14">
+                  {canEdit ? (
+                    <Input
+                      type="number"
+                      step="0.01"
+                      className="tabular-nums"
+                      value={val("discountAmount", doc.discountAmount ?? ocr.amounts?.discount_amount ?? "0")}
+                      onChange={(e) => onFieldChange("discountAmount", e.target.value)}
+                    />
+                  ) : (
+                    <p className="rounded-[var(--radius-input)] bg-[var(--muted)] px-3 py-2 text-sm tabular-nums">
+                      {formatCurrency(doc.discountAmount ?? ocr.amounts?.discount_amount ?? 0, currency) || <span className="text-[var(--muted-foreground)]">-</span>}
                     </p>
                   )}
                 </Field>
@@ -734,6 +870,12 @@ function ExtractionsContent() {
                   )}
                 </Field>
               </div>
+              {ocr.validation && !ocr.validation.amount_equation?.isValid && (
+                <div className="mt-3 space-y-1 border-t border-[var(--border)] pt-3">
+                  <p className="text-sm font-medium text-[var(--muted-foreground)] mb-1">Validation</p>
+                  <ValidationIndicator label="Amount equation" isValid={false} detail="Subtotal + VAT \u2260 Total" />
+                </div>
+              )}
             </Section>
 
             {/* --- Line Items --- */}
@@ -752,28 +894,6 @@ function ExtractionsContent() {
               <JournalEntries doc={doc} />
             </Section>
 
-            {/* --- Raw OCR JSON --- */}
-            <Section
-              icon={<Code className="h-4 w-4 text-[var(--muted-foreground)]" />}
-              title="Raw OCR JSON"
-              defaultOpen={false}
-            >
-              <div className="relative">
-                <button
-                  onClick={() => {
-                    navigator.clipboard.writeText(JSON.stringify(ocr, null, 2));
-                    toast.success("Copied to clipboard");
-                  }}
-                  className="absolute right-2 top-2 z-10 flex items-center gap-1 rounded-[var(--radius-button)] border border-[var(--border)] bg-white px-2 py-1 text-[10px] font-medium text-[var(--muted-foreground)] hover:bg-[var(--muted)]"
-                >
-                  <Copy className="h-3 w-3" />
-                  Copy
-                </button>
-                <pre className="max-h-96 overflow-auto rounded-[var(--radius-card)] bg-slate-900 p-4 text-xs leading-relaxed text-emerald-400">
-                  {JSON.stringify(ocr, null, 2)}
-                </pre>
-              </div>
-            </Section>
           </div>
         </div>
       </div>
