@@ -161,6 +161,20 @@ function DocumentsPageContent() {
             ? new Date(row.documentDate as string).toLocaleDateString("th-TH")
             : "\u2014",
       },
+      {
+        key: "createdAt",
+        header: "Uploaded",
+        render: (row) =>
+          row.createdAt
+            ? new Date(row.createdAt as string).toLocaleString("th-TH", {
+                day: "2-digit",
+                month: "2-digit",
+                year: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+              })
+            : "\u2014",
+      },
     ],
     []
   );
