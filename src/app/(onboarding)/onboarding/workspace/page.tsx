@@ -5,11 +5,15 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, X } from "lucide-react";
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
+import { Select } from "@/components/select";
+import { RadioGroup } from "@/components/radio-group";
 
 interface TenantRow {
   tenantId: string;
   tenantName: string;
   taxId: string;
+  industry?: string | null;
+  companySize?: string | null;
 }
 
 export default function OnboardingWorkspacePage() {
@@ -18,6 +22,8 @@ export default function OnboardingWorkspacePage() {
   const [existingTenantId, setExistingTenantId] = useState<string | null>(null);
   const [companyName, setCompanyName] = useState("");
   const [taxId, setTaxId] = useState("");
+  const [industry, setIndustry] = useState("");
+  const [companySize, setCompanySize] = useState("");
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -34,6 +40,8 @@ export default function OnboardingWorkspacePage() {
             setExistingTenantId(first.tenantId);
             setCompanyName(first.tenantName ?? "");
             setTaxId(first.taxId ?? "");
+            setIndustry(first.industry ?? "");
+            setCompanySize(first.companySize ?? "");
           }
         }
       } catch {
@@ -75,7 +83,7 @@ export default function OnboardingWorkspacePage() {
         const res = await fetch(`/api/tenants/${existingTenantId}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name: companyName.trim(), taxId }),
+          body: JSON.stringify({ name: companyName.trim(), taxId, industry: industry || undefined, companySize: companySize || undefined }),
         });
         if (!res.ok) {
           const json = (await res.json()) as { error?: string };
@@ -86,7 +94,7 @@ export default function OnboardingWorkspacePage() {
         const res = await fetch("/api/tenants", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name: companyName.trim(), taxId }),
+          body: JSON.stringify({ name: companyName.trim(), taxId, industry: industry || undefined, companySize: companySize || undefined }),
         });
         if (!res.ok) {
           const json = (await res.json()) as { error?: string };
@@ -151,6 +159,47 @@ export default function OnboardingWorkspacePage() {
           inputMode="numeric"
           placeholder="0000000000000"
         />
+
+        {/* Industry */}
+        <div>
+          <label className="mb-1.5 block text-sm font-medium text-[var(--foreground)]">
+            ประเภทธุรกิจ (Industry)
+          </label>
+          <Select
+            value={industry}
+            onChange={setIndustry}
+            placeholder="เลือกประเภทธุรกิจ"
+            options={[
+              { value: "retail", label: "ค้าปลีก (Retail)" },
+              { value: "manufacturing", label: "การผลิต (Manufacturing)" },
+              { value: "services", label: "บริการ (Services)" },
+              { value: "construction", label: "ก่อสร้าง (Construction)" },
+              { value: "hospitality", label: "โรงแรม/ร้านอาหาร (Hospitality)" },
+              { value: "healthcare", label: "สุขภาพ (Healthcare)" },
+              { value: "education", label: "การศึกษา (Education)" },
+              { value: "technology", label: "เทคโนโลยี (Technology)" },
+              { value: "other", label: "อื่นๆ (Other)" },
+            ]}
+          />
+        </div>
+
+        {/* Company Size */}
+        <div>
+          <label className="mb-1.5 block text-sm font-medium text-[var(--foreground)]">
+            ขนาดบริษัท (Company Size)
+          </label>
+          <RadioGroup
+            name="companySize"
+            value={companySize}
+            onChange={setCompanySize}
+            options={[
+              { value: "micro", label: "Micro (1-5 คน)" },
+              { value: "small", label: "Small (6-30 คน)" },
+              { value: "medium", label: "Medium (31-200 คน)" },
+              { value: "large", label: "Large (200+ คน)" },
+            ]}
+          />
+        </div>
 
         {/* Error */}
         {error && (
