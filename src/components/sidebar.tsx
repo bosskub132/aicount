@@ -15,8 +15,10 @@ import {
   ClipboardList,
   FileCheck,
   Settings,
+  Shield,
   X,
 } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useUIStore } from "@/lib/stores/ui-store";
 import { WorkspaceSelector } from "@/components/workspace-selector";
 
@@ -57,6 +59,15 @@ export function Sidebar() {
   const pathname = usePathname();
   const mobileMenuOpen = useUIStore((s) => s.mobileMenuOpen);
   const setMobileMenuOpen = useUIStore((s) => s.setMobileMenuOpen);
+  const [isSuperadmin, setIsSuperadmin] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/backoffice/tenants", { method: "HEAD" }).then((res) => {
+      if (!cancelled) setIsSuperadmin(res.ok);
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
 
   const sidebarContent = (
     <>
@@ -127,6 +138,20 @@ export function Sidebar() {
           <Settings className="h-4 w-4" />
           Settings
         </Link>
+        {isSuperadmin && (
+          <Link
+            href="/backoffice"
+            onClick={() => setMobileMenuOpen(false)}
+            className={`flex items-center gap-2.5 rounded-[var(--radius-input)] px-2.5 py-[7px] text-[13px] font-medium transition-colors duration-100 ${
+              pathname?.startsWith("/backoffice")
+                ? "bg-[var(--primary-light)] text-[var(--primary)]"
+                : "text-[var(--muted-foreground)] hover:bg-[var(--muted)]"
+            }`}
+          >
+            <Shield className="h-4 w-4" />
+            Backoffice
+          </Link>
+        )}
       </div>
     </>
   );
