@@ -174,11 +174,16 @@ export default function PatternsPage() {
         />
       </div>
 
-      <DataTable
-        columns={columns}
-        data={(patterns?.data ?? []) as PatternRow[]}
-        isLoading={isLoading}
-      />
+      {isLoading ? (
+        <div className="flex items-center justify-center py-12">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-[var(--primary)] border-t-transparent" />
+        </div>
+      ) : (
+        <DataTable
+          columns={columns}
+          data={(patterns?.data ?? []) as PatternRow[]}
+        />
+      )}
 
       {patterns && patterns.total > limit && (
         <Pagination

@@ -60,6 +60,8 @@ scripts/            # Utility scripts (migration, health checks, smoke tests)
 - Business logic lives in `src/lib/services/`
 - Database queries are in `src/lib/db/queries/`
 - React Compiler is active — avoid `Date.now()` / `Math.random()` in render, wrap cascading `setState` in `startTransition`, stabilize useMemo deps
+- Never use `\uXXXX` escape sequences for Thai text in JSX — Turbopack may render them literally. Use actual UTF-8 characters.
+- After API mutations, `await refetch()` BEFORE clearing local state (`setEditValues({})`) — otherwise UI briefly shows stale data
 - Direction enum mapping: `"REVENUE"` = Accounts Receivable (AR), `"EXPENSE"` = Accounts Payable (AP)
 - Drizzle migrations: use `npx drizzle-kit generate` (auto-names files) — never hardcode migration filenames
 - `DataTable<T>` generic requires `T extends Record<string, unknown>` — add `[key: string]: unknown` index signature to custom row interfaces
@@ -76,6 +78,8 @@ scripts/            # Utility scripts (migration, health checks, smoke tests)
 - Tailwind v4 `@source "../../src"` in globals.css prevents scanning docs/ for class names
 - Master data APIs support server-side pagination: `?page=1&limit=50&search=`
 - FileImport component supports multi-file import with local accumulation and duplicate highlighting
+- Drizzle schema: never define the same column twice in a pgTable — JavaScript silently uses the last definition, causing confusing migration diffs
+- Extraction page (`extractions/page.tsx`): only `docType` and `direction` are editable fields; `glAccountCode`, `whtRate`, `whtIncomeType` are not editable inputs (display only or absent)
 
 ## Design Tokens & Styling
 
@@ -109,6 +113,7 @@ if (!ensureTenantScope(ctx.tenantId, tenantId)) return forbidden("Cross-tenant a
 - **Testing locally:** Routes expect headers set by proxy.ts, not cookies:
   `curl -H "x-user-id: UUID" -H "x-tenant-id: UUID" -H "x-user-role: admin" http://localhost:3000/api/...`
 - Users link to tenants via `tenant_assignments` table (not profiles or workspace_members)
+- **Client-side fetches**: ALL `fetch()` calls to `/api/*` MUST include `"x-tenant-id": tenantId` in headers — proxy.ts falls back to zero UUID without it, causing cross-tenant denied errors
 
 ## Design System Components (Phase 1)
 
@@ -122,6 +127,8 @@ All in `src/components/` (flat structure). Use these instead of inline markup:
 - **Accounting:** CurrencyInput, AccountSelect, JournalLineEditor, AgingMiniBar
 - **Reports:** PeriodPicker, ReportFilterBar, ReportStatCards, PdfPreviewModal, ReportHistoryDrawer
 - **Import:** FileImport (CSV/Excel with column mapping, validation, multi-file accumulation)
+- **Modal:** uses `open` prop (not `isOpen`), footer buttons via `actions` prop (not inline children)
+- **Suggestions:** SuggestionPill, SuggestionBanner, DuplicateWarningBanner, DuplicateCompareModal
 - **Toast hook:** `import { useToast } from "@/lib/stores/ui-store"` — position: top-right
 
 ## Database Schema (Phase 3)
@@ -133,6 +140,7 @@ All in `src/components/` (flat structure). Use these instead of inline markup:
 - `bankTransactions` + `bankReconMatches` — bank reconciliation
 - CRITICAL: Report queries MUST join `journalLines → journalEntries` (NOT `journalLines → documents`) for tenant scoping. The documents join silently excludes manual JVs where `documentId` is NULL.
 - Only include POSTED entries in reports: `eq(journalEntries.status, "posted")`
+- Document table key UI fields: `issuerName`, `documentNumber`, `grandTotal`, `vatAmount`, `status`, `createdAt` — do NOT use `title` or `totalAmount` (these don't exist)
 
 ## Database Schema (Phase 4)
 
@@ -153,12 +161,36 @@ All in `src/components/` (flat structure). Use these instead of inline markup:
 - Onboarding: 8 steps (Welcome, Workspace, COA, Partners, Departments, Team, Template, Complete)
 - `profiles.onboardingStep` max is 10 (Zod validation in profile PATCH)
 
+## Database Schema (Phase 6C)
+
+- `aiSuggestions` — per-document AI suggestions with lifecycle tracking (pending → accepted/dismissed/edited)
+- `aiDuplicateCandidates` — duplicate document matches (file_hash or content_match)
+- `tenants.suggestionsEnabled` — simple on/off toggle for AI suggestions
+- `documents.fileHash` — SHA-256 for upload-time duplicate detection
+- Suggestion service: `src/lib/services/suggestions/` with coordinator + provider pattern (mirrors extraction pipeline)
+- Suggestion providers run in two modes: eager (cheap history lookups during extraction) and lazy (AI calls on page open)
+- Suggestion interactions tracked in local state, batch-submitted with form save (not per-interaction API calls)
+
+## Database Schema (Phase 6D)
+
+- `crossTenantPatterns` — anonymized statistical patterns aggregated from suggestion outcomes across all tenants
+- `tenants.industry` — business industry category (retail, manufacturing, services, etc.)
+- `tenants.companySize` — company size bracket (micro, small, medium, large)
+- AI Provider Abstraction: `src/lib/services/ai/` with `AIProvider` interface, `AnthropicProvider`, factory
+- Cross-tenant engine: `src/lib/services/learning/` with event-driven pattern updates via Inngest
+- Suggestion providers priority: tenant history → graduated rules → cross-tenant patterns → AI fallback
+- Cross-tenant suggestions use `source: 'cross_tenant'` (no UI distinction from other sources)
+- Trigger keys are normalized (tax ID prefix only, no PII in pattern data)
+- Adaptive thresholds: minTenants/minAgreement tighten as platform grows
+- Backoffice pattern explorer at `/backoffice/patterns` (superadmin only)
+
 ## Asset Handling
 
 - Static assets go in `public/`
 - Generated files go in `public/generated/`
 - IMPORTANT: If the Figma MCP server returns a localhost source for an image or SVG, use that source directly
 - IMPORTANT: DO NOT use or create placeholders if a localhost source is provided
+- Supabase Storage buckets must be set to `public: true` on EACH environment (prod + staging) — `getPublicUrl()` always generates a URL but returns 400 if bucket is private
 
 ## PDF Generation (Phase 4)
 
