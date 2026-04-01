@@ -104,6 +104,8 @@ export const tenants = pgTable("tenants", {
   monthlyBudgetUsd: decimal("monthly_budget_usd", { precision: 10, scale: 2 }),
   budgetAlertThreshold: decimal("budget_alert_threshold", { precision: 3, scale: 2 }).default("0.80"),
   suggestionsEnabled: boolean("suggestions_enabled").default(true).notNull(),
+  industry: text("industry"),
+  companySize: text("company_size"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   deletedAt: timestamp("deleted_at", { withTimezone: true }),
@@ -941,5 +943,36 @@ export const aiDuplicateCandidates = pgTable(
   },
   (table) => [
     index("idx_duplicates_document").on(table.documentId),
+  ]
+);
+
+// ── Cross-Tenant Learning (Phase 6D) ──────────────────────────────────────
+
+export const crossTenantPatterns = pgTable(
+  "cross_tenant_patterns",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    patternType: text("pattern_type").notNull(),
+    triggerKey: text("trigger_key").notNull(),
+    fieldName: text("field_name").notNull(),
+    suggestedValue: text("suggested_value").notNull(),
+    tenantCount: integer("tenant_count").notNull().default(1),
+    sampleCount: integer("sample_count").notNull().default(1),
+    acceptCount: integer("accept_count").notNull().default(0),
+    dismissCount: integer("dismiss_count").notNull().default(0),
+    agreementRatio: decimal("agreement_ratio", { precision: 3, scale: 2 }).notNull(),
+    confidence: decimal("confidence", { precision: 3, scale: 2 }).notNull(),
+    metadata: jsonb("metadata"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("idx_patterns_unique").on(
+      table.patternType,
+      table.triggerKey,
+      table.fieldName,
+      table.suggestedValue
+    ),
+    index("idx_patterns_lookup").on(table.patternType, table.triggerKey),
   ]
 );
