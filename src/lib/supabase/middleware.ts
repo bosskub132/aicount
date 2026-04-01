@@ -97,11 +97,38 @@ export async function updateSession(request: NextRequest) {
     }
     if (role !== "admin" && role !== "checker") role = "maker";
 
+    // Superadmin check
+    let isSuperadmin = false;
+    if (isApiRoute || request.nextUrl.pathname.startsWith("/backoffice")) {
+      try {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("is_superadmin")
+          .eq("id", user.id)
+          .single();
+        isSuperadmin = profile?.is_superadmin === true;
+      } catch {
+        // Default to not superadmin
+      }
+    }
+
     requestHeaders.set("x-user-id", user.id);
     requestHeaders.set("x-user-role", role);
     requestHeaders.set("x-tenant-id", tenantId);
     if (user.email) {
       requestHeaders.set("x-user-email", user.email);
+    }
+    requestHeaders.set("x-is-superadmin", String(isSuperadmin));
+
+    const isBackofficeRoute = request.nextUrl.pathname.startsWith("/backoffice") ||
+      request.nextUrl.pathname.startsWith("/api/backoffice");
+    if (isBackofficeRoute && !isSuperadmin) {
+      if (isApiRoute) {
+        return NextResponse.json({ success: false, error: "Superadmin access required" }, { status: 403 });
+      }
+      const url = request.nextUrl.clone();
+      url.pathname = "/dashboard";
+      return NextResponse.redirect(url);
     }
 
     // Preserve cookies from auth refresh when re-creating the response

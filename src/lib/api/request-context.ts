@@ -9,6 +9,7 @@ export type RequestContext = {
   tenantId: string;
   role: "admin" | "maker" | "checker";
   ipAddress: string | null;
+  isSuperadmin: boolean;
 };
 
 /**
@@ -46,6 +47,7 @@ export function getRequestContext(request: Request): RequestContext | null {
   const tenantId = request.headers.get("x-tenant-id");
   const role = request.headers.get("x-user-role") as RequestContext["role"] | null;
   const ipAddress = request.headers.get("x-forwarded-for");
+  const isSuperadmin = request.headers.get("x-is-superadmin") === "true";
 
   if (userId && tenantId && role && ["admin", "maker", "checker"].includes(role)) {
     return {
@@ -54,6 +56,7 @@ export function getRequestContext(request: Request): RequestContext | null {
       tenantId,
       role,
       ipAddress,
+      isSuperadmin,
     };
   }
 
@@ -72,6 +75,7 @@ export function getRequestContext(request: Request): RequestContext | null {
         tenantId: derivedTenantId,
         role: (role as RequestContext["role"]) || "maker",
         ipAddress,
+        isSuperadmin,
       };
     }
   }
