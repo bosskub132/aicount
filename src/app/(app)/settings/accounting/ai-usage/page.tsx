@@ -1,12 +1,47 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { StatCard } from "@/components/stat-card";
 import { Skeleton } from "@/components/skeleton";
 import { BudgetProgressBar } from "@/components/budget-progress-bar";
+import { Toggle } from "@/components/toggle";
 import { useTenantAiUsage } from "@/lib/hooks/use-ai-usage";
+import { useToast } from "@/lib/stores/ui-store";
+import { getWorkspaceTenantId } from "@/components/workspace-selector";
 
 export default function AiUsagePage() {
   const { data, isLoading, error } = useTenantAiUsage();
+  const toast = useToast();
+  const tenantId = getWorkspaceTenantId();
+  const [suggestionsEnabled, setSuggestionsEnabled] = useState(true);
+
+  useEffect(() => {
+    if (data?.suggestionsEnabled !== undefined) {
+      setSuggestionsEnabled(data.suggestionsEnabled);
+    }
+  }, [data?.suggestionsEnabled]);
+
+  async function handleToggleSuggestions(enabled: boolean) {
+    setSuggestionsEnabled(enabled);
+    try {
+      const res = await fetch("/api/settings/suggestions", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "x-tenant-id": tenantId,
+        },
+        body: JSON.stringify({ suggestionsEnabled: enabled }),
+      });
+      const json = await res.json();
+      if (!json.success) throw new Error(json.error);
+      toast.success(
+        enabled ? "AI suggestions enabled" : "AI suggestions disabled"
+      );
+    } catch {
+      setSuggestionsEnabled(!enabled);
+      toast.error("Failed to update suggestion setting");
+    }
+  }
 
   const trend =
     data?.costChange == null
@@ -66,6 +101,22 @@ export default function AiUsagePage() {
             tier2Count={data.tier2Count}
             tier3Count={data.tier3Count}
           />
+
+          {/* Suggestions Toggle */}
+          <div className="mt-6 flex items-center justify-between rounded-lg border border-gray-200 bg-white p-4">
+            <div>
+              <h3 className="text-sm font-semibold text-gray-800">
+                AI Suggestions
+              </h3>
+              <p className="text-xs text-gray-500">
+                Show automatic suggestions for GL accounts, WHT rates, and more
+              </p>
+            </div>
+            <Toggle
+              checked={suggestionsEnabled}
+              onChange={handleToggleSuggestions}
+            />
+          </div>
         </>
       ) : null}
     </div>

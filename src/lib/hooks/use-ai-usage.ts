@@ -25,6 +25,7 @@ export function useTenantAiUsage() {
         budget: number | null;
         budgetAlertThreshold: number;
         budgetUsedPct: number | null;
+        suggestionsEnabled: boolean;
       };
     },
     enabled: isValidTenant(tenantId),

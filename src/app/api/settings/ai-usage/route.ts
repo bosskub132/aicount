@@ -24,6 +24,7 @@ export async function GET(request: NextRequest) {
       .select({
         monthlyBudgetUsd: tenants.monthlyBudgetUsd,
         budgetAlertThreshold: tenants.budgetAlertThreshold,
+        suggestionsEnabled: tenants.suggestionsEnabled,
       })
       .from(tenants)
       .where(eq(tenants.id, ctx.tenantId))
@@ -46,6 +47,8 @@ export async function GET(request: NextRequest) {
         )
       : null;
 
+  const suggestionsEnabled = tenantData[0]?.suggestionsEnabled ?? true;
+
   return NextResponse.json({
     success: true,
     data: {
@@ -54,6 +57,7 @@ export async function GET(request: NextRequest) {
       budget,
       budgetAlertThreshold: threshold,
       budgetUsedPct: budget ? (summary.totalCostUsd / budget) * 100 : null,
+      suggestionsEnabled,
     },
   });
 }
