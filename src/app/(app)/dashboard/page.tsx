@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   LineChart,
@@ -75,8 +75,11 @@ type DocRow = Record<string, unknown>;
 
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState("summary");
+  const [mounted, setMounted] = useState(false);
   const router = useRouter();
   const toast = useToast();
+
+  useEffect(() => setMounted(true), []);
 
   const tenantId = getWorkspaceTenantId();
   const isDefault = isDefaultWorkspaceTenantId(tenantId);
@@ -307,6 +310,18 @@ export default function DashboardPage() {
   ];
 
   const isLoading = monthly.isLoading || statusBreakdown.isLoading;
+
+  if (!mounted) {
+    return (
+      <section className="space-y-5">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} variant="rect" height="100px" />
+          ))}
+        </div>
+      </section>
+    );
+  }
 
   if (isDefault) {
     return (
