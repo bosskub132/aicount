@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutGrid, BarChart3, Wrench, Users, LogOut } from "lucide-react";
+import { LayoutGrid, BarChart3, Layers, Wrench, Users, LogOut } from "lucide-react";
 
 const navGroups = [
   {
     label: "ANALYTICS",
     items: [
       { href: "/backoffice/overview", label: "AI Overview", icon: LayoutGrid, disabled: false },
+      { href: "/backoffice/patterns", label: "Patterns", icon: Layers, disabled: false },
       { href: "/backoffice/cost-analysis", label: "Cost Analysis", icon: BarChart3, disabled: true },
     ],
   },
