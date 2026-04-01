@@ -6,6 +6,8 @@ import {
   journalEntries,
   chartOfAccounts,
 } from "@/lib/db/schema";
+import { queryCrossTenantPattern } from "@/lib/db/queries/cross-tenant-patterns";
+import { normalizeTriggerKey } from "@/lib/services/learning/trigger-keys";
 import type { SuggestionResult } from "../types";
 
 /**
@@ -66,6 +68,8 @@ export async function fromHistory(
 
   const nameMap = new Map(coaRows.map((r) => [r.code, r.name]));
 
+  const triggerKey = normalizeTriggerKey("coa_mapping", currentDoc.issuerTaxId);
+
   return rows.map((r) => ({
     feature: "coa_mapping" as const,
     fieldName: "accountCode",
@@ -76,8 +80,56 @@ export async function fromHistory(
       accountName: nameMap.get(r.accountCode) ?? null,
       frequency: Number(r.count),
       total,
+      triggerKey,
     },
   }));
+}
+
+/**
+ * Suggests GL account from cross-tenant anonymized patterns.
+ */
+export async function fromCrossTenant(
+  documentId: string,
+  tenantId: string
+): Promise<SuggestionResult[]> {
+  const [currentDoc] = await db
+    .select({
+      issuerTaxId: documents.issuerTaxId,
+      docType: documents.docType,
+    })
+    .from(documents)
+    .where(and(eq(documents.id, documentId), eq(documents.tenantId, tenantId)))
+    .limit(1);
+
+  if (!currentDoc?.issuerTaxId) return [];
+
+  const triggerKey = normalizeTriggerKey(
+    "coa_mapping",
+    currentDoc.issuerTaxId,
+    currentDoc.docType
+  );
+  const pattern = await queryCrossTenantPattern({
+    patternType: "coa_mapping",
+    triggerKey,
+    fieldName: "accountCode",
+  });
+
+  if (!pattern) return [];
+
+  return [
+    {
+      feature: "coa_mapping" as const,
+      fieldName: "accountCode",
+      suggestedValue: pattern.suggestedValue,
+      confidence: pattern.confidence,
+      source: "cross_tenant" as const,
+      sourceContext: {
+        triggerKey,
+        tenantCount: pattern.tenantCount,
+        sampleCount: pattern.sampleCount,
+      },
+    },
+  ];
 }
 
 /**
@@ -89,6 +141,10 @@ export async function full(
 ): Promise<SuggestionResult[]> {
   const historyResults = await fromHistory(documentId, tenantId);
   if (historyResults.length > 0) return historyResults;
+
+  // Try cross-tenant patterns before expensive AI call
+  const crossTenantResults = await fromCrossTenant(documentId, tenantId);
+  if (crossTenantResults.length > 0) return crossTenantResults;
 
   // Fall back to Claude Haiku AI suggestion
   const [currentDoc] = await db

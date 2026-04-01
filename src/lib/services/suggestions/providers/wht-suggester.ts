@@ -1,6 +1,8 @@
 import { and, eq, isNotNull, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { documents, vendors } from "@/lib/db/schema";
+import { queryCrossTenantPattern } from "@/lib/db/queries/cross-tenant-patterns";
+import { normalizeTriggerKey } from "@/lib/services/learning/trigger-keys";
 import type { SuggestionResult } from "../types";
 
 /**
@@ -56,6 +58,8 @@ export async function fromHistory(
 
   const results: SuggestionResult[] = [];
 
+  const triggerKey = normalizeTriggerKey("wht_rate", "vendor", "unknown");
+
   if (rateRows.length > 0 && rateRows[0].whtRate != null) {
     const totalRates = await db
       .select({ total: sql<string>`count(*)` })
@@ -77,7 +81,7 @@ export async function fromHistory(
       suggestedValue: String(rateRows[0].whtRate),
       confidence: Math.min(freq / total, 0.95),
       source: "vendor_history" as const,
-      sourceContext: { frequency: freq, total },
+      sourceContext: { frequency: freq, total, triggerKey },
     });
   }
 
@@ -102,7 +106,71 @@ export async function fromHistory(
       suggestedValue: String(incomeTypeRows[0].whtIncomeType),
       confidence: Math.min(freq / total, 0.95),
       source: "vendor_history" as const,
-      sourceContext: { frequency: freq, total },
+      sourceContext: { frequency: freq, total, triggerKey },
+    });
+  }
+
+  return results;
+}
+
+/**
+ * Suggests WHT rate from cross-tenant anonymized patterns.
+ */
+export async function fromCrossTenant(
+  documentId: string,
+  tenantId: string
+): Promise<SuggestionResult[]> {
+  const [currentDoc] = await db
+    .select({ issuerTaxId: documents.issuerTaxId, whtIncomeType: documents.whtIncomeType })
+    .from(documents)
+    .where(and(eq(documents.id, documentId), eq(documents.tenantId, tenantId)))
+    .limit(1);
+
+  if (!currentDoc?.issuerTaxId) return [];
+
+  const [vendor] = await db
+    .select({ vendorType: vendors.vendorType })
+    .from(vendors)
+    .where(
+      and(eq(vendors.tenantId, tenantId), eq(vendors.taxId, currentDoc.issuerTaxId))
+    )
+    .limit(1);
+
+  const vendorType = vendor?.vendorType ?? "company";
+  const incomeCategory = currentDoc.whtIncomeType ?? "unknown";
+  const triggerKey = normalizeTriggerKey("wht_rate", vendorType, incomeCategory);
+
+  const results: SuggestionResult[] = [];
+
+  const ratePattern = await queryCrossTenantPattern({
+    patternType: "wht_rate",
+    triggerKey,
+    fieldName: "whtRate",
+  });
+  if (ratePattern) {
+    results.push({
+      feature: "wht_rate" as const,
+      fieldName: "whtRate",
+      suggestedValue: ratePattern.suggestedValue,
+      confidence: ratePattern.confidence,
+      source: "cross_tenant" as const,
+      sourceContext: { triggerKey, tenantCount: ratePattern.tenantCount },
+    });
+  }
+
+  const typePattern = await queryCrossTenantPattern({
+    patternType: "wht_rate",
+    triggerKey,
+    fieldName: "whtIncomeType",
+  });
+  if (typePattern) {
+    results.push({
+      feature: "wht_rate" as const,
+      fieldName: "whtIncomeType",
+      suggestedValue: typePattern.suggestedValue,
+      confidence: typePattern.confidence,
+      source: "cross_tenant" as const,
+      sourceContext: { triggerKey, tenantCount: typePattern.tenantCount },
     });
   }
 
@@ -136,7 +204,10 @@ export async function fromVendorType(
     )
     .limit(1);
 
-  if (!vendor) return [];
+  if (!vendor) {
+    // No vendor master data — try cross-tenant patterns
+    return fromCrossTenant(documentId, tenantId);
+  }
 
   // Default WHT rates: individual = 3%, company = 3% (overrideable by defaultWhtRate)
   const defaultRate =

@@ -1,6 +1,8 @@
 import { and, eq, isNotNull, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { documents } from "@/lib/db/schema";
+import { queryCrossTenantPattern } from "@/lib/db/queries/cross-tenant-patterns";
+import { normalizeTriggerKey } from "@/lib/services/learning/trigger-keys";
 import type { SuggestionResult } from "../types";
 
 const MIN_CONFIDENCE = 0.6;
@@ -77,6 +79,7 @@ export async function fromHistory(
   const results: SuggestionResult[] = [];
 
   if (docTypeResult) {
+    const triggerKey = normalizeTriggerKey("smart_default", "unknown", "docType");
     results.push({
       feature: "smart_default" as const,
       fieldName: "docType",
@@ -85,11 +88,13 @@ export async function fromHistory(
       source: "frequency" as const,
       sourceContext: {
         issuerTaxId: currentDoc.issuerTaxId,
+        triggerKey,
       },
     });
   }
 
   if (directionResult) {
+    const triggerKey = normalizeTriggerKey("smart_default", "unknown", "direction");
     results.push({
       feature: "smart_default" as const,
       fieldName: "direction",
@@ -98,8 +103,58 @@ export async function fromHistory(
       source: "frequency" as const,
       sourceContext: {
         issuerTaxId: currentDoc.issuerTaxId,
+        triggerKey,
       },
     });
+  }
+
+  // If no tenant history, try cross-tenant patterns
+  if (results.length === 0) {
+    return fromCrossTenant(documentId, tenantId);
+  }
+
+  return results;
+}
+
+/**
+ * Suggests defaults from cross-tenant anonymized patterns.
+ */
+export async function fromCrossTenant(
+  documentId: string,
+  tenantId: string
+): Promise<SuggestionResult[]> {
+  const [currentDoc] = await db
+    .select({ docType: documents.docType })
+    .from(documents)
+    .where(and(eq(documents.id, documentId), eq(documents.tenantId, tenantId)))
+    .limit(1);
+
+  if (!currentDoc) return [];
+
+  const fields = ["docType", "direction"];
+  const results: SuggestionResult[] = [];
+
+  for (const fieldName of fields) {
+    const triggerKey = normalizeTriggerKey(
+      "smart_default",
+      currentDoc.docType,
+      fieldName
+    );
+    const pattern = await queryCrossTenantPattern({
+      patternType: "smart_default",
+      triggerKey,
+      fieldName,
+    });
+    if (pattern) {
+      results.push({
+        feature: "smart_default" as const,
+        fieldName,
+        suggestedValue: pattern.suggestedValue,
+        confidence: pattern.confidence,
+        source: "cross_tenant" as const,
+        sourceContext: { triggerKey, tenantCount: pattern.tenantCount },
+      });
+    }
   }
 
   return results;
