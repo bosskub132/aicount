@@ -207,13 +207,22 @@ export async function PATCH(
     }
 
     if (body.suggestionOutcomes?.length || body.duplicateOutcomes?.length) {
-      const { processBatchOutcomes } = await import(
-        "@/lib/services/suggestions/tracking"
-      );
-      await processBatchOutcomes(
-        (body.suggestionOutcomes ?? []) as SuggestionOutcome[],
-        (body.duplicateOutcomes ?? []) as DuplicateOutcome[]
-      );
+      const validSuggestionStatuses = new Set(["accepted", "dismissed", "edited"]);
+      const validDuplicateStatuses = new Set(["dismissed", "confirmed_duplicate"]);
+
+      const filteredSuggestions = (body.suggestionOutcomes ?? []).filter(
+        (o: { status: string }) => validSuggestionStatuses.has(o.status)
+      ) as SuggestionOutcome[];
+      const filteredDuplicates = (body.duplicateOutcomes ?? []).filter(
+        (o: { status: string }) => validDuplicateStatuses.has(o.status)
+      ) as DuplicateOutcome[];
+
+      if (filteredSuggestions.length > 0 || filteredDuplicates.length > 0) {
+        const { processBatchOutcomes } = await import(
+          "@/lib/services/suggestions/tracking"
+        );
+        await processBatchOutcomes(filteredSuggestions, filteredDuplicates);
+      }
     }
 
     return NextResponse.json({ success: true, data: updated });

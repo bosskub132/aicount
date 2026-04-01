@@ -15,15 +15,10 @@ export async function feedLearner(
 
     if (!suggestion) continue;
 
-    if (outcome.status === "dismissed") {
-      await degradeMatchingRules(
-        suggestion.tenantId,
-        suggestion.fieldName,
-        suggestion.suggestedValue
-      );
-    }
-
-    if (outcome.status === "edited" && outcome.finalValue) {
+    if (
+      outcome.status === "dismissed" ||
+      (outcome.status === "edited" && outcome.finalValue)
+    ) {
       await degradeMatchingRules(
         suggestion.tenantId,
         suggestion.fieldName,

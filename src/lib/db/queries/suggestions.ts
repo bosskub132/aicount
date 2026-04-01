@@ -58,11 +58,19 @@ export async function getPendingSuggestions(
   }));
 }
 
-export async function hasAnySuggestions(documentId: string): Promise<boolean> {
+export async function hasAnySuggestions(
+  documentId: string,
+  tenantId: string
+): Promise<boolean> {
   const [row] = await db
     .select({ id: aiSuggestions.id })
     .from(aiSuggestions)
-    .where(eq(aiSuggestions.documentId, documentId))
+    .where(
+      and(
+        eq(aiSuggestions.documentId, documentId),
+        eq(aiSuggestions.tenantId, tenantId)
+      )
+    )
     .limit(1);
   return !!row;
 }

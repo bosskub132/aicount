@@ -61,7 +61,7 @@ export async function fetchAllForDocument(
   documentId: string,
   tenantId: string
 ): Promise<{ suggestions: Suggestion[]; duplicates: DuplicateCandidate[] }> {
-  const alreadyHasSuggestions = await hasAnySuggestions(documentId);
+  const alreadyHasSuggestions = await hasAnySuggestions(documentId, tenantId);
   if (!alreadyHasSuggestions) {
     await getSuggestions(documentId, tenantId, "lazy");
   }
