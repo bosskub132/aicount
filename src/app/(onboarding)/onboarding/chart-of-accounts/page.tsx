@@ -7,6 +7,7 @@ import { Button } from "@/components/button";
 import { Input } from "@/components/input";
 import { Select } from "@/components/select";
 import { FileImport } from "@/components/file-import";
+import { SuggestionPill } from "@/components/suggestion-pill";
 
 interface CoaRow {
   accountCode: string;
@@ -36,6 +37,9 @@ export default function OnboardingChartOfAccountsPage() {
   const [fetching, setFetching] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [mode, setMode] = useState<"manual" | "import">("manual");
+  const [coaSuggestions, setCoaSuggestions] = useState<
+    Array<{ fieldName: string; suggestedValue: string; confidence: number; context?: string }>
+  >([]);
 
   useEffect(() => {
     const tid = localStorage.getItem("workspaceTenantId") || "";
@@ -66,6 +70,19 @@ export default function OnboardingChartOfAccountsPage() {
 
     loadCoa();
   }, []);
+
+  // Fetch cross-tenant suggestions for COA
+  useEffect(() => {
+    if (!tenantId) return;
+    fetch(`/api/onboarding/suggestions?step=coa`, {
+      headers: { "x-tenant-id": tenantId },
+    })
+      .then((r) => r.json())
+      .then((data: { suggestions?: typeof coaSuggestions }) =>
+        setCoaSuggestions(data.suggestions ?? [])
+      )
+      .catch(() => {});
+  }, [tenantId]);
 
   function handleAddEntry() {
     if (!accountCode.trim() || !accountName.trim()) return;
@@ -220,6 +237,40 @@ export default function OnboardingChartOfAccountsPage() {
               </Button>
             </div>
           </>
+        )}
+
+        {/* Cross-tenant suggestions */}
+        {coaSuggestions.length > 0 && (
+          <div className="mt-4 rounded-lg border border-[#BFDBFE] bg-[#EFF6FF] p-3">
+            <p className="mb-2 text-xs font-medium text-[#2563EB]">
+              Commonly used account codes
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {coaSuggestions.map((s, i) => (
+                <SuggestionPill
+                  key={i}
+                  id={String(i)}
+                  displayLabel={`${s.suggestedValue}${s.context ? ` — ${s.context}` : ""}`}
+                  confidence={s.confidence}
+                  onAccept={() => {
+                    setCoaRows((prev) => [
+                      ...prev,
+                      {
+                        accountCode: s.suggestedValue,
+                        accountName: s.context ?? s.suggestedValue,
+                        category: "expense",
+                        _local: true,
+                      },
+                    ]);
+                    setCoaSuggestions((prev) => prev.filter((_, idx) => idx !== i));
+                  }}
+                  onDismiss={() => {
+                    setCoaSuggestions((prev) => prev.filter((_, idx) => idx !== i));
+                  }}
+                />
+              ))}
+            </div>
+          </div>
         )}
 
         {/* Accounts table */}
