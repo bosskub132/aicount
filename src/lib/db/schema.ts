@@ -101,6 +101,8 @@ export const tenants = pgTable("tenants", {
   branchNumber: varchar("branch_number", { length: 20 }).default("00000"),
   nextJvSequence: integer("next_jv_sequence").default(0).notNull(),
   nextWhtSequence: integer("next_wht_sequence").default(0).notNull(),
+  monthlyBudgetUsd: decimal("monthly_budget_usd", { precision: 10, scale: 2 }),
+  budgetAlertThreshold: decimal("budget_alert_threshold", { precision: 3, scale: 2 }).default("0.80"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   deletedAt: timestamp("deleted_at", { withTimezone: true }),
@@ -116,6 +118,7 @@ export const profiles = pgTable("profiles", {
   isActive: boolean("is_active").default(true).notNull(),
   isOnboardingComplete: boolean("is_onboarding_complete").default(false).notNull(),
   onboardingStep: integer("onboarding_step").default(0).notNull(),
+  isSuperadmin: boolean("is_superadmin").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   deletedAt: timestamp("deleted_at", { withTimezone: true }),
@@ -856,5 +859,33 @@ export const aiExtractionRules = pgTable(
       table.triggerValue,
       table.fieldName,
     ),
+  ]
+);
+
+// ── AI Usage Logs ──────────────────────────────────────────────────────────
+
+export const aiUsageLogs = pgTable(
+  "ai_usage_logs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id),
+    documentId: uuid("document_id").references(() => documents.id),
+    provider: text("provider").notNull(),
+    model: text("model").notNull(),
+    feature: text("feature").notNull().default("extraction"),
+    tier: integer("tier"),
+    inputTokens: integer("input_tokens").notNull().default(0),
+    outputTokens: integer("output_tokens").notNull().default(0),
+    costUsd: decimal("cost_usd", { precision: 10, scale: 6 })
+      .notNull()
+      .default("0"),
+    metadata: jsonb("metadata"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("idx_ai_usage_logs_tenant_date").on(table.tenantId, table.createdAt),
+    index("idx_ai_usage_logs_feature_date").on(table.feature, table.createdAt),
   ]
 );
