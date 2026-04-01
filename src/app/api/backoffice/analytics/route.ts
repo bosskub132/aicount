@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getRequestContext, unauthorized, forbidden } from "@/lib/api/request-context";
-import { getPlatformOverview, getDailyCosts } from "@/lib/db/queries/ai-usage";
+import { getPlatformOverview, getDailyCosts, getTierBreakdown } from "@/lib/db/queries/ai-usage";
 
 export async function GET(request: NextRequest) {
   const ctx = getRequestContext(request);
@@ -15,10 +15,11 @@ export async function GET(request: NextRequest) {
   const prevYear = month === 1 ? year - 1 : year;
   const prevMonth = month === 1 ? 12 : month - 1;
 
-  const [currentOverview, prevOverview, dailyCosts] = await Promise.all([
+  const [currentOverview, prevOverview, dailyCosts, tierBreakdown] = await Promise.all([
     getPlatformOverview(year, month),
     getPlatformOverview(prevYear, prevMonth),
     getDailyCosts(year, month),
+    getTierBreakdown(year, month),
   ]);
 
   const costChange =
@@ -43,12 +44,12 @@ export async function GET(request: NextRequest) {
     success: true,
     data: {
       overview: {
-        current: currentOverview,
-        previous: prevOverview,
+        ...currentOverview,
         costChange,
         docChange,
       },
       dailyCosts,
+      tierBreakdown,
     },
   });
 }

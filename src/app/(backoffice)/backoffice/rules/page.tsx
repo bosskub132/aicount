@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { Fragment, useState, useEffect, useRef } from "react";
 import { StatCard } from "@/components/stat-card";
 import { Skeleton } from "@/components/skeleton";
 import { useBackofficeRules, useBackofficeTenants } from "@/lib/hooks/use-backoffice";
@@ -323,9 +323,8 @@ export default function BackofficeRulesPage() {
                 rules.map((rule) => {
                   const isExpanded = expandedId === rule.id;
                   return (
-                    <>
+                    <Fragment key={rule.id}>
                       <tr
-                        key={rule.id}
                         className="hover:bg-[var(--muted)]/30 transition-colors cursor-pointer"
                         onClick={() => toggleExpand(rule.id)}
                       >
@@ -379,7 +378,7 @@ export default function BackofficeRulesPage() {
                       </tr>
 
                       {isExpanded && (
-                        <tr key={`${rule.id}-expanded`}>
+                        <tr>
                           <td
                             colSpan={8}
                             className="px-4 py-4 border-b border-[var(--muted)] bg-[var(--muted)]/20"
@@ -429,8 +428,6 @@ export default function BackofficeRulesPage() {
                                 className={`${BTN_CLASS} border-[var(--border)] text-[var(--secondary)] hover:bg-[var(--muted)]`}
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  // eslint-disable-next-line no-console
-                                  console.log("Edit rule:", rule.id);
                                 }}
                               >
                                 Edit Rule
@@ -473,7 +470,7 @@ export default function BackofficeRulesPage() {
                           </td>
                         </tr>
                       )}
-                    </>
+                    </Fragment>
                   );
                 })
               )}

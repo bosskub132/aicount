@@ -15,7 +15,6 @@ import {
   ClipboardList,
   FileCheck,
   Settings,
-  Shield,
   X,
 } from "lucide-react";
 import { useUIStore } from "@/lib/stores/ui-store";
@@ -127,17 +126,6 @@ export function Sidebar() {
         >
           <Settings className="h-4 w-4" />
           Settings
-        </Link>
-        <Link
-          href="/backoffice"
-          className={`flex items-center gap-2.5 rounded-[var(--radius-input)] px-2.5 py-[7px] text-[13px] font-medium transition-colors duration-100 ${
-            pathname?.startsWith("/backoffice")
-              ? "bg-[var(--primary-light)] text-[var(--primary)]"
-              : "text-[var(--secondary)] hover:bg-[var(--muted)]"
-          }`}
-        >
-          <Shield className="h-4 w-4" />
-          Backoffice
         </Link>
       </div>
     </>

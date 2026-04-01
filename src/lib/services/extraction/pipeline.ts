@@ -270,7 +270,7 @@ function buildResult(
 
   // Log usage for each tier (non-blocking, fire-and-forget)
   for (const tierResult of allTierResults) {
-    logAiUsage({
+    void logAiUsage({
       tenantId,
       documentId,
       provider: "anthropic",

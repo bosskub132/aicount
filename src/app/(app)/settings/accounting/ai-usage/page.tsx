@@ -61,7 +61,7 @@ export default function AiUsagePage() {
           <BudgetProgressBar
             spent={data.totalCostUsd}
             budget={data.budget}
-            threshold={data.budgetAlertThreshold}
+            threshold={data.budgetAlertThreshold * 100}
             tier1Count={data.tier1Count}
             tier2Count={data.tier2Count}
             tier3Count={data.tier3Count}

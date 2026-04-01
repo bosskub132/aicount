@@ -147,6 +147,39 @@ export async function getDailyCosts(
   });
 }
 
+export interface TierBreakdown {
+  tier1: number;
+  tier2: number;
+  tier3: number;
+}
+
+export async function getTierBreakdown(
+  year: number,
+  month: number
+): Promise<TierBreakdown> {
+  const { start, end } = getMonthRange(year, month);
+
+  const [result] = await db
+    .select({
+      tier1: sql<number>`COUNT(*) FILTER (WHERE ${aiUsageLogs.tier} = 1)`,
+      tier2: sql<number>`COUNT(*) FILTER (WHERE ${aiUsageLogs.tier} = 2)`,
+      tier3: sql<number>`COUNT(*) FILTER (WHERE ${aiUsageLogs.tier} = 3)`,
+    })
+    .from(aiUsageLogs)
+    .where(
+      and(
+        gte(aiUsageLogs.createdAt, start),
+        lt(aiUsageLogs.createdAt, end)
+      )
+    );
+
+  return {
+    tier1: Number(result?.tier1 ?? 0),
+    tier2: Number(result?.tier2 ?? 0),
+    tier3: Number(result?.tier3 ?? 0),
+  };
+}
+
 export async function getPerTenantUsage(
   year: number,
   month: number,

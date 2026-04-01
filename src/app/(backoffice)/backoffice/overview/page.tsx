@@ -42,11 +42,11 @@ function BudgetBar({ used, budget }: { used: number; budget: number }) {
 interface TenantUsageRow {
   tenantId: string;
   tenantName: string;
-  totalDocuments: number;
+  documentCount: number;
   totalCostUsd: number;
   avgCostPerDoc: number;
-  budgetUsd: number;
-  tier1Pct: number;
+  monthlyBudgetUsd: number | null;
+  budgetUsedPct: number | null;
 }
 
 export default function BackofficeOverviewPage() {
@@ -237,7 +237,7 @@ export default function BackofficeOverviewPage() {
                       {row.tenantName}
                     </td>
                     <td className="px-3 py-2 border-b border-[var(--muted)] tabular-nums">
-                      {row.totalDocuments.toLocaleString()}
+                      {row.documentCount.toLocaleString()}
                     </td>
                     <td className="px-3 py-2 border-b border-[var(--muted)] tabular-nums">
                       {formatCostShort(row.totalCostUsd)}
@@ -246,10 +246,10 @@ export default function BackofficeOverviewPage() {
                       {formatCost(row.avgCostPerDoc)}
                     </td>
                     <td className="px-3 py-2 border-b border-[var(--muted)]">
-                      <BudgetBar used={row.totalCostUsd} budget={row.budgetUsd} />
+                      <BudgetBar used={row.totalCostUsd} budget={row.monthlyBudgetUsd ?? 0} />
                     </td>
                     <td className="px-3 py-2 border-b border-[var(--muted)] tabular-nums">
-                      {row.tier1Pct !== undefined ? `${row.tier1Pct.toFixed(1)}%` : "—"}
+                      {row.budgetUsedPct !== null ? `${row.budgetUsedPct.toFixed(1)}%` : "—"}
                     </td>
                   </tr>
                 ))

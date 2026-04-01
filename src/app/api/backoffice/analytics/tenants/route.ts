@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
   const now = new Date();
   const year = Number(searchParams.get("year") ?? now.getFullYear());
   const month = Number(searchParams.get("month") ?? now.getMonth() + 1);
-  const search = searchParams.get("search") ?? undefined;
+  const search = searchParams.get("search")?.slice(0, 200) ?? undefined;
   const page = Math.max(1, Number(searchParams.get("page") ?? 1));
   const limit = Math.min(100, Math.max(1, Number(searchParams.get("limit") ?? 20)));
 
