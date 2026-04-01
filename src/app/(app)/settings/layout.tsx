@@ -19,6 +19,7 @@ import {
   Landmark,
   ClipboardList,
   Clock,
+  DollarSign,
 } from "lucide-react";
 
 type NavItem = {
@@ -68,6 +69,7 @@ const navGroups: NavGroup[] = [
       { label: "Bank Reconciliation", href: "/settings/accounting/bank-recon", icon: Landmark },
       { label: "Tax Reports", href: "/settings/accounting/tax-reports", icon: ClipboardList },
       { label: "Report Retention", href: "/settings/accounting/report-retention", icon: Clock },
+      { label: "AI Usage", href: "/settings/accounting/ai-usage", icon: DollarSign },
     ],
   },
 ];
