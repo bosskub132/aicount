@@ -277,7 +277,6 @@ function ExtractionsContent() {
   const {
     suggestions,
     duplicates,
-    isLoading: suggestionsLoading,
     acceptSuggestion,
     dismissSuggestion,
     acceptAll,
@@ -344,12 +343,11 @@ function ExtractionsContent() {
   }
 
   function handleAcceptAll() {
+    const merged: Record<string, string> = {};
     for (const s of suggestions) {
-      setEditValues((prev) => ({
-        ...prev,
-        [s.fieldName]: s.suggestedValue,
-      }));
+      merged[s.fieldName] = s.suggestedValue;
     }
+    setEditValues((prev) => ({ ...prev, ...merged }));
     acceptAll();
   }
 
