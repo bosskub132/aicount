@@ -13,6 +13,7 @@ import {
 import { writeAuditLog } from "@/lib/services/audit";
 import { isDocumentMonthLocked } from "@/lib/services/period-lock";
 import { learnFromCorrections } from "@/lib/services/extraction/rules/rule-learner";
+import type { SuggestionOutcome, DuplicateOutcome } from "@/lib/services/suggestions/types";
 
 type PatchBody = {
   tenantId: string;
@@ -41,6 +42,8 @@ type PatchBody = {
   creditDueDate?: string | null;
   extractionStatus?: string;
   ocrRaw?: Record<string, unknown> | null;
+  suggestionOutcomes?: { id: string; status: string; finalValue?: string }[];
+  duplicateOutcomes?: { id: string; status: string }[];
   status?:
     | "DRAFT"
     | "OCR_PROCESSING"
@@ -201,6 +204,16 @@ export async function PATCH(
     if (existingOcrRaw && Object.keys(editedFields).length > 0) {
       learnFromCorrections(ctx.tenantId, existingOcrRaw, editedFields)
         .catch((err) => console.error("[Rule Learning] Failed:", err));
+    }
+
+    if (body.suggestionOutcomes?.length || body.duplicateOutcomes?.length) {
+      const { processBatchOutcomes } = await import(
+        "@/lib/services/suggestions/tracking"
+      );
+      await processBatchOutcomes(
+        (body.suggestionOutcomes ?? []) as SuggestionOutcome[],
+        (body.duplicateOutcomes ?? []) as DuplicateOutcome[]
+      );
     }
 
     return NextResponse.json({ success: true, data: updated });
