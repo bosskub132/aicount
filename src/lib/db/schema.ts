@@ -103,6 +103,7 @@ export const tenants = pgTable("tenants", {
   nextWhtSequence: integer("next_wht_sequence").default(0).notNull(),
   monthlyBudgetUsd: decimal("monthly_budget_usd", { precision: 10, scale: 2 }),
   budgetAlertThreshold: decimal("budget_alert_threshold", { precision: 3, scale: 2 }).default("0.80"),
+  suggestionsEnabled: boolean("suggestions_enabled").default(true).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   deletedAt: timestamp("deleted_at", { withTimezone: true }),
@@ -330,6 +331,7 @@ export const documents = pgTable(
     // Phase 6A: Extraction pipeline tracking
     extractionStatus: text("extraction_status").default("pending"),
     extractionFailureReason: text("extraction_failure_reason"),
+    fileHash: text("file_hash"),
 
     // Classification
     direction: directionEnum("direction"),
@@ -887,5 +889,58 @@ export const aiUsageLogs = pgTable(
   (table) => [
     index("idx_ai_usage_logs_tenant_date").on(table.tenantId, table.createdAt),
     index("idx_ai_usage_logs_feature_date").on(table.feature, table.createdAt),
+  ]
+);
+
+export const aiSuggestions = pgTable(
+  "ai_suggestions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id),
+    documentId: uuid("document_id").references(() => documents.id),
+    feature: text("feature").notNull(),
+    fieldName: text("field_name").notNull(),
+    suggestedValue: text("suggested_value").notNull(),
+    confidence: decimal("confidence", { precision: 3, scale: 2 }).notNull(),
+    source: text("source").notNull(),
+    sourceContext: jsonb("source_context"),
+    status: text("status").notNull().default("pending"),
+    finalValue: text("final_value"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    resolvedAt: timestamp("resolved_at"),
+  },
+  (table) => [
+    index("idx_suggestions_document").on(table.documentId),
+    index("idx_suggestions_tenant_feature").on(
+      table.tenantId,
+      table.feature,
+      table.createdAt
+    ),
+  ]
+);
+
+export const aiDuplicateCandidates = pgTable(
+  "ai_duplicate_candidates",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id),
+    documentId: uuid("document_id")
+      .notNull()
+      .references(() => documents.id),
+    matchDocumentId: uuid("match_document_id")
+      .notNull()
+      .references(() => documents.id),
+    matchType: text("match_type").notNull(),
+    matchScore: decimal("match_score", { precision: 3, scale: 2 }).notNull(),
+    matchDetails: jsonb("match_details"),
+    status: text("status").notNull().default("pending"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("idx_duplicates_document").on(table.documentId),
   ]
 );
