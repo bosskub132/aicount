@@ -1,10 +1,11 @@
-import Anthropic from "@anthropic-ai/sdk";
+import { getProvider } from "@/lib/services/ai/factory";
+import { calculateCost } from "@/lib/services/ai/models";
 import { buildBasePrompt } from "../prompts/base-extraction";
 import { normalizeClaudeResponse } from "../parsers/response-normalizer";
 import { validateAmounts } from "../validators/amount-validator";
 import type { TierResult, LearnedRule } from "../types";
 
-const anthropic = new Anthropic();
+const MODEL = "claude-haiku-4-5-20251001";
 
 export async function extractTier1(
   rawText: string,
@@ -12,18 +13,16 @@ export async function extractTier1(
 ): Promise<TierResult> {
   const prompt = buildBasePrompt(rawText, rules);
 
-  const response = await anthropic.messages.create({
-    model: "claude-haiku-4-5-20251001",
-    max_tokens: 1500,
+  const provider = getProvider();
+  const response = await provider.chat({
+    model: MODEL,
+    maxTokens: 1500,
     messages: [{ role: "user", content: prompt }],
   });
 
-  const text =
-    response.content[0].type === "text" ? response.content[0].text : "";
-
   let parsed: Record<string, unknown>;
   try {
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    const jsonMatch = response.content.match(/\{[\s\S]*\}/);
     parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : {};
   } catch {
     parsed = {};
@@ -32,9 +31,8 @@ export async function extractTier1(
   const data = normalizeClaudeResponse(parsed);
   const validation = validateAmounts(data.amounts, data.line_items);
 
-  const inputTokens = response.usage?.input_tokens ?? 0;
-  const outputTokens = response.usage?.output_tokens ?? 0;
-  const costUsd = (inputTokens * 0.8 + outputTokens * 4) / 1_000_000;
+  const { inputTokens, outputTokens } = response.usage;
+  const costUsd = calculateCost(MODEL, inputTokens, outputTokens);
 
   return {
     tier: 1,
@@ -44,6 +42,6 @@ export async function extractTier1(
     costUsd,
     inputTokens,
     outputTokens,
-    model: "claude-haiku-4-5-20251001",
+    model: MODEL,
   };
 }

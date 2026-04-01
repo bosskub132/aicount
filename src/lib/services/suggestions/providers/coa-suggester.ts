@@ -136,39 +136,37 @@ ${coaRows.map((a) => `${a.code} - ${a.name} (${a.category})`).join("\n")}
 Respond with JSON only: {"accountCode": "XXXX", "confidence": 0.0-1.0, "reason": "brief reason"}`;
 
   try {
-    const { default: Anthropic } = await import("@anthropic-ai/sdk");
+    const { getProvider } = await import("@/lib/services/ai/factory");
+    const { calculateCost } = await import("@/lib/services/ai/models");
     const { logAiUsage } = await import(
       "@/lib/services/extraction/usage-logger"
     );
 
-    const client = new Anthropic();
-    const response = await client.messages.create({
-      model: "claude-haiku-4-5",
-      max_tokens: 256,
+    const model = "claude-haiku-4-5-20251001";
+    const provider = getProvider();
+    const response = await provider.chat({
+      model,
+      maxTokens: 256,
       messages: [{ role: "user", content: prompt }],
     });
 
-    const inputTokens = response.usage.input_tokens;
-    const outputTokens = response.usage.output_tokens;
-    const costUsd = inputTokens * 0.00000025 + outputTokens * 0.00000125;
+    const { inputTokens, outputTokens } = response.usage;
+    const costUsd = calculateCost(model, inputTokens, outputTokens);
 
     await logAiUsage({
       tenantId,
       documentId,
       provider: "anthropic",
-      model: "claude-haiku-4-5",
+      model,
       feature: "coa_suggestion",
       inputTokens,
       outputTokens,
       costUsd,
     });
 
-    const content = response.content[0];
-    if (content.type !== "text") return [];
-
     let parsed: { accountCode?: string; confidence?: number; reason?: string };
     try {
-      parsed = JSON.parse(content.text) as typeof parsed;
+      parsed = JSON.parse(response.content) as typeof parsed;
     } catch {
       return [];
     }
@@ -187,7 +185,7 @@ Respond with JSON only: {"accountCode": "XXXX", "confidence": 0.0-1.0, "reason":
         sourceContext: {
           accountName: matchedAccount?.name ?? null,
           reason: parsed.reason ?? null,
-          model: "claude-haiku-4-5",
+          model,
         },
       },
     ];
