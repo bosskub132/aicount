@@ -5,6 +5,7 @@ import { loadRules } from "./rules/rule-loader";
 import { applyGraduatedRules } from "./rules/graduated-rules";
 import { shouldEscalate } from "./validators/escalation-check";
 import { validateAmounts } from "./validators/amount-validator";
+import { logAiUsage } from "./usage-logger";
 import type {
   ExtractionResult,
   TierResult,
@@ -70,6 +71,9 @@ function createEmptyTierResult(tier: 1 | 2 | 3): TierResult {
     validation: emptyValidation,
     escalationReasons: [],
     costUsd: 0,
+    inputTokens: 0,
+    outputTokens: 0,
+    model: "",
   };
 }
 
@@ -78,6 +82,7 @@ const TIER_TIMEOUT_MS = 30_000;
 export async function extractDocument(
   rawText: string,
   tenantId: string,
+  documentId: string,
   imageBase64?: string,
   mimeType?: string
 ): Promise<ExtractionResult> {
@@ -116,7 +121,7 @@ export async function extractDocument(
     bestResult = tier1Result;
 
     if (!escalate) {
-      return buildResult(bestResult, allTierResults);
+      return buildResult(bestResult, allTierResults, tenantId, documentId);
     }
 
     // --- Tier 2 (Sonnet) ---
@@ -145,7 +150,7 @@ export async function extractDocument(
       bestResult = tier2Result;
 
       if (!tier2Escalation.escalate) {
-        return buildResult(bestResult, allTierResults);
+        return buildResult(bestResult, allTierResults, tenantId, documentId);
       }
 
       // --- Tier 3 (Vision) ---
@@ -252,14 +257,34 @@ export async function extractDocument(
     allTierResults.push(bestResult);
   }
 
-  return buildResult(bestResult, allTierResults);
+  return buildResult(bestResult, allTierResults, tenantId, documentId);
 }
 
 function buildResult(
   best: TierResult,
-  allTierResults: TierResult[]
+  allTierResults: TierResult[],
+  tenantId: string,
+  documentId: string
 ): ExtractionResult {
   const totalCostUsd = allTierResults.reduce((sum, r) => sum + r.costUsd, 0);
+
+  // Log usage for each tier (non-blocking, fire-and-forget)
+  for (const tierResult of allTierResults) {
+    logAiUsage({
+      tenantId,
+      documentId,
+      provider: "anthropic",
+      model: tierResult.model,
+      tier: tierResult.tier,
+      inputTokens: tierResult.inputTokens,
+      outputTokens: tierResult.outputTokens,
+      costUsd: tierResult.costUsd,
+      metadata: {
+        escalationReasons: tierResult.escalationReasons,
+        validationValid: tierResult.validation.overallValid,
+      },
+    });
+  }
 
   return {
     data: best.data,

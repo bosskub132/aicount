@@ -60,6 +60,7 @@ export const processDocument = inngest.createFunction(
           const result: ExtractionResult = await extractDocument(
             gvResult.rawText,
             tenantId,
+            documentId,
             imageBase64,
             mimeType
           );

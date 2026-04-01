@@ -72,5 +72,8 @@ export async function extractTier3(
     validation,
     escalationReasons,
     costUsd,
+    inputTokens,
+    outputTokens,
+    model: "claude-sonnet-4-6-20250514",
   };
 }

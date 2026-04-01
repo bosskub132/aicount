@@ -44,5 +44,8 @@ export async function extractTier2(
     validation,
     escalationReasons: tier1Reasons,
     costUsd,
+    inputTokens,
+    outputTokens,
+    model: "claude-sonnet-4-6-20250514",
   };
 }

@@ -7,6 +7,7 @@ vi.mock("../tiers/tier3-vision", () => ({ extractTier3: vi.fn() }));
 vi.mock("../rules/rule-loader", () => ({
   loadRules: vi.fn().mockResolvedValue({ promptRules: [], graduated: [] }),
 }));
+vi.mock("../usage-logger", () => ({ logAiUsage: vi.fn() }));
 
 import { extractTier1 } from "../tiers/tier1-haiku";
 import { extractTier2 } from "../tiers/tier2-sonnet";
@@ -92,6 +93,9 @@ function highConfResult(): TierResult {
     validation: makeValidation(true),
     escalationReasons: [],
     costUsd: 0.001,
+    inputTokens: 100,
+    outputTokens: 50,
+    model: "claude-haiku-4-5-20251001",
   };
 }
 
@@ -102,6 +106,9 @@ function lowConfResult(): TierResult {
     validation: makeValidation(false),
     escalationReasons: [],
     costUsd: 0.001,
+    inputTokens: 100,
+    outputTokens: 50,
+    model: "claude-haiku-4-5-20251001",
   };
 }
 
@@ -114,7 +121,7 @@ describe("extractDocument pipeline", () => {
   it("returns Tier 1 result when confidence is high", async () => {
     mockedTier1.mockResolvedValue(highConfResult());
 
-    const result = await extractDocument("some raw text", "tenant-123");
+    const result = await extractDocument("some raw text", "tenant-123", "doc-123");
 
     expect(result.tierUsed).toBe(1);
     expect(result.allTierResults).toHaveLength(1);
@@ -134,10 +141,13 @@ describe("extractDocument pipeline", () => {
       validation: makeValidation(true),
       escalationReasons: [],
       costUsd: 0.005,
+      inputTokens: 200,
+      outputTokens: 100,
+      model: "claude-sonnet-4-6-20250514",
     };
     mockedTier2.mockResolvedValue(tier2Result);
 
-    const result = await extractDocument("some raw text", "tenant-123");
+    const result = await extractDocument("some raw text", "tenant-123", "doc-123");
 
     expect(result.tierUsed).toBe(2);
     expect(result.allTierResults).toHaveLength(2);
@@ -156,6 +166,9 @@ describe("extractDocument pipeline", () => {
       validation: makeValidation(false),
       escalationReasons: [],
       costUsd: 0.005,
+      inputTokens: 200,
+      outputTokens: 100,
+      model: "claude-sonnet-4-6-20250514",
     };
     mockedTier2.mockResolvedValue(lowTier2);
 
@@ -165,12 +178,16 @@ describe("extractDocument pipeline", () => {
       validation: makeValidation(true),
       escalationReasons: [],
       costUsd: 0.01,
+      inputTokens: 300,
+      outputTokens: 150,
+      model: "claude-sonnet-4-6-20250514",
     };
     mockedTier3.mockResolvedValue(tier3Result);
 
     const result = await extractDocument(
       "some raw text",
       "tenant-123",
+      "doc-123",
       "base64data",
       "image/jpeg"
     );
@@ -192,10 +209,13 @@ describe("extractDocument pipeline", () => {
       validation: makeValidation(false),
       escalationReasons: [],
       costUsd: 0.005,
+      inputTokens: 200,
+      outputTokens: 100,
+      model: "claude-sonnet-4-6-20250514",
     };
     mockedTier2.mockResolvedValue(lowTier2);
 
-    const result = await extractDocument("some raw text", "tenant-123");
+    const result = await extractDocument("some raw text", "tenant-123", "doc-123");
 
     expect(result.tierUsed).toBe(2);
     expect(result.allTierResults).toHaveLength(2);
@@ -211,7 +231,7 @@ describe("extractDocument pipeline", () => {
     // so we test that the error is caught and empty result returned
     mockedTier1.mockRejectedValue(new Error("Tier timeout after 30000ms"));
 
-    const result = await extractDocument("some raw text", "tenant-123");
+    const result = await extractDocument("some raw text", "tenant-123", "doc-123");
 
     expect(result.tierUsed).toBe(1);
     expect(result.data.confidence.weighted).toBe(0);
@@ -222,7 +242,7 @@ describe("extractDocument pipeline", () => {
     mockedTier1.mockResolvedValue(lowConfResult());
     mockedTier2.mockRejectedValue(new Error("API error"));
 
-    const result = await extractDocument("some raw text", "tenant-123");
+    const result = await extractDocument("some raw text", "tenant-123", "doc-123");
 
     expect(result.tierUsed).toBe(1);
     expect(result.allTierResults).toHaveLength(1);
@@ -239,12 +259,16 @@ describe("extractDocument pipeline", () => {
       validation: makeValidation(true),
       escalationReasons: [],
       costUsd: 0.01,
+      inputTokens: 300,
+      outputTokens: 150,
+      model: "claude-sonnet-4-6-20250514",
     };
     mockedTier3.mockResolvedValue(tier3Result);
 
     const result = await extractDocument(
       "some raw text",
       "tenant-123",
+      "doc-123",
       "base64data",
       "image/png"
     );

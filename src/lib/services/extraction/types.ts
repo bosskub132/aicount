@@ -82,6 +82,9 @@ export interface TierResult {
   validation: ValidationResult;
   escalationReasons: string[];
   costUsd: number;
+  inputTokens: number;
+  outputTokens: number;
+  model: string;
 }
 
 export interface ExtractionResult {
