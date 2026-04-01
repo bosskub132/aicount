@@ -10,6 +10,8 @@ type TenantData = {
   vatRegistered: boolean;
   baseCurrency: string;
   dataRetentionYears: number;
+  industry: string | null;
+  companySize: string | null;
 };
 
 export default function WorkspaceGeneralPage() {
@@ -24,6 +26,8 @@ export default function WorkspaceGeneralPage() {
   const [vatRegistered, setVatRegistered] = useState(false);
   const [baseCurrency, setBaseCurrency] = useState("THB");
   const [dataRetentionYears, setDataRetentionYears] = useState(5);
+  const [industry, setIndustry] = useState("");
+  const [companySize, setCompanySize] = useState("");
 
   useEffect(() => {
     const id = localStorage.getItem("workspaceTenantId") ?? "";
@@ -47,6 +51,8 @@ export default function WorkspaceGeneralPage() {
           setVatRegistered(d.vatRegistered);
           setBaseCurrency(d.baseCurrency ?? "THB");
           setDataRetentionYears(d.dataRetentionYears ?? 5);
+          setIndustry(d.industry ?? "");
+          setCompanySize(d.companySize ?? "");
         } else {
           setError(json.error ?? "Failed to load workspace");
         }
@@ -73,7 +79,7 @@ export default function WorkspaceGeneralPage() {
           "Content-Type": "application/json",
           "x-tenant-id": tenantId,
         },
-        body: JSON.stringify({ name, taxId, vatRegistered, baseCurrency, dataRetentionYears }),
+        body: JSON.stringify({ name, taxId, vatRegistered, baseCurrency, dataRetentionYears, industry: industry || undefined, companySize: companySize || undefined }),
       });
       const json = (await response.json()) as { success: boolean; error?: string };
       if (json.success) {
@@ -199,6 +205,55 @@ export default function WorkspaceGeneralPage() {
                 max={30}
                 className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
               />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-slate-700" htmlFor="industry">
+                ประเภทธุรกิจ (Industry)
+              </label>
+              <select
+                id="industry"
+                value={industry}
+                onChange={(e) => setIndustry(e.target.value)}
+                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              >
+                <option value="">Select industry</option>
+                <option value="retail">ค้าปลีก (Retail)</option>
+                <option value="manufacturing">การผลิต (Manufacturing)</option>
+                <option value="services">บริการ (Services)</option>
+                <option value="construction">ก่อสร้าง (Construction)</option>
+                <option value="hospitality">โรงแรม/ร้านอาหาร (Hospitality)</option>
+                <option value="healthcare">สุขภาพ (Healthcare)</option>
+                <option value="education">การศึกษา (Education)</option>
+                <option value="technology">เทคโนโลยี (Technology)</option>
+                <option value="other">อื่นๆ (Other)</option>
+              </select>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-slate-700">
+                ขนาดบริษัท (Company Size)
+              </label>
+              <div className="flex flex-col gap-2">
+                {[
+                  { value: "micro", label: "Micro (1-5 คน)" },
+                  { value: "small", label: "Small (6-30 คน)" },
+                  { value: "medium", label: "Medium (31-200 คน)" },
+                  { value: "large", label: "Large (200+ คน)" },
+                ].map((option) => (
+                  <label key={option.value} className="inline-flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="companySize"
+                      value={option.value}
+                      checked={companySize === option.value}
+                      onChange={(e) => setCompanySize(e.target.value)}
+                      className="h-4 w-4 border-slate-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="text-sm text-slate-700">{option.label}</span>
+                  </label>
+                ))}
+              </div>
             </div>
 
             {error ? <p className="text-sm text-red-600">{error}</p> : null}
