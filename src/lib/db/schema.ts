@@ -300,7 +300,6 @@ export const documents = pgTable(
       .default("FRONTEND_UPLOAD")
       .notNull(),
     fileUrl: text("file_url"),
-    fileHash: varchar("file_hash", { length: 64 }),
     batchId: uuid("batch_id"),
 
     // PO Matching & Reversal
