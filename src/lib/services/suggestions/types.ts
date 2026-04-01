@@ -8,7 +8,8 @@ export type SuggestionSource =
   | "vendor_history"
   | "graduated_rule"
   | "ai_model"
-  | "frequency";
+  | "frequency"
+  | "cross_tenant";
 
 export type SuggestionStatus =
   | "pending"

@@ -12,6 +12,7 @@ import { workspacePurge } from "@/lib/inngest/functions/workspace-purge";
 import { accountPurge } from "@/lib/inngest/functions/account-purge";
 import { reportCleanup } from "@/lib/inngest/functions/report-cleanup";
 import { whtBatchGenerate } from "@/lib/inngest/functions/wht-batch-generate";
+import { updateCrossTenantPattern } from "@/lib/inngest/functions/update-cross-tenant-pattern";
 
 export const { GET, POST, PUT } = serve({
   client: inngest,
@@ -26,5 +27,6 @@ export const { GET, POST, PUT } = serve({
     accountPurge,
     reportCleanup,
     whtBatchGenerate,
+    updateCrossTenantPattern,
   ],
 });
