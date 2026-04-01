@@ -8,6 +8,7 @@ import { Input } from "@/components/input";
 import { Select } from "@/components/select";
 import { Tabs } from "@/components/tabs";
 import { FileImport } from "@/components/file-import";
+import { SuggestionPill } from "@/components/suggestion-pill";
 
 interface VendorRow {
   name: string;
@@ -75,6 +76,9 @@ export default function OnboardingVendorsCustomersPage() {
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [whtSuggestions, setWhtSuggestions] = useState<
+    Array<{ vendorTaxId: string; fieldName: string; suggestedValue: string; confidence: number }>
+  >([]);
 
   useEffect(() => {
     const tid = localStorage.getItem("workspaceTenantId") || "";
@@ -106,6 +110,21 @@ export default function OnboardingVendorsCustomersPage() {
       })
       .finally(() => setFetching(false));
   }, []);
+
+  // Fetch WHT suggestions when vendors with tax IDs exist
+  useEffect(() => {
+    if (!tenantId) return;
+    const taxIds = vendors.map((v) => v.taxId).filter(Boolean);
+    if (taxIds.length === 0) return;
+    fetch(`/api/onboarding/suggestions?step=vendors&vendorTaxIds=${taxIds.join(",")}`, {
+      headers: { "x-tenant-id": tenantId },
+    })
+      .then((r) => r.json())
+      .then((data: { suggestions?: typeof whtSuggestions }) =>
+        setWhtSuggestions(data.suggestions ?? [])
+      )
+      .catch(() => {});
+  }, [tenantId, vendors.length]);
 
   function resetVendorForm() {
     setVName("");
@@ -346,6 +365,39 @@ export default function OnboardingVendorsCustomersPage() {
         {activeTab === "customers" && customerMode === "import" && (
           <FileImport key="customer-import" entityType="customer" onImport={handleCustomerImport} />
         )}
+        {/* Cross-tenant WHT suggestions for vendors */}
+        {activeTab === "vendors" && whtSuggestions.length > 0 && (
+          <div className="mb-4 rounded-lg border border-[#BFDBFE] bg-[#EFF6FF] p-3">
+            <p className="mb-2 text-xs font-medium text-[#2563EB]">
+              Suggested WHT rates based on common patterns
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {whtSuggestions.map((s, i) => (
+                <SuggestionPill
+                  key={i}
+                  id={String(i)}
+                  displayLabel={`${s.vendorTaxId}: WHT ${s.suggestedValue}%`}
+                  confidence={s.confidence}
+                  onAccept={() => {
+                    // Apply suggested WHT rate to matching vendor
+                    setVendors((prev) =>
+                      prev.map((v) =>
+                        v.taxId === s.vendorTaxId
+                          ? { ...v, defaultWhtRate: s.suggestedValue }
+                          : v
+                      )
+                    );
+                    setWhtSuggestions((prev) => prev.filter((_, idx) => idx !== i));
+                  }}
+                  onDismiss={() => {
+                    setWhtSuggestions((prev) => prev.filter((_, idx) => idx !== i));
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
         {activeTab === "vendors" && vendorMode === "manual" ? (
           /* Vendor manual form */
           <div className="flex flex-col gap-3">

@@ -6,6 +6,7 @@ import { Skeleton } from "@/components/skeleton";
 import { DailyCostChart } from "@/components/daily-cost-chart";
 import { TierDistributionChart } from "@/components/tier-distribution-chart";
 import { useBackofficeAnalytics, useBackofficeTenantUsage } from "@/lib/hooks/use-backoffice";
+import { useQuery } from "@tanstack/react-query";
 
 function getMonthOptions() {
   const options: { label: string; year: number; month: number }[] = [];
@@ -61,6 +62,15 @@ export default function BackofficeOverviewPage() {
 
   const { data: analytics, isLoading: analyticsLoading } = useBackofficeAnalytics(year, month);
   const { data: tenantData, isLoading: tenantLoading } = useBackofficeTenantUsage(year, month, debouncedSearch, page);
+
+  const { data: patternStats } = useQuery<{
+    totalPatterns: number;
+    activePatterns: number;
+    coverage: number;
+  }>({
+    queryKey: ["backoffice", "pattern-stats"],
+    queryFn: () => fetch("/api/backoffice/analytics/patterns").then((r) => r.json()),
+  });
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -180,6 +190,29 @@ export default function BackofficeOverviewPage() {
               totalDocs={overview?.totalDocuments ?? 0}
             />
           )}
+        </div>
+      </div>
+
+      {/* Community Patterns */}
+      <div className="rounded-[var(--radius-card)] border border-[var(--border)] bg-white p-4">
+        <h2 className="text-sm font-semibold mb-3">Community Patterns</h2>
+        <div className="grid grid-cols-3 gap-3">
+          <StatCard
+            title="Total Patterns"
+            value={String(patternStats?.totalPatterns ?? 0)}
+          />
+          <StatCard
+            title="Active Patterns"
+            value={String(patternStats?.activePatterns ?? 0)}
+            trendValue="Meeting quality bar"
+            trend="neutral"
+          />
+          <StatCard
+            title="Pattern Coverage"
+            value={`${patternStats?.coverage ?? 0}%`}
+            trendValue="of suggestions from cross-tenant"
+            trend="neutral"
+          />
         </div>
       </div>
 
