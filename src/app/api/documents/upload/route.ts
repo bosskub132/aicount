@@ -98,6 +98,25 @@ export async function POST(request: Request) {
       })
       .returning({ id: documents.id, status: documents.status, fileUrl: documents.fileUrl });
 
+    // Phase 6C: Record file-hash duplicate candidates
+    if (isDuplicate && existing) {
+      try {
+        const { insertDuplicateCandidate } = await import(
+          "@/lib/db/queries/duplicates"
+        );
+        await insertDuplicateCandidate(
+          tenantId,
+          created.id,
+          existing.id,
+          "file_hash",
+          1.0,
+          { reason: "Identical file content (SHA-256 match)" }
+        );
+      } catch {
+        // Non-blocking: duplicate recording failure must not affect upload
+      }
+    }
+
     await inngest.send({
       name: "document/uploaded",
       data: {

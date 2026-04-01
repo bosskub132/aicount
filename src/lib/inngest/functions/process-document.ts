@@ -127,6 +127,18 @@ export const processDocument = inngest.createFunction(
         return { mapped, wht };
       });
 
+      // Phase 6C: Eager suggestions (non-blocking)
+      await step.run("eager-suggestions", async () => {
+        try {
+          const { getSuggestions } = await import(
+            "@/lib/services/suggestions/coordinator"
+          );
+          await getSuggestions(documentId, tenantId, "eager");
+        } catch {
+          // Non-blocking: suggestion failure must not affect extraction
+        }
+      });
+
       // Persist results
       await step.run("persist-results", async () => {
         const rawEntries = Array.isArray(taxGl.mapped.entries) ? taxGl.mapped.entries : [];
