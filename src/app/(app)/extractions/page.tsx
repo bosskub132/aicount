@@ -17,6 +17,11 @@ import {
 } from "lucide-react";
 import { useDocument } from "@/lib/hooks/use-documents";
 import { useToast } from "@/lib/stores/ui-store";
+import { SuggestionPill } from "@/components/suggestion-pill";
+import { SuggestionBanner } from "@/components/suggestion-banner";
+import { DuplicateWarningBanner } from "@/components/duplicate-warning-banner";
+import { DuplicateCompareModal } from "@/components/duplicate-compare-modal";
+import { useSuggestions } from "@/lib/hooks/use-suggestions";
 import { getWorkspaceTenantId } from "@/components/workspace-selector";
 import { DocumentImageViewer } from "@/components/document-image-viewer";
 import { ConfidenceBar } from "@/components/confidence-bar";
@@ -269,6 +274,21 @@ function ExtractionsContent() {
   const [saving, setSaving] = useState(false);
   const [customers, setCustomers] = useState<{ name: string; taxId: string | null }[]>([]);
 
+  const {
+    suggestions,
+    duplicates,
+    isLoading: suggestionsLoading,
+    acceptSuggestion,
+    dismissSuggestion,
+    acceptAll,
+    clearAll,
+    dismissDuplicate,
+    getBatchOutcomes,
+  } = useSuggestions(doc?.id);
+
+  const [compareModalOpen, setCompareModalOpen] = useState(false);
+  const [comparingDuplicate, setComparingDuplicate] = useState<(typeof duplicates)[number] | null>(null);
+
   const hasEdits = Object.keys(editValues).length > 0;
 
   /* Derived data from document */
@@ -308,6 +328,30 @@ function ExtractionsContent() {
   const onFieldChange = useCallback((key: string, value: string) => {
     setEditValues((prev) => ({ ...prev, [key]: value }));
   }, []);
+
+  function getSuggestionForField(fieldName: string) {
+    return suggestions.find((s) => s.fieldName === fieldName);
+  }
+
+  function handleAcceptSuggestion(suggestionId: string) {
+    const suggestion = suggestions.find((s) => s.id === suggestionId);
+    if (!suggestion) return;
+    setEditValues((prev) => ({
+      ...prev,
+      [suggestion.fieldName]: suggestion.suggestedValue,
+    }));
+    acceptSuggestion(suggestionId);
+  }
+
+  function handleAcceptAll() {
+    for (const s of suggestions) {
+      setEditValues((prev) => ({
+        ...prev,
+        [s.fieldName]: s.suggestedValue,
+      }));
+    }
+    acceptAll();
+  }
 
   const buyerName = val("customerName", ocr.customer?.name) || null;
   const buyerTaxId = val("customerTaxId", doc?.customerTaxId ?? ocr.customer?.tax_id) || null;
@@ -373,6 +417,8 @@ function ExtractionsContent() {
         };
       }
 
+      const { suggestionOutcomes, duplicateOutcomes: dupOutcomes } = getBatchOutcomes();
+
       const res = await fetch(`/api/documents/${doc.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json", "x-tenant-id": tenantId },
@@ -395,6 +441,8 @@ function ExtractionsContent() {
           ...(editValues.referencePo !== undefined && { referencePo: editValues.referencePo }),
           ...(editValues.creditDueDate !== undefined && { creditDueDate: editValues.creditDueDate }),
           ocrRaw: updatedOcrRaw,
+          suggestionOutcomes: suggestionOutcomes.length > 0 ? suggestionOutcomes : undefined,
+          duplicateOutcomes: dupOutcomes.length > 0 ? dupOutcomes : undefined,
         }),
       });
       const json = await res.json();
@@ -598,6 +646,20 @@ function ExtractionsContent() {
 
           {/* Sections */}
           <div>
+            <DuplicateWarningBanner
+              duplicates={duplicates}
+              onCompare={(dup) => {
+                setComparingDuplicate(dup);
+                setCompareModalOpen(true);
+              }}
+              onDismiss={dismissDuplicate}
+            />
+            <SuggestionBanner
+              count={suggestions.length}
+              onAcceptAll={handleAcceptAll}
+              onClearAll={clearAll}
+            />
+
             {/* --- Issuer Information --- */}
             <Section
               icon={<User className="h-4 w-4 text-[var(--muted-foreground)]" />}
@@ -755,6 +817,22 @@ function ExtractionsContent() {
                       {doc.docType || ocr.document?.document_type || <span className="text-[var(--muted-foreground)]">Not extracted</span>}
                     </p>
                   )}
+                  {(() => {
+                    const suggestion = getSuggestionForField("docType");
+                    if (!suggestion) return null;
+                    return (
+                      <SuggestionPill
+                        id={suggestion.id}
+                        displayLabel={
+                          (suggestion.sourceContext?.displayLabel as string) ??
+                          suggestion.suggestedValue
+                        }
+                        confidence={suggestion.confidence}
+                        onAccept={handleAcceptSuggestion}
+                        onDismiss={dismissSuggestion}
+                      />
+                    );
+                  })()}
                 </Field>
                 <Field label="Direction / ประเภท">
                   {canEdit ? (
@@ -769,6 +847,22 @@ function ExtractionsContent() {
                       {doc.direction || <span className="text-[var(--muted-foreground)]">Not extracted</span>}
                     </p>
                   )}
+                  {(() => {
+                    const suggestion = getSuggestionForField("direction");
+                    if (!suggestion) return null;
+                    return (
+                      <SuggestionPill
+                        id={suggestion.id}
+                        displayLabel={
+                          (suggestion.sourceContext?.displayLabel as string) ??
+                          suggestion.suggestedValue
+                        }
+                        confidence={suggestion.confidence}
+                        onAccept={handleAcceptSuggestion}
+                        onDismiss={dismissSuggestion}
+                      />
+                    );
+                  })()}
                 </Field>
                 <Field label="Journal Type / ประเภทบันทึก">
                   {canEdit ? (
@@ -944,6 +1038,30 @@ function ExtractionsContent() {
           </div>
         </div>
       </div>
+
+      <DuplicateCompareModal
+        isOpen={compareModalOpen}
+        onClose={() => setCompareModalOpen(false)}
+        duplicate={comparingDuplicate}
+        currentDoc={
+          doc
+            ? {
+                issuerName: doc.issuerName,
+                documentNumber: doc.documentNumber,
+                documentDate: doc.documentDate,
+                grandTotal: doc.grandTotal,
+                status: doc.status,
+              }
+            : null
+        }
+        onDismiss={(id) => {
+          dismissDuplicate(id);
+          setCompareModalOpen(false);
+        }}
+        onViewOriginal={(docId) => {
+          router.push(`/extractions?docId=${docId}`);
+        }}
+      />
     </div>
   );
 }
