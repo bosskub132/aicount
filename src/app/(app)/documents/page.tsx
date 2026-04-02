@@ -3,6 +3,7 @@
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useDocuments, useDocumentMutations } from "@/lib/hooks/use-documents";
+import { useMounted } from "@/lib/hooks/use-mounted";
 import { useToast } from "@/lib/stores/ui-store";
 import { getWorkspaceTenantId } from "@/components/workspace-selector";
 import { Tabs } from "@/components/tabs";
@@ -40,6 +41,8 @@ function DocumentsPageContent() {
   const router = useRouter();
   const toast = useToast();
   const tenantId = getWorkspaceTenantId();
+
+  const mounted = useMounted();
 
   // Tab from URL - sync with searchParams
   const urlTab = searchParams.get("tab") || "all";
@@ -91,11 +94,14 @@ function DocumentsPageContent() {
   }, [tenantId]);
 
   // Fetch all documents once — filter by tab client-side
-  const { data, isLoading } = useDocuments({
+  const { data, isLoading: queryLoading } = useDocuments({
     page,
     limit: 100,
     search: debouncedSearch || undefined,
   });
+
+  // Show loading until mounted (hydration-safe) and query is done
+  const isLoading = !mounted || queryLoading;
 
   const allRows = useMemo(() => (data?.data ?? []) as Record<string, unknown>[], [data]);
 
@@ -109,7 +115,10 @@ function DocumentsPageContent() {
 
   const meta = data?.meta ?? { total: 0, page: 1, limit: 100, totalPages: 1 };
 
-  const { submit, approve, reject, reOcr } = useDocumentMutations();
+  const { submit, approve, reject, reOcr, deleteDoc } = useDocumentMutations();
+
+  // Delete confirmation
+  const [deleteModal, setDeleteModal] = useState<{ docId: string } | null>(null);
 
   // Column definitions
   const columns: Column<Record<string, unknown>>[] = useMemo(
@@ -246,6 +255,8 @@ function DocumentsPageContent() {
         } else if (action === "re-ocr") {
           await reOcr.mutateAsync(docId);
           toast.info("Re-processing OCR...");
+        } else if (action === "delete") {
+          setDeleteModal({ docId });
         }
       } catch (err) {
         toast.error(err instanceof Error ? err.message : "Action failed");
@@ -268,6 +279,18 @@ function DocumentsPageContent() {
       toast.error(err instanceof Error ? err.message : "Reject failed");
     }
   }, [rejectModal, rejectComment, reject, toast]);
+
+  const handleDeleteConfirm = useCallback(async () => {
+    if (!deleteModal) return;
+    try {
+      await deleteDoc.mutateAsync(deleteModal.docId);
+      toast.success("Document deleted");
+      setDeleteModal(null);
+      setSelectedDocId(null);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Delete failed");
+    }
+  }, [deleteModal, deleteDoc, toast]);
 
   const handleBulkApprove = useCallback(async () => {
     let successCount = 0;
@@ -299,63 +322,65 @@ function DocumentsPageContent() {
     []
   );
 
-  // Loading skeleton
-  if (isLoading) {
-    return (
-      <div className="space-y-5 p-6">
-        <div className="flex items-center justify-between">
-          <Skeleton variant="text" width="200px" height="28px" />
-          <Skeleton variant="rect" width="200px" height="36px" />
-        </div>
-        <Skeleton variant="rect" width="100%" height="44px" />
-        <div className="space-y-2">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <Skeleton key={i} variant="rect" width="100%" height="48px" />
-          ))}
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="flex h-full">
       {/* Main content area */}
       <div className="flex-1 flex flex-col min-w-0 p-6 gap-5">
         {/* Header */}
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h1 className="text-xl font-semibold text-[var(--foreground)]">Documents</h1>
-            <p className="text-sm text-[var(--muted-foreground)]">
-              {meta.total} document{meta.total !== 1 ? "s" : ""}
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--muted-foreground)]" />
-              <Input
-                value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value);
-                  setPage(1);
-                }}
-                placeholder="Search issuer, doc number..."
-                className="pl-9 w-64"
-              />
-            </div>
-            <Button
-              icon={<Upload className="h-4 w-4" />}
-              onClick={() => router.push("/upload")}
-            >
-              Upload
-            </Button>
-          </div>
+          {isLoading ? (
+            <>
+              <Skeleton variant="text" width="200px" height="28px" />
+              <Skeleton variant="rect" width="200px" height="36px" />
+            </>
+          ) : (
+            <>
+              <div>
+                <h1 className="text-xl font-semibold text-[var(--foreground)]">Documents</h1>
+                <p className="text-sm text-[var(--muted-foreground)]">
+                  {meta.total} document{meta.total !== 1 ? "s" : ""}
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--muted-foreground)]" />
+                  <Input
+                    value={search}
+                    onChange={(e) => {
+                      setSearch(e.target.value);
+                      setPage(1);
+                    }}
+                    placeholder="Search issuer, doc number..."
+                    className="pl-9 w-64"
+                  />
+                </div>
+                <Button
+                  icon={<Upload className="h-4 w-4" />}
+                  onClick={() => router.push("/upload")}
+                >
+                  Upload
+                </Button>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Tabs */}
-        <Tabs tabs={tabItems} activeTab={activeTab} onChange={handleTabChange} />
+        {isLoading ? (
+          <>
+            <Skeleton variant="rect" width="100%" height="44px" />
+            <div className="space-y-2">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <Skeleton key={i} variant="rect" width="100%" height="48px" />
+              ))}
+            </div>
+          </>
+        ) : (
+          <>
+            <Tabs tabs={tabItems} activeTab={activeTab} onChange={handleTabChange} />
 
         {/* DataTable or empty state */}
-        {rows.length === 0 && !isLoading ? (
+        {rows.length === 0 ? (
           <EmptyState
             icon={<FileText className="h-10 w-10" />}
             title={activeTab === "all" ? "No documents yet" : `No ${STATUS_TABS.find((t) => t.id === activeTab)?.label.toLowerCase() || ""} documents`}
@@ -410,6 +435,8 @@ function DocumentsPageContent() {
             </Button>
           </div>
         )}
+          </>
+        )}
       </div>
 
       {/* Side panel */}
@@ -460,6 +487,31 @@ function DocumentsPageContent() {
             rows={3}
           />
         </div>
+      </Modal>
+
+      {/* Delete confirmation modal */}
+      <Modal
+        open={!!deleteModal}
+        onClose={() => setDeleteModal(null)}
+        title="Delete Document"
+        actions={
+          <>
+            <Button variant="secondary" onClick={() => setDeleteModal(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              loading={deleteDoc.isPending}
+              onClick={handleDeleteConfirm}
+            >
+              Delete Permanently
+            </Button>
+          </>
+        }
+      >
+        <p className="text-sm text-[var(--muted-foreground)]">
+          This document will be permanently deleted. This action cannot be undone.
+        </p>
       </Modal>
     </div>
   );

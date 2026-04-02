@@ -7,6 +7,7 @@ import { DailyCostChart } from "@/components/daily-cost-chart";
 import { TierDistributionChart } from "@/components/tier-distribution-chart";
 import { useBackofficeAnalytics, useBackofficeTenantUsage } from "@/lib/hooks/use-backoffice";
 import { useQuery } from "@tanstack/react-query";
+import { useMounted } from "@/lib/hooks/use-mounted";
 
 function getMonthOptions() {
   const options: { label: string; year: number; month: number }[] = [];
@@ -60,8 +61,11 @@ export default function BackofficeOverviewPage() {
 
   const { year, month } = monthOptions[selectedIndex];
 
-  const { data: analytics, isLoading: analyticsLoading } = useBackofficeAnalytics(year, month);
-  const { data: tenantData, isLoading: tenantLoading } = useBackofficeTenantUsage(year, month, debouncedSearch, page);
+  const mounted = useMounted();
+  const { data: analytics, isLoading: queryAnalyticsLoading } = useBackofficeAnalytics(year, month);
+  const { data: tenantData, isLoading: queryTenantLoading } = useBackofficeTenantUsage(year, month, debouncedSearch, page);
+  const analyticsLoading = !mounted || queryAnalyticsLoading;
+  const tenantLoading = !mounted || queryTenantLoading;
 
   const { data: patternStats } = useQuery<{
     totalPatterns: number;

@@ -34,6 +34,7 @@ import {
 import { useReceivables } from "@/lib/hooks/use-receivables";
 import { useRecordPayment } from "@/lib/hooks/use-payments";
 import { useToast } from "@/lib/stores/ui-store";
+import { useMounted } from "@/lib/hooks/use-mounted";
 import { formatCurrency, formatDate } from "@/lib/utils/format";
 import { exportToCsv } from "@/lib/utils/csv-export";
 
@@ -187,6 +188,7 @@ export default function ReceivablesPage() {
 // ---------------------------------------------------------------------------
 
 function ReceivablesPageContent() {
+  const mounted = useMounted();
   const toast = useToast();
   const tenantId = getWorkspaceTenantId();
   const isDefault = isDefaultWorkspaceTenantId(tenantId);
@@ -242,7 +244,7 @@ function ReceivablesPageContent() {
   }, []);
 
   // Data fetching
-  const { data, isLoading, isError } = useReceivables(tenantId, {
+  const { data, isLoading: queryLoading, isError } = useReceivables(tenantId, {
     status: statusFilter || undefined,
     dateFrom: dateFrom || undefined,
     dateTo: dateTo || undefined,
@@ -250,6 +252,7 @@ function ReceivablesPageContent() {
     limit: 20,
     search: debouncedSearch || undefined,
   });
+  const isLoading = !mounted || queryLoading;
 
   const recordPaymentMutation = useRecordPayment(tenantId);
 

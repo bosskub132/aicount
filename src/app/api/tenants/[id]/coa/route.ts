@@ -24,7 +24,7 @@ export async function GET(
     where = and(where, or(ilike(chartOfAccounts.accountCode, `%${search}%`), ilike(chartOfAccounts.accountName, `%${search}%`)));
   }
 
-  const [countResult] = await db.select({ count: sql<number>`count(*)` }).from(chartOfAccounts).where(where);
+  const [countResult] = await db.select({ count: sql<number>`count(*)::int` }).from(chartOfAccounts).where(where);
   const total = Number(countResult.count);
   const rows = await db.select().from(chartOfAccounts).where(where).limit(limit).offset(offset).orderBy(chartOfAccounts.accountCode);
 

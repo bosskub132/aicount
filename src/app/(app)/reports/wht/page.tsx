@@ -38,6 +38,7 @@ import {
   useBatchGenerateWht,
 } from "@/lib/hooks/use-wht-certificates";
 import { useWhtUncertified } from "@/lib/hooks/use-wht-uncertified";
+import { useMounted } from "@/lib/hooks/use-mounted";
 import { useToast } from "@/lib/stores/ui-store";
 import { formatCurrency, formatDate } from "@/lib/utils/format";
 
@@ -283,17 +284,20 @@ function CertificateLogTab({
   const [showPdfPreview, setShowPdfPreview] = useState(false);
   const [voidTarget, setVoidTarget] = useState<WhtCertificateRow | null>(null);
 
-  const { data, isLoading } = useWhtCertificates({
+  const mounted = useMounted();
+  const { data, isLoading: queryLoading } = useWhtCertificates({
     period,
     search: search || undefined,
     status: statusFilter || undefined,
     page,
     limit: PAGE_SIZE,
   });
+  const isLoading = !mounted || queryLoading;
 
-  const { data: stats, isLoading: statsLoading } = useWhtCertificateStats({
+  const { data: stats, isLoading: statsQueryLoading } = useWhtCertificateStats({
     period,
   });
+  const statsLoading = !mounted || statsQueryLoading;
 
   const voidCert = useVoidWhtCertificate();
 
@@ -569,7 +573,9 @@ function BulkGenerateTab({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showConfirm, setShowConfirm] = useState(false);
 
-  const { data, isLoading } = useWhtUncertified({ period });
+  const mounted = useMounted();
+  const { data, isLoading: queryLoading } = useWhtUncertified({ period });
+  const isLoading = !mounted || queryLoading;
   const batchGenerate = useBatchGenerateWht();
   const toast = useToast();
 

@@ -33,7 +33,7 @@ export async function GET(
           yearMonth: sql<string>`to_char(${documents.documentDate}::date, 'YYYY-MM')`,
           revenueAmount: sql<number>`coalesce(sum(case when ${documents.direction}='REVENUE' then ${documents.grandTotal}::numeric else 0 end),0)`,
           expenseAmount: sql<number>`coalesce(sum(case when ${documents.direction}='EXPENSE' then ${documents.grandTotal}::numeric else 0 end),0)`,
-          docCount: sql<number>`count(*)`,
+          docCount: sql<number>`count(*)::int`,
         })
         .from(documents)
         .where(
@@ -87,7 +87,7 @@ export async function GET(
         yearMonth: sql<string>`to_char(${documents.documentDate}::date, 'YYYY-MM')`,
         revenueAmount: sql<number>`coalesce(sum(case when ${documents.direction}='REVENUE' then ${documents.grandTotal}::numeric else 0 end),0)`,
         expenseAmount: sql<number>`coalesce(sum(case when ${documents.direction}='EXPENSE' then ${documents.grandTotal}::numeric else 0 end),0)`,
-        docCount: sql<number>`count(*)`,
+        docCount: sql<number>`count(*)::int`,
       })
       .from(documents)
       .where(

@@ -20,7 +20,7 @@ export async function GET(
       vendorName: sql<string>`coalesce(${vendors.name}, ${documents.issuerName}, 'Unknown Vendor')`,
       totalAmount: sql<number>`coalesce(sum(${documents.grandTotal}),0)`,
       totalVat: sql<number>`coalesce(sum(${documents.vatAmount}),0)`,
-      docCount: sql<number>`count(*)`,
+      docCount: sql<number>`count(*)::int`,
     })
     .from(documents)
     .leftJoin(vendors, and(eq(vendors.tenantId, documents.tenantId), eq(vendors.taxId, documents.issuerTaxId)))

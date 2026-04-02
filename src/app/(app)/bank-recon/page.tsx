@@ -2,6 +2,7 @@
 
 import { Suspense, useCallback, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { useMounted } from "@/lib/hooks/use-mounted";
 import {
   Landmark,
   Check,
@@ -80,6 +81,7 @@ interface ReconData {
 // ---------------------------------------------------------------------------
 
 function BankReconContent() {
+  const mounted = useMounted();
   const tenantId = getWorkspaceTenantId();
   const searchParams = useSearchParams();
   const paramStatementId = searchParams.get("statementId");
@@ -93,10 +95,12 @@ function BankReconContent() {
   const deleteMatch = useDeleteMatch(tenantId);
   const bulkConfirm = useBulkConfirm(tenantId);
 
-  const { data: reconData, isLoading, isError } = useBankRecon(
+  const { data: reconData, isLoading: queryLoading, isError } = useBankRecon(
     tenantId,
     selectedStatementId || null,
   );
+
+  const isLoading = !mounted || queryLoading;
 
   const data = reconData as ReconData | undefined;
 

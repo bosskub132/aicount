@@ -2,9 +2,12 @@
 
 import { Skeleton } from "@/components/skeleton";
 import { useBackofficeTenants } from "@/lib/hooks/use-backoffice";
+import { useMounted } from "@/lib/hooks/use-mounted";
 
 export default function BackofficeTenantsPage() {
-  const { data: tenants, isLoading } = useBackofficeTenants();
+  const mounted = useMounted();
+  const { data: tenants, isLoading: queryLoading } = useBackofficeTenants();
+  const isLoading = !mounted || queryLoading;
 
   return (
     <div className="p-6 space-y-6">

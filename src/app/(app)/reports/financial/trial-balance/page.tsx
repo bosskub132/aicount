@@ -12,6 +12,7 @@ import { EmptyState } from "@/components/empty-state";
 import { Skeleton } from "@/components/skeleton";
 
 import { useTrialBalance } from "@/lib/hooks/use-trial-balance";
+import { useMounted } from "@/lib/hooks/use-mounted";
 import {
   useReportHistory,
   useLockReport,
@@ -65,11 +66,15 @@ function TrialBalanceContent() {
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [historyFilter, setHistoryFilter] = useState<"all" | "locked" | "drafts" | "trash">("all");
 
-  const { data, isLoading } = useTrialBalance({
+  const mounted = useMounted();
+
+  const { data, isLoading: queryLoading } = useTrialBalance({
     period,
     scope,
     department: department !== "all" ? department : undefined,
   });
+
+  const isLoading = !mounted || queryLoading;
 
   const reportData = data as TrialBalanceData | undefined;
 

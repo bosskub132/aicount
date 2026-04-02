@@ -77,10 +77,10 @@ export async function GET(request: NextRequest) {
     db
       .select({
         total: count(),
-        graduated: sql<number>`COUNT(*) FILTER (WHERE ${aiExtractionRules.isGraduated} = true)`,
-        prompt: sql<number>`COUNT(*) FILTER (WHERE ${aiExtractionRules.isGraduated} = false AND ${aiExtractionRules.confidence} >= '0.50')`,
-        low: sql<number>`COUNT(*) FILTER (WHERE ${aiExtractionRules.confidence} < '0.50')`,
-        tenantCount: sql<number>`COUNT(DISTINCT ${aiExtractionRules.tenantId})`,
+        graduated: sql<number>`COUNT(*) FILTER (WHERE ${aiExtractionRules.isGraduated} = true)::int`,
+        prompt: sql<number>`COUNT(*) FILTER (WHERE ${aiExtractionRules.isGraduated} = false AND ${aiExtractionRules.confidence} >= '0.50')::int`,
+        low: sql<number>`COUNT(*) FILTER (WHERE ${aiExtractionRules.confidence} < '0.50')::int`,
+        tenantCount: sql<number>`COUNT(DISTINCT ${aiExtractionRules.tenantId})::int`,
       })
       .from(aiExtractionRules),
   ]);

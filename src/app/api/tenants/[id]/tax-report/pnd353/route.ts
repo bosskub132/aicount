@@ -23,7 +23,7 @@ export async function GET(
     .select({
       rate: sql<string>`coalesce(((${documents.ocrRaw} -> 'wht' ->> 'rate')), '0')`,
       totalWht: sql<number>`coalesce(sum(${documents.whtAmount}),0)`,
-      count: sql<number>`count(*)`,
+      count: sql<number>`count(*)::int`,
     })
     .from(documents)
     .where(

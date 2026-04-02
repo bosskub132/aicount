@@ -1,7 +1,7 @@
 // src/components/document-side-panel.tsx
 "use client";
 
-import { X } from "lucide-react";
+import { X, Trash2 } from "lucide-react";
 import { useDocument } from "@/lib/hooks/use-documents";
 import { ConfidenceBar } from "@/components/confidence-bar";
 import { StatusBadge } from "@/components/badge";
@@ -104,6 +104,11 @@ export function DocumentSidePanel({ documentId, onClose, onAction }: DocumentSid
           {doc.status === "QUERY" && (
             <Button variant="secondary" size="sm" className="w-full" onClick={() => onAction?.("re-ocr", doc.id)}>
               Re-process OCR
+            </Button>
+          )}
+          {(doc.status === "OCR_PROCESSING" || doc.status === "DRAFT") && (
+            <Button variant="destructive" size="sm" className="w-full" icon={<Trash2 className="h-4 w-4" />} onClick={() => onAction?.("delete", doc.id)}>
+              Delete Document
             </Button>
           )}
           {doc.status === "PENDING_APPROVAL" && (

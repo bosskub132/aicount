@@ -110,5 +110,18 @@ export function useDocumentMutations() {
     onSuccess: invalidate,
   });
 
-  return { submit, approve, reject, reOcr };
+  const deleteDoc = useMutation({
+    mutationFn: async (docId: string) => {
+      const res = await fetch(`/api/documents/${docId}?tenantId=${tenantId}`, {
+        method: "DELETE",
+        headers,
+      });
+      const json = await res.json();
+      if (!json.success) throw new Error(json.error);
+      return json;
+    },
+    onSuccess: invalidate,
+  });
+
+  return { submit, approve, reject, reOcr, deleteDoc };
 }

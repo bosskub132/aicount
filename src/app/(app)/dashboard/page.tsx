@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   LineChart,
@@ -36,6 +36,7 @@ import {
   useStatusBreakdown,
   useApprovalQueue,
 } from "@/lib/hooks/use-dashboard";
+import { useMounted } from "@/lib/hooks/use-mounted";
 import { useDocuments, useDocumentMutations } from "@/lib/hooks/use-documents";
 import { useToast } from "@/lib/stores/ui-store";
 
@@ -75,11 +76,9 @@ type DocRow = Record<string, unknown>;
 
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState("summary");
-  const [mounted, setMounted] = useState(false);
+  const mounted = useMounted();
   const router = useRouter();
   const toast = useToast();
-
-  useEffect(() => setMounted(true), []);
 
   const tenantId = getWorkspaceTenantId();
   const isDefault = isDefaultWorkspaceTenantId(tenantId);
@@ -309,7 +308,7 @@ export default function DashboardPage() {
     },
   ];
 
-  const isLoading = monthly.isLoading || statusBreakdown.isLoading;
+  const isLoading = !mounted || monthly.isLoading || statusBreakdown.isLoading;
 
   if (!mounted) {
     return (
@@ -462,7 +461,7 @@ export default function DashboardPage() {
 
           {/* Recent Documents */}
           <Card title="Recent Documents">
-            {recentDocs.isLoading ? (
+            {(!mounted || recentDocs.isLoading) ? (
               <div className="space-y-2">
                 {Array.from({ length: 5 }).map((_, i) => (
                   <Skeleton key={i} variant="text" height="20px" />
@@ -563,7 +562,7 @@ export default function DashboardPage() {
         <div className="space-y-5">
           {/* Pending approvals */}
           <Card title="Pending Approvals">
-            {approvalQueue.isLoading ? (
+            {(!mounted || approvalQueue.isLoading) ? (
               <div className="space-y-2">
                 {Array.from({ length: 3 }).map((_, i) => (
                   <Skeleton key={i} variant="text" height="20px" />
@@ -581,7 +580,7 @@ export default function DashboardPage() {
 
           {/* Query documents */}
           <Card title="Query Documents">
-            {queryDocs.isLoading ? (
+            {(!mounted || queryDocs.isLoading) ? (
               <div className="space-y-2">
                 {Array.from({ length: 3 }).map((_, i) => (
                   <Skeleton key={i} variant="text" height="20px" />
@@ -599,7 +598,7 @@ export default function DashboardPage() {
 
           {/* Stuck action required */}
           <Card title="Stuck Documents (Action Required > 3 days)">
-            {actionRequiredDocs.isLoading ? (
+            {(!mounted || actionRequiredDocs.isLoading) ? (
               <div className="space-y-2">
                 {Array.from({ length: 3 }).map((_, i) => (
                   <Skeleton key={i} variant="text" height="20px" />

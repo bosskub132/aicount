@@ -21,13 +21,15 @@ export async function GET(request: NextRequest) {
       budgetAlertThreshold: tenants.budgetAlertThreshold,
       createdAt: tenants.createdAt,
       deletedAt: tenants.deletedAt,
-      memberCount: sql<number>`(SELECT COUNT(*) FROM tenant_assignments WHERE tenant_id = ${tenants.id})`,
-      documentCount: sql<number>`(SELECT COUNT(*) FROM documents WHERE tenant_id = ${tenants.id})`,
+      memberCount: sql<number>`(SELECT count(*)::int FROM tenant_assignments WHERE tenant_assignments.tenant_id = "tenants"."id")`,
+      documentCount: sql<number>`(SELECT count(*)::int FROM documents WHERE documents.tenant_id = "tenants"."id")`,
     })
     .from(tenants);
 
   const data = rows.map((row) => ({
     ...row,
+    memberCount: Number(row.memberCount) || 0,
+    documentCount: Number(row.documentCount) || 0,
     monthlyBudgetUsd: row.monthlyBudgetUsd !== null ? Number(row.monthlyBudgetUsd) : null,
   }));
 

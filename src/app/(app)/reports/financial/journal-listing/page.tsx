@@ -15,6 +15,7 @@ import { EmptyState } from "@/components/empty-state";
 import { Skeleton } from "@/components/skeleton";
 
 import { useJournalListing } from "@/lib/hooks/use-journal-listing";
+import { useMounted } from "@/lib/hooks/use-mounted";
 import {
   useReportHistory,
   useLockReport,
@@ -75,6 +76,7 @@ const TYPE_OPTIONS = [
 // ---------------------------------------------------------------------------
 
 function JournalListingContent() {
+  const mounted = useMounted();
   const [scope, setScope] = useState<"monthly" | "quarterly" | "yearly">("monthly");
   const [period, setPeriod] = useState(() => {
     const now = new Date();
@@ -88,7 +90,7 @@ function JournalListingContent() {
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [historyFilter, setHistoryFilter] = useState<"all" | "locked" | "drafts" | "trash">("all");
 
-  const { data, isLoading } = useJournalListing({
+  const { data, isLoading: queryLoading } = useJournalListing({
     period,
     scope,
     type: journalType || undefined,
@@ -96,6 +98,7 @@ function JournalListingContent() {
     limit: PAGE_SIZE,
   });
 
+  const isLoading = !mounted || queryLoading;
   const reportData = data as JournalListingData | undefined;
 
   const history = useReportHistory({ reportType: "journal-listing" });

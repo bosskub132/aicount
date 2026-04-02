@@ -13,6 +13,7 @@ import { EmptyState } from "@/components/empty-state";
 import { Skeleton } from "@/components/skeleton";
 
 import { useTaxPp36 } from "@/lib/hooks/use-tax-pp36";
+import { useMounted } from "@/lib/hooks/use-mounted";
 import {
   useReportHistory,
   useLockReport,
@@ -68,7 +69,9 @@ function Pp36Content() {
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [historyFilter, setHistoryFilter] = useState<"all" | "locked" | "drafts" | "trash">("all");
 
-  const { data, isLoading } = useTaxPp36({ period });
+  const mounted = useMounted();
+  const { data, isLoading: queryLoading } = useTaxPp36({ period });
+  const isLoading = !mounted || queryLoading;
   const reportData = data as Pp36Data | undefined;
 
   const history = useReportHistory({ reportType: "pp36" });

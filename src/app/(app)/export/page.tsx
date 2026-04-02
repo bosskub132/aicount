@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useMounted } from "@/lib/hooks/use-mounted";
 import {
   Download,
   FileSpreadsheet,
@@ -258,6 +259,7 @@ function makeHistoryColumns(
 
 export default function ExportPage() {
   const toast = useToast();
+  const mounted = useMounted();
 
   // Page-level state
   const [activePageTab, setActivePageTab] = useState("export");
@@ -272,14 +274,16 @@ export default function ExportPage() {
   // Data fetching
   const {
     data: templates = [] as TemplateCard[],
-    isLoading: templatesLoading,
+    isLoading: queryTemplatesLoading,
   } = useExportTemplates();
+
+  const templatesLoading = !mounted || queryTemplatesLoading;
 
   const tenantId = getWorkspaceTenantId();
 
   const {
     data: templateDocs,
-    isLoading: docsLoading,
+    isLoading: queryDocsLoading,
   } = useQuery<{ groups: DocGroups }>({
     queryKey: ["export-template-docs", tenantId, selectedTemplateId],
     queryFn: async () => {
@@ -293,10 +297,14 @@ export default function ExportPage() {
     enabled: !!selectedTemplateId && !!tenantId,
   });
 
+  const docsLoading = !mounted || queryDocsLoading;
+
   const {
     data: historyData = [] as HistoryRow[],
-    isLoading: historyLoading,
+    isLoading: queryHistoryLoading,
   } = useExportHistory();
+
+  const historyLoading = !mounted || queryHistoryLoading;
 
   const exportMutation = useExportMutation();
 

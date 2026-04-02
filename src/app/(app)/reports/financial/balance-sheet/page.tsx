@@ -3,6 +3,7 @@
 import { Suspense, useState, useCallback, useMemo } from "react";
 import { ArrowLeft, Download, FileText, CheckCircle, AlertTriangle } from "lucide-react";
 
+import { useMounted } from "@/lib/hooks/use-mounted";
 import { ReportFilterBar } from "@/components/report-filter-bar";
 import { ReportStatCards } from "@/components/report-stat-cards";
 import { PdfPreviewModal } from "@/components/pdf-preview-modal";
@@ -74,11 +75,15 @@ function BalanceSheetContent() {
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [historyFilter, setHistoryFilter] = useState<"all" | "locked" | "drafts" | "trash">("all");
 
-  const { data, isLoading } = useBalanceSheet({
+  const mounted = useMounted();
+
+  const { data, isLoading: queryLoading } = useBalanceSheet({
     period,
     scope,
     comparison: comparison !== "none" ? comparison : undefined,
   });
+
+  const isLoading = !mounted || queryLoading;
 
   const reportData = data as BsData | undefined;
   const hasComparison = comparison !== "none";

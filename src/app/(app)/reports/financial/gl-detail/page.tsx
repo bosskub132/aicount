@@ -15,6 +15,7 @@ import { EmptyState } from "@/components/empty-state";
 import { Skeleton } from "@/components/skeleton";
 
 import { useGlDetail } from "@/lib/hooks/use-gl-detail";
+import { useMounted } from "@/lib/hooks/use-mounted";
 import {
   useReportHistory,
   useLockReport,
@@ -110,13 +111,17 @@ function GlDetailContent() {
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [historyFilter, setHistoryFilter] = useState<"all" | "locked" | "drafts" | "trash">("all");
 
-  const { data, isLoading } = useGlDetail({
+  const mounted = useMounted();
+
+  const { data, isLoading: queryLoading } = useGlDetail({
     period,
     scope,
     account,
     page,
     limit: PAGE_SIZE,
   });
+
+  const isLoading = !mounted || queryLoading;
 
   const reportData = data as GlDetailData | undefined;
 

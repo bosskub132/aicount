@@ -12,6 +12,7 @@ import { EmptyState } from "@/components/empty-state";
 import { Skeleton } from "@/components/skeleton";
 
 import { useProfitLoss } from "@/lib/hooks/use-profit-loss";
+import { useMounted } from "@/lib/hooks/use-mounted";
 import {
   useReportHistory,
   useLockReport,
@@ -66,6 +67,7 @@ function formatExpenseAmount(amount: number): string {
 // ---------------------------------------------------------------------------
 
 function ProfitLossContent() {
+  const mounted = useMounted();
   const [scope, setScope] = useState<"monthly" | "quarterly" | "yearly">("monthly");
   const [period, setPeriod] = useState(() => {
     const now = new Date();
@@ -78,12 +80,13 @@ function ProfitLossContent() {
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [historyFilter, setHistoryFilter] = useState<"all" | "locked" | "drafts" | "trash">("all");
 
-  const { data, isLoading } = useProfitLoss({
+  const { data, isLoading: queryLoading } = useProfitLoss({
     period,
     scope,
     department: department !== "all" ? department : undefined,
     comparison: comparison !== "none" ? comparison : undefined,
   });
+  const isLoading = !mounted || queryLoading;
 
   const reportData = data as PnlData | undefined;
   const hasComparison = comparison !== "none";

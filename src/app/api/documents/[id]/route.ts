@@ -1,8 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { and, eq } from "drizzle-orm";
+import { and, eq, or } from "drizzle-orm";
+import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { documents } from "@/lib/db/schema";
+import { documents, aiSuggestions, aiDuplicateCandidates, aiUsageLogs, journalEntries } from "@/lib/db/schema";
 import {
   ensureRole,
   ensureTenantScope,
@@ -229,6 +230,87 @@ export async function PATCH(
   } catch (error) {
     return NextResponse.json(
       { success: false, error: error instanceof Error ? error.message : "Patch failed" },
+      { status: 500 }
+    );
+  }
+}
+
+const DELETABLE_STATUSES = new Set(["OCR_PROCESSING", "DRAFT"]);
+
+export async function DELETE(
+  request: Request,
+  context: { params: Promise<{ id: string }> }
+) {
+  try {
+    const ctx = getRequestContext(request);
+    if (!ctx) return unauthorized();
+
+    const { id } = await context.params;
+    const url = new URL(request.url);
+    const tenantId = url.searchParams.get("tenantId");
+
+    if (!tenantId) {
+      return NextResponse.json({ success: false, error: "tenantId is required" }, { status: 400 });
+    }
+    if (!ensureTenantScope(ctx.tenantId, tenantId)) return forbidden("Cross-tenant access denied");
+
+    const [doc] = await db
+      .select({ id: documents.id, status: documents.status, fileUrl: documents.fileUrl })
+      .from(documents)
+      .where(and(eq(documents.id, id), eq(documents.tenantId, tenantId)))
+      .limit(1);
+
+    if (!doc) {
+      return NextResponse.json({ success: false, error: "Document not found" }, { status: 404 });
+    }
+
+    if (!DELETABLE_STATUSES.has(doc.status)) {
+      return NextResponse.json(
+        { success: false, error: "Only OCR_PROCESSING or DRAFT documents can be deleted" },
+        { status: 400 }
+      );
+    }
+
+    // Delete file from Supabase Storage
+    if (doc.fileUrl) {
+      const BUCKET = "documents";
+      const marker = `/storage/v1/object/public/${BUCKET}/`;
+      const idx = doc.fileUrl.indexOf(marker);
+      if (idx !== -1) {
+        const storagePath = decodeURIComponent(doc.fileUrl.slice(idx + marker.length));
+        const supabase = createClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          process.env.SUPABASE_SERVICE_ROLE_KEY!
+        );
+        await supabase.storage.from(BUCKET).remove([storagePath]);
+      }
+    }
+
+    // Clean up related records that don't cascade
+    await db.delete(aiUsageLogs).where(eq(aiUsageLogs.documentId, id));
+    await db.delete(aiSuggestions).where(eq(aiSuggestions.documentId, id));
+    await db.delete(aiDuplicateCandidates).where(
+      or(eq(aiDuplicateCandidates.documentId, id), eq(aiDuplicateCandidates.matchDocumentId, id))
+    );
+    await db.delete(journalEntries).where(eq(journalEntries.sourceDocumentId, id));
+
+    // Delete document (journal_lines cascade via FK)
+    await db.delete(documents).where(eq(documents.id, id));
+
+    await writeAuditLog({
+      tenantId,
+      userId: ctx.userId,
+      action: "document.deleted",
+      entityType: "document",
+      entityId: id,
+      metadata: { previousStatus: doc.status, fileUrl: doc.fileUrl },
+      ipAddress: ctx.ipAddress,
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    return NextResponse.json(
+      { success: false, error: error instanceof Error ? error.message : "Delete failed" },
       { status: 500 }
     );
   }

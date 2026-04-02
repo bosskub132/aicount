@@ -14,6 +14,7 @@ import { EmptyState } from "@/components/empty-state";
 import { Skeleton } from "@/components/skeleton";
 
 import { useTaxPnd53 } from "@/lib/hooks/use-tax-pnd53";
+import { useMounted } from "@/lib/hooks/use-mounted";
 import {
   useReportHistory,
   useLockReport,
@@ -75,7 +76,9 @@ function Pnd53Content() {
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [historyFilter, setHistoryFilter] = useState<"all" | "locked" | "drafts" | "trash">("all");
 
-  const { data, isLoading } = useTaxPnd53({ period });
+  const mounted = useMounted();
+  const { data, isLoading: queryLoading } = useTaxPnd53({ period });
+  const isLoading = !mounted || queryLoading;
   const reportData = data as Pnd53Data | undefined;
 
   const history = useReportHistory({ reportType: "pnd53" });

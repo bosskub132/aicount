@@ -7,6 +7,7 @@ import { DataTable } from "@/components/data-table";
 import { Input } from "@/components/input";
 import { Pagination } from "@/components/pagination";
 import { Badge } from "@/components/badge";
+import { useMounted } from "@/lib/hooks/use-mounted";
 
 interface PatternRow {
   id: string;
@@ -39,7 +40,8 @@ export default function PatternsPage() {
       fetch("/api/backoffice/analytics/patterns").then((r) => r.json()),
   });
 
-  const { data: patterns, isLoading } = useQuery<{
+  const mounted = useMounted();
+  const { data: patterns, isLoading: queryLoading } = useQuery<{
     data: PatternRow[];
     total: number;
   }>({
@@ -174,7 +176,7 @@ export default function PatternsPage() {
         />
       </div>
 
-      {isLoading ? (
+      {(!mounted || queryLoading) ? (
         <div className="flex items-center justify-center py-12">
           <div className="h-6 w-6 animate-spin rounded-full border-2 border-[var(--primary)] border-t-transparent" />
         </div>

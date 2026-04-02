@@ -12,6 +12,7 @@ import { EmptyState } from "@/components/empty-state";
 import { Skeleton } from "@/components/skeleton";
 
 import { useMonthlyComparison } from "@/lib/hooks/use-monthly-comparison";
+import { useMounted } from "@/lib/hooks/use-mounted";
 import {
   useReportHistory,
   useLockReport,
@@ -68,7 +69,9 @@ function MonthlyComparisonContent() {
 
   const year = useMemo(() => parseInt(period.split("-")[0], 10), [period]);
 
-  const { data, isLoading } = useMonthlyComparison({ year });
+  const mounted = useMounted();
+  const { data, isLoading: queryLoading } = useMonthlyComparison({ year });
+  const isLoading = !mounted || queryLoading;
 
   const reportData = data as MonthlyComparisonData | undefined;
   const currentMonth = reportData?.currentMonth ?? 12;

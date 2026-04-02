@@ -32,7 +32,7 @@ export async function GET(
         END
       `,
       totalAmount: sql<number>`sum(${documents.grandTotal})`,
-      count: sql<number>`count(*)`,
+      count: sql<number>`count(*)::int`,
     })
     .from(documents)
     .where(

@@ -12,6 +12,7 @@ import { EmptyState } from "@/components/empty-state";
 import { Skeleton } from "@/components/skeleton";
 
 import { useCashFlow } from "@/lib/hooks/use-cash-flow";
+import { useMounted } from "@/lib/hooks/use-mounted";
 import {
   useReportHistory,
   useLockReport,
@@ -81,11 +82,15 @@ function CashFlowContent() {
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [historyFilter, setHistoryFilter] = useState<"all" | "locked" | "drafts" | "trash">("all");
 
-  const { data, isLoading } = useCashFlow({
+  const mounted = useMounted();
+
+  const { data, isLoading: queryLoading } = useCashFlow({
     period,
     scope,
     comparison: comparison !== "none" ? comparison : undefined,
   });
+
+  const isLoading = !mounted || queryLoading;
 
   const reportData = data as CfData | undefined;
   const hasComparison = comparison !== "none";

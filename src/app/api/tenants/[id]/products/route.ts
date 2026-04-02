@@ -24,7 +24,7 @@ export async function GET(
     where = and(where, or(ilike(products.itemCode, `%${search}%`), ilike(products.itemName, `%${search}%`)));
   }
 
-  const [countResult] = await db.select({ count: sql<number>`count(*)` }).from(products).where(where);
+  const [countResult] = await db.select({ count: sql<number>`count(*)::int` }).from(products).where(where);
   const total = Number(countResult.count);
   const rows = await db.select().from(products).where(where).limit(limit).offset(offset).orderBy(products.itemCode);
 

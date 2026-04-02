@@ -13,6 +13,7 @@ import { EmptyState } from "@/components/empty-state";
 import { Skeleton } from "@/components/skeleton";
 
 import { useVatRegister } from "@/lib/hooks/use-vat-register";
+import { useMounted } from "@/lib/hooks/use-mounted";
 import {
   useReportHistory,
   useLockReport,
@@ -70,7 +71,9 @@ function SalesVatContent() {
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [historyFilter, setHistoryFilter] = useState<"all" | "locked" | "drafts" | "trash">("all");
 
-  const { data, isLoading } = useVatRegister({ period, direction: "REVENUE" });
+  const mounted = useMounted();
+  const { data, isLoading: queryLoading } = useVatRegister({ period, direction: "REVENUE" });
+  const isLoading = !mounted || queryLoading;
   const reportData = data as VatRegisterData | undefined;
 
   const history = useReportHistory({ reportType: "sales-vat" });

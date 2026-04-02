@@ -4,6 +4,7 @@ import { Fragment, useState, useEffect, useRef } from "react";
 import { StatCard } from "@/components/stat-card";
 import { Skeleton } from "@/components/skeleton";
 import { useBackofficeRules, useBackofficeTenants } from "@/lib/hooks/use-backoffice";
+import { useMounted } from "@/lib/hooks/use-mounted";
 
 interface ExtractionRule {
   id: string;
@@ -127,7 +128,9 @@ export default function BackofficeRulesPage() {
     page,
   };
 
-  const { data, isLoading, refetch } = useBackofficeRules(queryFilters);
+  const mounted = useMounted();
+  const { data, isLoading: queryLoading, refetch } = useBackofficeRules(queryFilters);
+  const isLoading = !mounted || queryLoading;
   const { data: tenantsData } = useBackofficeTenants();
 
   const rules: ExtractionRule[] = data?.data ?? [];

@@ -36,6 +36,7 @@ import {
   isDefaultWorkspaceTenantId,
 } from "@/components/workspace-selector";
 import { usePayables } from "@/lib/hooks/use-payables";
+import { useMounted } from "@/lib/hooks/use-mounted";
 import { useRecordPayment } from "@/lib/hooks/use-payments";
 import { useToast } from "@/lib/stores/ui-store";
 import { formatCurrency, formatDate } from "@/lib/utils/format";
@@ -133,6 +134,7 @@ export default function PayablesPage() {
 function PayablesPageContent() {
   const searchParams = useSearchParams();
   const toast = useToast();
+  const mounted = useMounted();
   const tenantId = getWorkspaceTenantId();
   const isDefault = isDefaultWorkspaceTenantId(tenantId);
 
@@ -180,12 +182,13 @@ function PayablesPageContent() {
   });
 
   // Data
-  const { data: rawData, isLoading, error } = usePayables(tenantId, {
+  const { data: rawData, isLoading: queryLoading, error } = usePayables(tenantId, {
     status,
     search: debouncedSearch,
     page,
     limit: 20,
   });
+  const isLoading = !mounted || queryLoading;
 
   const payablesData = rawData as PayablesResponse | undefined;
   const vendors = useMemo(() => payablesData?.data?.vendors ?? [], [payablesData?.data?.vendors]);

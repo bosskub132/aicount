@@ -48,6 +48,7 @@ import {
   usePostJournalEntry,
 } from "@/lib/hooks/use-journal-entries";
 import { useAccountLedger } from "@/lib/hooks/use-account-ledger";
+import { useMounted } from "@/lib/hooks/use-mounted";
 import { useToast } from "@/lib/stores/ui-store";
 import { formatCurrency, formatDate } from "@/lib/utils/format";
 import { exportToCsv } from "@/lib/utils/csv-export";
@@ -198,6 +199,7 @@ export default function LedgerPage() {
 
 function LedgerPageContent() {
   const searchParams = useSearchParams();
+  const mounted = useMounted();
   const toast = useToast();
   const tenantId = getWorkspaceTenantId();
   const isDefault = isDefaultWorkspaceTenantId(tenantId);
@@ -814,7 +816,8 @@ function LedgerPageContent() {
     );
   }
 
-  const isLoading = journalEntries.isLoading;
+  const queryLoading = journalEntries.isLoading;
+  const isLoading = !mounted || queryLoading;
 
   return (
     <section className="space-y-5 p-6">
