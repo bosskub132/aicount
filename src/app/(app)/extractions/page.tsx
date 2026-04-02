@@ -14,6 +14,8 @@ import {
   Package,
   BookOpen,
   AlertTriangle,
+  Trash2,
+  Pencil,
 } from "lucide-react";
 import { useDocument } from "@/lib/hooks/use-documents";
 import { useToast } from "@/lib/stores/ui-store";
@@ -32,6 +34,7 @@ import { Button } from "@/components/button";
 import { Badge, StatusBadge } from "@/components/badge";
 import { Skeleton } from "@/components/skeleton";
 import { compareBuyerName } from "@/lib/services/buyer-name-matcher";
+import { LineItemEditorModal, type LineItemEdit } from "@/components/line-item-editor-modal";
 
 /* ------------------------------------------------------------------ */
 /*  Constants                                                          */
@@ -139,55 +142,103 @@ function ValidationIndicator({ label, isValid, detail }: { label: string; isVali
 /*  Line Items Table                                                   */
 /* ------------------------------------------------------------------ */
 
-function LineItemsTable({ items, currency }: { items: any[]; currency: string }) {
+function LineItemsTable({
+  items,
+  currency,
+  editable,
+  onDelete,
+  onEditAll,
+}: {
+  items: any[];
+  currency: string;
+  editable?: boolean;
+  onDelete?: (index: number) => void;
+  onEditAll?: () => void;
+}) {
   if (!items || items.length === 0) {
     return (
       <div className="flex flex-col items-center gap-1.5 py-6 text-[var(--muted-foreground)]">
         <Package className="h-5 w-5" />
         <span className="text-sm">No line items extracted</span>
+        {editable && onEditAll && (
+          <button
+            type="button"
+            onClick={onEditAll}
+            className="mt-1 text-sm text-[var(--primary)] hover:underline"
+          >
+            + Add line items
+          </button>
+        )}
       </div>
     );
   }
 
   return (
-    <div className="overflow-x-auto rounded-[var(--radius-card)] border border-[var(--border)]">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="bg-[var(--muted)] text-left text-[var(--muted-foreground)]">
-            <th className="w-10 px-3 py-2 text-center font-medium">#</th>
-            <th className="px-3 py-2 font-medium">Description</th>
-            <th className="px-3 py-2 text-right font-medium">Qty</th>
-            <th className="px-3 py-2 text-right font-medium">Unit Price</th>
-            <th className="px-3 py-2 text-right font-medium">Discount</th>
-            <th className="px-3 py-2 text-right font-medium">Total</th>
-          </tr>
-        </thead>
-        <tbody>
-          {items.map((item: any, idx: number) => {
-            const desc = typeof item === "string" ? item : item?.description || item?.name || "-";
-            const qty = item?.quantity ?? item?.qty ?? "";
-            const unitPrice = item?.unit_price ?? item?.price ?? "";
-            const discount = item?.discount;
-            const total = item?.total ?? item?.amount ?? "";
-            return (
-              <tr key={idx} className="border-t border-[var(--border)]">
-                <td className="px-3 py-2 text-center text-[var(--muted-foreground)]">{idx + 1}</td>
-                <td className="px-3 py-2 text-[var(--foreground)]">{desc}</td>
-                <td className="px-3 py-2 text-right text-[var(--foreground)]">{qty}</td>
-                <td className="px-3 py-2 text-right text-[var(--foreground)]">
-                  {unitPrice !== "" ? formatCurrency(unitPrice, currency) || unitPrice : "-"}
-                </td>
-                <td className="px-3 py-2 text-right tabular-nums text-[var(--foreground)]">
-                  {discount != null ? formatCurrency(discount, currency) || String(discount) : "—"}
-                </td>
-                <td className="px-3 py-2 text-right font-medium text-[var(--foreground)]">
-                  {total !== "" ? formatCurrency(total, currency) || total : "-"}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+    <div>
+      {editable && onEditAll && (
+        <div className="mb-2 flex justify-end">
+          <button
+            type="button"
+            onClick={onEditAll}
+            className="flex items-center gap-1 text-xs font-medium text-[var(--primary)] hover:underline"
+          >
+            <Pencil className="h-3 w-3" />
+            Edit All
+          </button>
+        </div>
+      )}
+      <div className="overflow-x-auto rounded-[var(--radius-card)] border border-[var(--border)]">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="bg-[var(--muted)] text-left text-[var(--muted-foreground)]">
+              <th className="w-10 px-3 py-2 text-center font-medium">#</th>
+              <th className="px-3 py-2 font-medium">Description</th>
+              <th className="px-3 py-2 text-right font-medium">Qty</th>
+              <th className="px-3 py-2 text-right font-medium">Unit Price</th>
+              <th className="px-3 py-2 text-right font-medium">Discount</th>
+              <th className="px-3 py-2 text-right font-medium">Total</th>
+              {editable && onDelete && <th className="w-10 px-3 py-2" />}
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((item: any, idx: number) => {
+              const desc = typeof item === "string" ? item : item?.description || item?.name || "-";
+              const qty = item?.quantity ?? item?.qty ?? "";
+              const unitPrice = item?.unit_price ?? item?.price ?? "";
+              const discount = item?.discount;
+              const total = item?.total ?? item?.amount ?? "";
+              return (
+                <tr key={idx} className="border-t border-[var(--border)]">
+                  <td className="px-3 py-2 text-center text-[var(--muted-foreground)]">{idx + 1}</td>
+                  <td className="px-3 py-2 text-[var(--foreground)]">{desc}</td>
+                  <td className="px-3 py-2 text-right text-[var(--foreground)]">{qty}</td>
+                  <td className="px-3 py-2 text-right text-[var(--foreground)]">
+                    {unitPrice !== "" ? formatCurrency(unitPrice, currency) || unitPrice : "-"}
+                  </td>
+                  <td className="px-3 py-2 text-right tabular-nums text-[var(--foreground)]">
+                    {discount != null ? formatCurrency(discount, currency) || String(discount) : "—"}
+                  </td>
+                  <td className="px-3 py-2 text-right font-medium text-[var(--foreground)]">
+                    {total !== "" ? formatCurrency(total, currency) || total : "-"}
+                  </td>
+                  {editable && onDelete && (
+                    <td className="px-3 py-2 text-center">
+                      <button
+                        type="button"
+                        onClick={() => onDelete(idx)}
+                        className="text-[var(--muted-foreground)] hover:text-[var(--destructive)]"
+                        title="Delete item"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </td>
+                  )}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
@@ -287,8 +338,8 @@ function ExtractionsContent() {
 
   const [compareModalOpen, setCompareModalOpen] = useState(false);
   const [comparingDuplicate, setComparingDuplicate] = useState<(typeof duplicates)[number] | null>(null);
-
-  const hasEdits = Object.keys(editValues).length > 0;
+  const [lineItemModalOpen, setLineItemModalOpen] = useState(false);
+  const [editedLineItems, setEditedLineItems] = useState<LineItemEdit[] | null>(null);
 
   /* Derived data from document */
   const ocr = doc?.ocrRaw || {};
@@ -297,6 +348,18 @@ function ExtractionsContent() {
   const currency = doc?.currency || ocr.amounts?.currency || "THB";
   const lineItems = ocr.line_items || [];
   const canEdit = doc ? EDITABLE_STATUSES.includes(doc.status) : false;
+
+  const displayLineItems = editedLineItems
+    ? editedLineItems.map((i) => ({
+        description: i.description,
+        quantity: i.quantity,
+        unit_price: i.unit_price,
+        discount: i.discount,
+        total: i.total,
+      }))
+    : lineItems;
+
+  const hasEdits = Object.keys(editValues).length > 0 || editedLineItems !== null;
 
   /* ---- fetch customer master data for buyer mismatch check ---- */
   useEffect(() => {
@@ -373,6 +436,33 @@ function ExtractionsContent() {
     return best;
   })();
 
+  /* ---- Line item actions ---- */
+  function normalizeToLineItemEdit(item: any): LineItemEdit {
+    return {
+      id: crypto.randomUUID(),
+      description: typeof item === "string" ? item : item?.description || item?.name || "",
+      quantity: Number(item?.quantity ?? item?.qty ?? 1) || 1,
+      unit_price: Number(item?.unit_price ?? item?.price ?? 0) || 0,
+      discount: Number(item?.discount ?? 0) || 0,
+      total: Number(item?.total ?? item?.amount ?? 0) || 0,
+      isManualTotal: true,
+    };
+  }
+
+  function handleEditAllLineItems() {
+    setLineItemModalOpen(true);
+  }
+
+  function handleSaveLineItems(items: LineItemEdit[]) {
+    setEditedLineItems(items);
+    setLineItemModalOpen(false);
+  }
+
+  function handleDeleteLineItem(index: number) {
+    const source = editedLineItems ?? lineItems.map(normalizeToLineItemEdit);
+    setEditedLineItems(source.filter((_: any, i: number) => i !== index));
+  }
+
   /* ---- API actions ---- */
   const tenantId = getWorkspaceTenantId();
 
@@ -415,6 +505,16 @@ function ExtractionsContent() {
         };
       }
 
+      if (editedLineItems) {
+        updatedOcrRaw.line_items = editedLineItems.map((item) => ({
+          description: item.description,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          discount: item.discount,
+          total: item.total,
+        }));
+      }
+
       const { suggestionOutcomes, duplicateOutcomes: dupOutcomes } = getBatchOutcomes();
 
       const res = await fetch(`/api/documents/${doc.id}`, {
@@ -448,6 +548,7 @@ function ExtractionsContent() {
       toast.success("Draft saved successfully");
       await refetch();
       setEditValues({});
+      setEditedLineItems(null);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to save");
     } finally {
@@ -489,6 +590,7 @@ function ExtractionsContent() {
       toast.success("Changes reverted");
       await refetch();
       setEditValues({});
+      setEditedLineItems(null);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Revert failed");
     }
@@ -1022,7 +1124,13 @@ function ExtractionsContent() {
               icon={<Package className="h-4 w-4 text-[var(--muted-foreground)]" />}
               title="Line Items"
             >
-              <LineItemsTable items={lineItems} currency={currency} />
+              <LineItemsTable
+                items={displayLineItems}
+                currency={currency}
+                editable={canEdit}
+                onDelete={handleDeleteLineItem}
+                onEditAll={handleEditAllLineItems}
+              />
             </Section>
 
             {/* --- Journal Entries --- */}
@@ -1036,6 +1144,14 @@ function ExtractionsContent() {
           </div>
         </div>
       </div>
+
+      <LineItemEditorModal
+        open={lineItemModalOpen}
+        items={editedLineItems ?? lineItems.map(normalizeToLineItemEdit)}
+        currency={currency}
+        onSave={handleSaveLineItems}
+        onClose={() => setLineItemModalOpen(false)}
+      />
 
       <DuplicateCompareModal
         isOpen={compareModalOpen}
