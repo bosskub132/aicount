@@ -45,3 +45,8 @@ next-env.d.ts
 
 # supabase
 supabase/.temp/
+test-data
+docs
+.superpowers
+.serena
+.playwright-mcp
