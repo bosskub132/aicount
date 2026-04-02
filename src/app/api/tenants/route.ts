@@ -109,8 +109,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true, data: created }, { status: 201 });
   } catch (error) {
+    console.error("[tenants POST]", error);
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : "Create tenant failed" },
+      { success: false, error: "Create tenant failed" },
       { status: 500 }
     );
   }

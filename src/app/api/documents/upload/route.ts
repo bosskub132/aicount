@@ -137,10 +137,11 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true, data: { ...created, isDuplicate } });
   } catch (error) {
+    console.error("[documents/upload POST]", error);
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : "Upload failed",
+        error: "Upload failed",
       },
       { status: 500 }
     );

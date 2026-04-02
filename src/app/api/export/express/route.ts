@@ -37,12 +37,13 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true, data: result });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Export failed";
+    console.error("[export/express POST]", error);
+    const message = error instanceof Error ? error.message : "";
     const isBusinessError =
       message.includes("No APPROVED documents") ||
       message.includes("none could be exported");
     return NextResponse.json(
-      { success: false, error: message },
+      { success: false, error: isBusinessError ? "No exportable documents found" : "Export failed" },
       { status: isBusinessError ? 422 : 500 }
     );
   }

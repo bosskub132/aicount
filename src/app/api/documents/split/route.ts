@@ -2,9 +2,13 @@ import { and, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { documents } from "@/lib/db/schema";
+import { getRequestContext, unauthorized, forbidden, ensureTenantScope } from "@/lib/api/request-context";
 
 export async function POST(request: Request) {
   try {
+    const ctx = getRequestContext(request);
+    if (!ctx) return unauthorized();
+
     const body = (await request.json()) as {
       tenantId: string;
       documentId: string;
@@ -14,6 +18,7 @@ export async function POST(request: Request) {
     if (!body.tenantId || !body.documentId || !Array.isArray(body.parts) || body.parts.length < 2) {
       return NextResponse.json({ success: false, error: "tenantId, documentId, parts(>=2) required" }, { status: 400 });
     }
+    if (!ensureTenantScope(ctx.tenantId, body.tenantId)) return forbidden("Cross-tenant access denied");
 
     const [parent] = await db
       .select()
@@ -50,8 +55,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true, data: { parentId: parent.id, created } });
   } catch (error) {
+    console.error("[documents/split POST]", error);
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : "Split failed" },
+      { success: false, error: "Split failed" },
       { status: 500 }
     );
   }

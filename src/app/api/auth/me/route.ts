@@ -43,8 +43,9 @@ export async function GET(request: Request) {
       },
     });
   } catch (error) {
+    console.error("[auth/me GET]", error);
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : "Profile fetch failed" },
+      { success: false, error: "Profile fetch failed" },
       { status: 500 }
     );
   }

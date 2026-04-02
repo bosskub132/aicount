@@ -90,7 +90,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
   return (
     <div className="flex gap-6">
       {/* Sidebar — hidden on mobile, visible on lg+ */}
-      <aside className="hidden w-56 shrink-0 lg:block">
+      <aside className="hidden w-56 shrink-0 lg:flex lg:flex-col lg:justify-between">
         <nav className="space-y-6">
           {navGroups.map((group) => (
             <div key={group.group}>
@@ -121,6 +121,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
             </div>
           ))}
         </nav>
+        <p className="mt-6 px-2 text-xs text-slate-400">v{process.env.NEXT_PUBLIC_APP_VERSION}</p>
       </aside>
 
       {/* Mobile dropdown */}

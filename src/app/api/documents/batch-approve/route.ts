@@ -11,7 +11,7 @@ import {
   unauthorized,
 } from "@/lib/api/request-context";
 import { writeAuditLog } from "@/lib/services/audit";
-import { getLastAuditUserId } from "@/lib/services/audit-queries";
+import { getLastAuditUserIdBatch } from "@/lib/services/audit-queries";
 import { isDocumentMonthLocked } from "@/lib/services/period-lock";
 
 export async function POST(request: Request) {
@@ -52,9 +52,10 @@ export async function POST(request: Request) {
 
     let skippedSelfSubmit = 0;
     if (realRole === "checker" && validIds.length) {
+      const submitterMap = await getLastAuditUserIdBatch(body.tenantId, validIds, "document.submitted");
       const allowed: string[] = [];
       for (const docId of validIds) {
-        const submitterId = await getLastAuditUserId(body.tenantId, docId, "document.submitted");
+        const submitterId = submitterMap.get(docId);
         if (submitterId && submitterId === ctx.userId) {
           skippedSelfSubmit += 1;
           continue;
@@ -100,8 +101,9 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
+    console.error("[documents/batch-approve POST]", error);
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : "Batch approve failed" },
+      { success: false, error: "Batch approve failed" },
       { status: 500 }
     );
   }

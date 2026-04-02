@@ -46,8 +46,9 @@ export async function POST(
 
     return NextResponse.json({ success: true, data: { tenantId: id, action: "anonymized_documents" } });
   } catch (error) {
+    console.error("[tenants/:id/pdpa/delete-request POST]", error);
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : "PDPA delete request failed" },
+      { success: false, error: "PDPA delete request failed" },
       { status: 500 }
     );
   }

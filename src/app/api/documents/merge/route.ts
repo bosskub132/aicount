@@ -2,17 +2,21 @@ import { and, eq, inArray } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { documents } from "@/lib/db/schema";
+import { getRequestContext, unauthorized, forbidden, ensureTenantScope } from "@/lib/api/request-context";
 
 export async function POST(request: Request) {
   try {
+    const ctx = getRequestContext(request);
+    if (!ctx) return unauthorized();
+
     const body = (await request.json()) as {
       tenantId: string;
       documentIds: string[];
-      uploadedBy: string;
     };
-    if (!body.tenantId || !body.uploadedBy || !Array.isArray(body.documentIds) || body.documentIds.length < 2) {
-      return NextResponse.json({ success: false, error: "tenantId, uploadedBy, documentIds(>=2) required" }, { status: 400 });
+    if (!body.tenantId || !Array.isArray(body.documentIds) || body.documentIds.length < 2) {
+      return NextResponse.json({ success: false, error: "tenantId, documentIds(>=2) required" }, { status: 400 });
     }
+    if (!ensureTenantScope(ctx.tenantId, body.tenantId)) return forbidden("Cross-tenant access denied");
 
     const rows = await db
       .select()
@@ -30,7 +34,7 @@ export async function POST(request: Request) {
       .insert(documents)
       .values({
         tenantId: body.tenantId,
-        uploadedBy: body.uploadedBy,
+        uploadedBy: ctx.userId,
         intakeSource: base.intakeSource,
         fileUrl: base.fileUrl,
         status: "ACTION_REQUIRED",
@@ -45,8 +49,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true, data: merged });
   } catch (error) {
+    console.error("[documents/merge POST]", error);
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : "Merge failed" },
+      { success: false, error: "Merge failed" },
       { status: 500 }
     );
   }

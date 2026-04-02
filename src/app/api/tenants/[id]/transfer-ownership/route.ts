@@ -94,8 +94,9 @@ export async function POST(
 
     return NextResponse.json({ success: true, data: updated });
   } catch (error) {
+    console.error("[tenants/:id/transfer-ownership POST]", error);
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : "Transfer ownership failed" },
+      { success: false, error: "Transfer ownership failed" },
       { status: 500 }
     );
   }

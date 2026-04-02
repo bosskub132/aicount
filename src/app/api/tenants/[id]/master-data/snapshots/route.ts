@@ -76,8 +76,9 @@ export async function POST(
 
     return NextResponse.json({ success: true, data: { created: true } }, { status: 201 });
   } catch (error) {
+    console.error("[tenants/:id/master-data/snapshots POST]", error);
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : "Create snapshot failed" },
+      { success: false, error: "Create snapshot failed" },
       { status: 500 }
     );
   }

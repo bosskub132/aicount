@@ -607,6 +607,7 @@ export async function extractBillDataGoogleVision(imageBuffer: Buffer, mimeType 
         },
       ],
     }),
+    signal: AbortSignal.timeout(30_000),
   });
 
   if (!response.ok) {
@@ -787,6 +788,7 @@ export async function extractRawTextGoogleVision(
         },
       ],
     }),
+    signal: AbortSignal.timeout(30_000),
   });
 
   if (!response.ok) {

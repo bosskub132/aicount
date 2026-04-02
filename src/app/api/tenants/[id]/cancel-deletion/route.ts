@@ -65,8 +65,9 @@ export async function POST(
 
     return NextResponse.json({ success: true, data: updated });
   } catch (error) {
+    console.error("[tenants/:id/cancel-deletion POST]", error);
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : "Cancel deletion failed" },
+      { success: false, error: "Cancel deletion failed" },
       { status: 500 }
     );
   }

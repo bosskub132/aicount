@@ -62,8 +62,9 @@ export async function POST(
 
     return NextResponse.json({ success: true, data: updated });
   } catch (error) {
+    console.error("[documents/:id/advance-reconcile POST]", error);
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : "Advance reconcile failed" },
+      { success: false, error: "Advance reconcile failed" },
       { status: 500 }
     );
   }

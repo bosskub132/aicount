@@ -99,8 +99,9 @@ export async function POST(
       },
     });
   } catch (error) {
+    console.error("[invite/:token POST]", error);
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : "Accept failed" },
+      { success: false, error: "Accept failed" },
       { status: 500 }
     );
   }

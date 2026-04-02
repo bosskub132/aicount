@@ -70,7 +70,7 @@ function formatCurrency(value: number | string | null | undefined, currency = "T
   const num = typeof value === "string" ? Number(value) : value;
   if (!Number.isFinite(num)) return null;
   const symbol = currency === "THB" ? "฿" : currency + " ";
-  return `${symbol}${num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return `${symbol}${num.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 function normalizeConfidence(raw: number): number {

@@ -2,13 +2,18 @@ import { and, eq, inArray } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { vendors } from "@/lib/db/schema";
+import { getRequestContext, unauthorized, forbidden, ensureTenantScope } from "@/lib/api/request-context";
 
 export async function POST(
   request: Request,
   context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const ctx = getRequestContext(request);
+    if (!ctx) return unauthorized();
+
     const { id: tenantId } = await context.params;
+    if (!ensureTenantScope(ctx.tenantId, tenantId)) return forbidden("Cross-tenant access denied");
     const body = (await request.json()) as {
       upserts?: Array<{
         id?: string;
@@ -81,8 +86,9 @@ export async function POST(
 
     return NextResponse.json({ success: true, data: results });
   } catch (error) {
+    console.error("[tenants/vendors/bulk POST]", error);
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : "Bulk vendors failed" },
+      { success: false, error: "Bulk vendors operation failed" },
       { status: 500 }
     );
   }

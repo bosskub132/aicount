@@ -167,8 +167,9 @@ export async function POST(
       },
     });
   } catch (error) {
+    console.error("[documents/:id/submit POST]", error);
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : "Submit failed" },
+      { success: false, error: "Submit failed" },
       { status: 500 }
     );
   }

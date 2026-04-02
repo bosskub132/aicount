@@ -77,8 +77,9 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
+    console.error("[documents/duplicate-check POST]", error);
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : "Duplicate check failed" },
+      { success: false, error: "Duplicate check failed" },
       { status: 500 }
     );
   }

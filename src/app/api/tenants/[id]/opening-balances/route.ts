@@ -65,8 +65,9 @@ export async function POST(
     await replaceJournalLines(doc.id, body.entries);
     return NextResponse.json({ success: true, data: doc }, { status: 201 });
   } catch (error) {
+    console.error("[tenants/:id/opening-balances POST]", error);
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : "Create opening balance failed" },
+      { success: false, error: "Create opening balance failed" },
       { status: 500 }
     );
   }

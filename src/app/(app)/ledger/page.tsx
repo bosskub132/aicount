@@ -306,53 +306,32 @@ function LedgerPageContent() {
 
   const isBalanced = Math.abs(stats.totalDebits - stats.totalCredits) < 0.01;
 
-  // Mock accounts list for selectors (in production, fetch from API)
-  const accounts = useMemo(
-    () => [
-      { accountCode: "1100", accountName: "Cash", category: "Asset" },
-      {
-        accountCode: "1200",
-        accountName: "Accounts Receivable",
-        category: "Asset",
-      },
-      {
-        accountCode: "1300",
-        accountName: "Inventory",
-        category: "Asset",
-      },
-      {
-        accountCode: "2100",
-        accountName: "Accounts Payable",
-        category: "Liability",
-      },
-      {
-        accountCode: "2200",
-        accountName: "Accrued Expenses",
-        category: "Liability",
-      },
-      {
-        accountCode: "3100",
-        accountName: "Retained Earnings",
-        category: "Equity",
-      },
-      {
-        accountCode: "4100",
-        accountName: "Sales Revenue",
-        category: "Revenue",
-      },
-      {
-        accountCode: "5100",
-        accountName: "Cost of Goods Sold",
-        category: "Expense",
-      },
-      {
-        accountCode: "5200",
-        accountName: "Operating Expenses",
-        category: "Expense",
-      },
-    ],
-    [],
-  );
+  const [accounts, setAccounts] = useState<
+    Array<{ accountCode: string; accountName: string; category: string }>
+  >([]);
+
+  useEffect(() => {
+    const tid = getWorkspaceTenantId();
+    if (!tid || isDefaultWorkspaceTenantId(tid)) return;
+    fetch(`/api/tenants/${tid}/coa?limit=500`, {
+      headers: { "x-tenant-id": tid },
+    })
+      .then((r) => r.json())
+      .then((json) => {
+        if (json.success && Array.isArray(json.data)) {
+          setAccounts(
+            json.data
+              .filter((a: any) => a.isActive !== false)
+              .map((a: any) => ({
+                accountCode: a.accountCode,
+                accountName: a.accountName,
+                category: a.category,
+              }))
+          );
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   // Populate edit modal when entry data loads
   useEffect(() => {

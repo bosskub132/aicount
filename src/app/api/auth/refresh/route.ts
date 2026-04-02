@@ -42,8 +42,9 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
+    console.error("[auth/refresh POST]", error);
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : "Refresh failed" },
+      { success: false, error: "Refresh failed" },
       { status: 500 }
     );
   }

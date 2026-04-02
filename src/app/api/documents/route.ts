@@ -64,7 +64,36 @@ export async function GET(request: Request) {
 
     const [rows, countResult] = await Promise.all([
       db
-        .select()
+        .select({
+          id: documents.id,
+          tenantId: documents.tenantId,
+          status: documents.status,
+          docType: documents.docType,
+          direction: documents.direction,
+          issuerName: documents.issuerName,
+          issuerTaxId: documents.issuerTaxId,
+          issuerBranch: documents.issuerBranch,
+          documentNumber: documents.documentNumber,
+          documentDate: documents.documentDate,
+          subtotal: documents.subtotal,
+          vatAmount: documents.vatAmount,
+          grandTotal: documents.grandTotal,
+          whtAmount: documents.whtAmount,
+          whtRate: documents.whtRate,
+          whtIncomeType: documents.whtIncomeType,
+          discountAmount: documents.discountAmount,
+          fileUrl: documents.fileUrl,
+          fileHash: documents.fileHash,
+          intakeSource: documents.intakeSource,
+          batchId: documents.batchId,
+          parentDocumentId: documents.parentDocumentId,
+          uploadedBy: documents.uploadedBy,
+          approvedBy: documents.approvedBy,
+          approvedAt: documents.approvedAt,
+          voidReason: documents.voidReason,
+          createdAt: documents.createdAt,
+          updatedAt: documents.updatedAt,
+        })
         .from(documents)
         .where(where)
         .orderBy(orderBy)

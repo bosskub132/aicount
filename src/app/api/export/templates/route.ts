@@ -100,8 +100,9 @@ export async function GET(request: Request) {
       },
     });
   } catch (error) {
+    console.error("[export/templates GET]", error);
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : "Load export templates failed" },
+      { success: false, error: "Load export templates failed" },
       { status: 500 }
     );
   }

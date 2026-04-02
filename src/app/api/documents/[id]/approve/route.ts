@@ -96,8 +96,9 @@ export async function POST(
       data: { id, status: "APPROVED" },
     });
   } catch (error) {
+    console.error("[documents/:id/approve POST]", error);
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : "Approve failed" },
+      { success: false, error: "Approve failed" },
       { status: 500 }
     );
   }

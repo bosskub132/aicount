@@ -116,8 +116,9 @@ export async function POST(
       data: { id, status: "REJECTED" },
     });
   } catch (error) {
+    console.error("[documents/:id/reject POST]", error);
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : "Reject failed" },
+      { success: false, error: "Reject failed" },
       { status: 500 }
     );
   }

@@ -119,8 +119,9 @@ export async function POST(
 
     return NextResponse.json({ success: true, data: reversalDoc }, { status: 201 });
   } catch (error) {
+    console.error("[documents/:id/reversal POST]", error);
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : "Create reversal failed" },
+      { success: false, error: "Create reversal failed" },
       { status: 500 }
     );
   }

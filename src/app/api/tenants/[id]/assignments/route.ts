@@ -85,8 +85,9 @@ export async function POST(
 
     return NextResponse.json({ success: true, data: created }, { status: 201 });
   } catch (error) {
+    console.error("[tenants/:id/assignments POST]", error);
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : "Create assignment failed" },
+      { success: false, error: "Create assignment failed" },
       { status: 500 }
     );
   }
@@ -130,8 +131,9 @@ export async function DELETE(
 
     return NextResponse.json({ success: true, data: deleted ?? null });
   } catch (error) {
+    console.error("[tenants/:id/assignments DELETE]", error);
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : "Delete assignment failed" },
+      { success: false, error: "Delete assignment failed" },
       { status: 500 }
     );
   }

@@ -59,8 +59,9 @@ export async function POST(
 
     return NextResponse.json({ success: true, data: updated });
   } catch (error) {
+    console.error("[documents/:id/void POST]", error);
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : "Void failed" },
+      { success: false, error: "Void failed" },
       { status: 500 }
     );
   }

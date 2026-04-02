@@ -3,18 +3,23 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { documents } from "@/lib/db/schema";
 import { inngest } from "@/lib/inngest/client";
+import { getRequestContext, unauthorized, forbidden, ensureTenantScope } from "@/lib/api/request-context";
 
 export async function POST(
   request: Request,
   context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const ctx = getRequestContext(request);
+    if (!ctx) return unauthorized();
+
     const { id } = await context.params;
     const body = (await request.json()) as { tenantId: string };
 
     if (!body.tenantId) {
       return NextResponse.json({ success: false, error: "tenantId is required" }, { status: 400 });
     }
+    if (!ensureTenantScope(ctx.tenantId, body.tenantId)) return forbidden("Cross-tenant access denied");
 
     const [doc] = await db
       .select({ id: documents.id, status: documents.status })
@@ -47,8 +52,9 @@ export async function POST(
       data: { id, status: "OCR_PROCESSING" },
     });
   } catch (error) {
+    console.error("[documents/re-ocr POST]", error);
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : "Re-OCR failed" },
+      { success: false, error: "Re-OCR failed" },
       { status: 500 }
     );
   }

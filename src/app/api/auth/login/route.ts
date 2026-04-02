@@ -67,8 +67,9 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
+    console.error("[auth/login POST]", error);
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : "Login failed" },
+      { success: false, error: "Invalid email or password" },
       { status: 500 }
     );
   }

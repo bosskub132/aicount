@@ -75,9 +75,9 @@ export async function GET(
     if (!ensureTenantScope(ctx.tenantId, doc.tenantId)) return forbidden("Cross-tenant access denied");
     return NextResponse.json({ success: true, data: doc });
   } catch (error) {
-    console.error("[GET /api/documents/:id]", error);
+    console.error("[documents/:id GET]", error);
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : "Fetch failed" },
+      { success: false, error: "Fetch failed" },
       { status: 500 }
     );
   }
@@ -130,7 +130,7 @@ export async function PATCH(
     }
 
     const currentRaw = (existing.ocrRaw as any) || {};
-    const undoHistory = Array.isArray(currentRaw.undoHistory) ? currentRaw.undoHistory : [];
+    const undoHistory = Array.isArray(currentRaw.undoHistory) ? currentRaw.undoHistory.slice(-19) : [];
     undoHistory.push({
       issuerTaxId: existing.issuerTaxId,
       issuerName: existing.issuerName,
@@ -228,8 +228,9 @@ export async function PATCH(
 
     return NextResponse.json({ success: true, data: updated });
   } catch (error) {
+    console.error("[documents/:id PATCH]", error);
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : "Patch failed" },
+      { success: false, error: "Patch failed" },
       { status: 500 }
     );
   }
@@ -309,8 +310,9 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
+    console.error("[documents/:id DELETE]", error);
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : "Delete failed" },
+      { success: false, error: "Delete failed" },
       { status: 500 }
     );
   }

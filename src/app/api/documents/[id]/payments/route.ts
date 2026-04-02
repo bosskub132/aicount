@@ -54,8 +54,9 @@ export async function POST(
 
     return NextResponse.json({ success: true, data: updated });
   } catch (error) {
+    console.error("[documents/:id/payments POST]", error);
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : "Record payment failed" },
+      { success: false, error: "Record payment failed" },
       { status: 500 }
     );
   }

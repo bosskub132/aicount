@@ -90,8 +90,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true, data: { acceptedCount: accepted.length, accepted } });
   } catch (error) {
+    console.error("[webhooks/line POST]", error);
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : "LINE webhook failed" },
+      { success: false, error: "LINE webhook failed" },
       { status: 500 }
     );
   }

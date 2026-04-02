@@ -84,8 +84,9 @@ export async function POST(
 
     return NextResponse.json({ success: true, data: { tenantId: id, restored: true } });
   } catch (error) {
+    console.error("[tenants/:id/restore POST]", error);
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : "Restore failed" },
+      { success: false, error: "Restore failed" },
       { status: 500 }
     );
   }

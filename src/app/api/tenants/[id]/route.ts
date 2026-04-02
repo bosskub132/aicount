@@ -102,8 +102,9 @@ export async function PUT(
 
     return NextResponse.json({ success: true, data: updated });
   } catch (error) {
+    console.error("[tenants/:id PUT]", error);
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : "Update tenant failed" },
+      { success: false, error: "Update tenant failed" },
       { status: 500 }
     );
   }
@@ -164,8 +165,9 @@ export async function PATCH(
 
     return NextResponse.json({ success: true, data: updated });
   } catch (error) {
+    console.error("[tenants/:id PATCH]", error);
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : "Delete failed" },
+      { success: false, error: "Delete failed" },
       { status: 500 }
     );
   }
@@ -200,8 +202,9 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
+    console.error("[tenants/:id DELETE]", error);
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : "Delete tenant failed" },
+      { success: false, error: "Delete tenant failed" },
       { status: 500 }
     );
   }

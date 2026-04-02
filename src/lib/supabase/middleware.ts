@@ -3,6 +3,14 @@ import { NextResponse, type NextRequest } from "next/server";
 
 export async function updateSession(request: NextRequest) {
   const requestHeaders = new Headers(request.headers);
+
+  // Strip auth headers to prevent client-side injection
+  requestHeaders.delete("x-user-id");
+  requestHeaders.delete("x-user-role");
+  requestHeaders.delete("x-tenant-id");
+  requestHeaders.delete("x-user-email");
+  requestHeaders.delete("x-is-superadmin");
+
   let supabaseResponse = NextResponse.next({ request: { headers: requestHeaders } });
 
   const supabase = createServerClient(

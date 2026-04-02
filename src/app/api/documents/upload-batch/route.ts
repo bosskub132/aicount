@@ -148,10 +148,11 @@ export async function POST(request: Request) {
       { status: 202 }
     );
   } catch (error) {
+    console.error("[documents/upload-batch POST]", error);
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : "Batch upload failed",
+        error: "Batch upload failed",
       },
       { status: 500 }
     );

@@ -78,8 +78,9 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
+    console.error("[auth/register POST]", error);
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : "Register failed" },
+      { success: false, error: "Register failed" },
       { status: 500 }
     );
   }

@@ -60,8 +60,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true, data: { cancelled: true } });
   } catch (error) {
+    console.error("[auth/account/cancel-deletion POST]", error);
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : "Cancel deletion failed" },
+      { success: false, error: "Cancel deletion failed" },
       { status: 500 }
     );
   }

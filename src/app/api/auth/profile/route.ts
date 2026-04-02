@@ -76,8 +76,9 @@ export async function PATCH(request: Request) {
 
     return NextResponse.json({ success: true, data: updated });
   } catch (error) {
+    console.error("[auth/profile PATCH]", error);
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : "Update failed" },
+      { success: false, error: "Update failed" },
       { status: 500 }
     );
   }

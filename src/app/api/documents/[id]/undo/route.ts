@@ -53,8 +53,9 @@ export async function POST(
 
     return NextResponse.json({ success: true, data: updated });
   } catch (error) {
+    console.error("[documents/:id/undo POST]", error);
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : "Undo failed" },
+      { success: false, error: "Undo failed" },
       { status: 500 }
     );
   }
