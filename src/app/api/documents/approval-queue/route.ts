@@ -10,10 +10,7 @@ export async function GET(request: Request) {
     if (!ctx) return unauthorized();
 
     const { searchParams } = new URL(request.url);
-    const tenantId = searchParams.get("tenantId");
-    if (!tenantId) {
-      return NextResponse.json({ success: false, error: "tenantId is required" }, { status: 400 });
-    }
+    const tenantId = searchParams.get("tenantId") ?? ctx.tenantId;
     if (!ensureTenantScope(ctx.tenantId, tenantId)) return forbidden("Cross-tenant access denied");
 
     const queue = await db

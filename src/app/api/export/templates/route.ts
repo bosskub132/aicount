@@ -8,6 +8,12 @@ import {
   TEMPLATES,
   type TemplateShape,
 } from "@/lib/services/match-strength";
+import {
+  ensureTenantScope,
+  forbidden,
+  getRequestContext,
+  unauthorized,
+} from "@/lib/api/request-context";
 
 function normalizeTemplate(template: TemplateShape) {
   return {
@@ -22,11 +28,11 @@ function normalizeTemplate(template: TemplateShape) {
 export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
-    const tenantId = url.searchParams.get("tenantId") || "";
+    const ctx = getRequestContext(request);
+    if (!ctx) return unauthorized();
+    const tenantId = url.searchParams.get("tenantId") || ctx.tenantId;
     const templateId = url.searchParams.get("templateId") || "";
-    if (!tenantId) {
-      return NextResponse.json({ success: false, error: "tenantId is required" }, { status: 400 });
-    }
+    if (!ensureTenantScope(ctx.tenantId, tenantId)) return forbidden("Cross-tenant access denied");
 
     const approvedDocs = await db
       .select({

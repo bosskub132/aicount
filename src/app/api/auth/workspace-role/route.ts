@@ -15,10 +15,7 @@ export async function GET(request: Request) {
   const ctx = getRequestContext(request);
   if (!ctx) return unauthorized();
 
-  const tenantId = new URL(request.url).searchParams.get("tenantId");
-  if (!tenantId) {
-    return NextResponse.json({ success: false, error: "tenantId is required" }, { status: 400 });
-  }
+  const tenantId = new URL(request.url).searchParams.get("tenantId") ?? ctx.tenantId;
   if (!ensureTenantScope(ctx.tenantId, tenantId)) {
     return forbidden("Cross-tenant access denied");
   }
