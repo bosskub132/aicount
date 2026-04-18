@@ -12,13 +12,7 @@ import {
 } from "@/lib/api/request-context";
 import { writeAuditLog } from "@/lib/services/audit";
 import { validateCsrf } from "@/lib/api/csrf";
-
-const VALID_INDUSTRIES = [
-  "retail", "manufacturing", "services", "construction",
-  "hospitality", "healthcare", "education", "technology", "other",
-] as const;
-
-const VALID_COMPANY_SIZES = ["micro", "small", "medium", "large"] as const;
+import { TENANT_COMPANY_SIZES, TENANT_INDUSTRIES } from "@/lib/utils/constants";
 
 const UpdateTenantSchema = z.object({
   name: z.string().min(1).max(200).optional(),
@@ -26,8 +20,8 @@ const UpdateTenantSchema = z.object({
   isVatRegistered: z.boolean().optional(),
   baseCurrency: z.string().regex(/^[A-Z]{3}$/).optional(),
   dataRetentionYears: z.number().int().min(1).max(50).optional(),
-  industry: z.enum(VALID_INDUSTRIES).optional(),
-  companySize: z.enum(VALID_COMPANY_SIZES).optional(),
+  industry: z.enum(TENANT_INDUSTRIES).optional(),
+  companySize: z.enum(TENANT_COMPANY_SIZES).optional(),
 });
 
 const PatchTenantSchema = z.object({

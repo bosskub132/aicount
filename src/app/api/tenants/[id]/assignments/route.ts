@@ -33,7 +33,6 @@ export async function GET(
       assignmentRole: tenantAssignments.role,
       email: profiles.email,
       name: profiles.name,
-      appRole: profiles.role,
     })
     .from(tenantAssignments)
     .innerJoin(profiles, eq(tenantAssignments.userId, profiles.id))

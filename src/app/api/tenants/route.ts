@@ -5,10 +5,13 @@ import { db } from "@/lib/db";
 import { tenantAssignments, tenants } from "@/lib/db/schema";
 import { ensureRole, getRequestContext, resolveUserRole, unauthorized } from "@/lib/api/request-context";
 import { writeAuditLog } from "@/lib/services/audit";
+import { TENANT_COMPANY_SIZES, TENANT_INDUSTRIES } from "@/lib/utils/constants";
 
 const CreateTenantSchema = z.object({
   name: z.string().min(1).max(200),
   taxId: z.string().regex(/^\d{13}$/),
+  industry: z.enum(TENANT_INDUSTRIES).optional(),
+  companySize: z.enum(TENANT_COMPANY_SIZES).optional(),
 });
 
 export async function GET(request: Request) {
@@ -87,6 +90,8 @@ export async function POST(request: Request) {
       .values({
         name: body.name,
         taxId: body.taxId,
+        industry: body.industry,
+        companySize: body.companySize,
         ownerUserId,
       })
       .returning();

@@ -11,7 +11,6 @@ const RegisterSchema = z.object({
   email: z.string().email(),
   password: z.string().min(6),
   name: z.string().max(200).optional(),
-  role: z.enum(["admin", "maker", "checker"]).optional(),
 });
 
 export async function POST(request: Request) {
@@ -42,7 +41,7 @@ export async function POST(request: Request) {
       email: body.email,
       password: body.password,
       options: {
-        data: { name: body.name || null, role: body.role || "maker" },
+        data: { name: body.name || null },
         emailRedirectTo: `${appUrl}/auth/callback`,
       },
     });
@@ -60,7 +59,6 @@ export async function POST(request: Request) {
             id: data.user.id,
             email: data.user.email || body.email,
             name: body.name || null,
-            role: body.role || "maker",
           })
           .onConflictDoNothing();
         profileSynced = true;

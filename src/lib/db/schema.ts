@@ -17,7 +17,6 @@ import { sql } from "drizzle-orm";
 
 // ── Enums ───────────────────────────────────────────────────────────────────
 
-export const userRoleEnum = pgEnum("user_role", ["admin", "maker", "checker"]);
 
 export const accountCategoryEnum = pgEnum("account_category", [
   "asset",
@@ -117,7 +116,6 @@ export const profiles = pgTable("profiles", {
   id: uuid("id").primaryKey(), // matches Supabase auth.users.id
   email: text("email").notNull(),
   name: text("name"),
-  role: userRoleEnum("role").default("maker").notNull(),
   isActive: boolean("is_active").default(true).notNull(),
   isOnboardingComplete: boolean("is_onboarding_complete").default(false).notNull(),
   onboardingStep: integer("onboarding_step").default(0).notNull(),

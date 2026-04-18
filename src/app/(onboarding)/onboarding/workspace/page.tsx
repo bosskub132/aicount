@@ -60,7 +60,8 @@ export default function OnboardingWorkspacePage() {
 
   function validate(): string | null {
     if (!companyName.trim()) return "Company name is required.";
-    if (taxId && taxId.length !== 13) return "Tax ID must be exactly 13 digits.";
+    if (!taxId) return "Tax ID is required.";
+    if (taxId.length !== 13) return "Tax ID must be exactly 13 digits.";
     return null;
   }
 
@@ -152,7 +153,8 @@ export default function OnboardingWorkspacePage() {
         {/* Tax ID */}
         <Input
           label="Tax ID"
-          helperText={`${taxId.length}/13 digits (optional)`}
+          required
+          helperText={`${taxId.length}/13 digits`}
           value={taxId}
           onChange={handleTaxIdChange}
           maxLength={13}

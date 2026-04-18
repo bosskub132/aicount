@@ -42,6 +42,20 @@ export const ACCOUNT_CATEGORIES = [
   "expense",
 ] as const;
 
+export const TENANT_INDUSTRIES = [
+  "retail",
+  "manufacturing",
+  "services",
+  "construction",
+  "hospitality",
+  "healthcare",
+  "education",
+  "technology",
+  "other",
+] as const;
+
+export const TENANT_COMPANY_SIZES = ["micro", "small", "medium", "large"] as const;
+
 export const STATUS_TRANSITIONS: Record<DocumentStatus, DocumentStatus[]> = {
   DRAFT: ["OCR_PROCESSING"],
   OCR_PROCESSING: ["QUERY", "ACTION_REQUIRED", "PENDING_APPROVAL"],

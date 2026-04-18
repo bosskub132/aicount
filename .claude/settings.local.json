@@ -92,7 +92,8 @@
       "Bash(bash:*)",
       "Bash(npx -y acorn-jsx)",
       "Bash(sed:*)",
-      "Bash(pip install:*)"
+      "Bash(pip install:*)",
+      "Bash(mcp list *)"
     ]
   },
   "enableAllProjectMcpServers": true,

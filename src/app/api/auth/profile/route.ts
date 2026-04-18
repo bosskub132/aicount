@@ -21,7 +21,6 @@ export async function GET(request: Request) {
       id: profiles.id,
       email: profiles.email,
       name: profiles.name,
-      role: profiles.role,
       isOnboardingComplete: profiles.isOnboardingComplete,
       onboardingStep: profiles.onboardingStep,
       isActive: profiles.isActive,

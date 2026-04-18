@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import {
   getRequestContext,
   unauthorized,
@@ -8,14 +9,19 @@ import {
 import { sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { customers } from "@/lib/db/schema";
+import { mapPgError } from "@/lib/api/errors";
 
-type CustomerRow = {
-  taxId: string;
-  name: string;
-  address?: string;
-  creditTermDays?: string;
-  branchNumber?: string;
-};
+const CustomerRowSchema = z.object({
+  taxId: z.string().min(1).max(20),
+  name: z.string().min(1).max(200),
+  address: z.string().optional(),
+  creditTermDays: z.string().optional(),
+  branchNumber: z.string().optional(),
+});
+
+const CustomerBatchSchema = z.object({
+  rows: z.array(CustomerRowSchema).min(1).max(5000),
+});
 
 export async function POST(
   request: Request,
@@ -28,15 +34,14 @@ export async function POST(
     return forbidden("Cross-tenant access denied");
 
   try {
-    const body = await request.json();
-    const rows: CustomerRow[] = body?.rows;
-
-    if (!Array.isArray(rows) || rows.length === 0 || rows.length > 5000) {
+    const parsed = CustomerBatchSchema.safeParse(await request.json());
+    if (!parsed.success) {
       return NextResponse.json(
-        { success: false, error: "rows must be an array with 1-5000 items" },
+        { success: false, error: "Invalid input", details: parsed.error.issues },
         { status: 400 }
       );
     }
+    const { rows } = parsed.data;
 
     const values = rows.map((row) => ({
       tenantId,
@@ -68,9 +73,6 @@ export async function POST(
     );
   } catch (error) {
     console.error("Customers batch insert error:", error);
-    return NextResponse.json(
-      { success: false, error: "Failed to import customers" },
-      { status: 500 }
-    );
+    return mapPgError(error, "Failed to import customers");
   }
 }

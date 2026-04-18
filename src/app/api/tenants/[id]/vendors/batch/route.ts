@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import {
   getRequestContext,
   unauthorized,
@@ -8,18 +9,23 @@ import {
 import { sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { vendors } from "@/lib/db/schema";
+import { mapPgError } from "@/lib/api/errors";
 
-type VendorRow = {
-  taxId: string;
-  name: string;
-  address?: string;
-  vendorType?: string;
-  branchNumber?: string;
-  country?: string;
-  isNonResident?: boolean;
-  defaultExpenseGl?: string;
-  defaultWhtRate?: string;
-};
+const VendorRowSchema = z.object({
+  taxId: z.string().min(1).max(20),
+  name: z.string().min(1).max(200),
+  address: z.string().optional(),
+  vendorType: z.enum(["company", "individual"]).optional(),
+  branchNumber: z.string().optional(),
+  country: z.string().optional(),
+  isNonResident: z.boolean().optional(),
+  defaultExpenseGl: z.string().optional(),
+  defaultWhtRate: z.string().optional(),
+});
+
+const VendorBatchSchema = z.object({
+  rows: z.array(VendorRowSchema).min(1).max(5000),
+});
 
 export async function POST(
   request: Request,
@@ -32,15 +38,14 @@ export async function POST(
     return forbidden("Cross-tenant access denied");
 
   try {
-    const body = await request.json();
-    const rows: VendorRow[] = body?.rows;
-
-    if (!Array.isArray(rows) || rows.length === 0 || rows.length > 5000) {
+    const parsed = VendorBatchSchema.safeParse(await request.json());
+    if (!parsed.success) {
       return NextResponse.json(
-        { success: false, error: "rows must be an array with 1-5000 items" },
+        { success: false, error: "Invalid input", details: parsed.error.issues },
         { status: 400 }
       );
     }
+    const { rows } = parsed.data;
 
     const values = rows.map((row) => ({
       tenantId,
@@ -80,9 +85,6 @@ export async function POST(
     );
   } catch (error) {
     console.error("Vendors batch insert error:", error);
-    return NextResponse.json(
-      { success: false, error: "Failed to import vendors" },
-      { status: 500 }
-    );
+    return mapPgError(error, "Failed to import vendors");
   }
 }

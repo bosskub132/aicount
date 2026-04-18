@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import {
   getRequestContext,
   unauthorized,
@@ -8,11 +9,16 @@ import {
 import { sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { departments } from "@/lib/db/schema";
+import { mapPgError } from "@/lib/api/errors";
 
-type DepartmentRow = {
-  deptCode: string;
-  deptName: string;
-};
+const DepartmentRowSchema = z.object({
+  deptCode: z.string().min(1).max(50),
+  deptName: z.string().min(1).max(200),
+});
+
+const DepartmentBatchSchema = z.object({
+  rows: z.array(DepartmentRowSchema).min(1).max(5000),
+});
 
 export async function POST(
   request: Request,
@@ -25,15 +31,14 @@ export async function POST(
     return forbidden("Cross-tenant access denied");
 
   try {
-    const body = await request.json();
-    const rows: DepartmentRow[] = body?.rows;
-
-    if (!Array.isArray(rows) || rows.length === 0 || rows.length > 5000) {
+    const parsed = DepartmentBatchSchema.safeParse(await request.json());
+    if (!parsed.success) {
       return NextResponse.json(
-        { success: false, error: "rows must be an array with 1-5000 items" },
+        { success: false, error: "Invalid input", details: parsed.error.issues },
         { status: 400 }
       );
     }
+    const { rows } = parsed.data;
 
     const values = rows.map((row) => ({
       tenantId,
@@ -59,9 +64,6 @@ export async function POST(
     );
   } catch (error) {
     console.error("Departments batch insert error:", error);
-    return NextResponse.json(
-      { success: false, error: "Failed to import departments" },
-      { status: 500 }
-    );
+    return mapPgError(error, "Failed to import departments");
   }
 }

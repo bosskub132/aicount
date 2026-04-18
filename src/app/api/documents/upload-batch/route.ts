@@ -53,7 +53,6 @@ export async function POST(request: Request) {
       .values({
         id: ctx.userId,
         email: ctx.userEmail || `${ctx.userId}@local.invalid`,
-        role: ctx.role,
       })
       .onConflictDoNothing();
     if (!files.length) {

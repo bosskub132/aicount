@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import {
   getRequestContext,
   unauthorized,
@@ -8,14 +9,20 @@ import {
 import { sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { chartOfAccounts } from "@/lib/db/schema";
+import { ACCOUNT_CATEGORIES } from "@/lib/utils/constants";
+import { mapPgError } from "@/lib/api/errors";
 
-type CoaRow = {
-  accountCode: string;
-  accountName: string;
-  category: string;
-  isSuspense?: boolean;
-  parentCode?: string;
-};
+const CoaRowSchema = z.object({
+  accountCode: z.string().min(1).max(20),
+  accountName: z.string().min(1).max(200),
+  category: z.enum(ACCOUNT_CATEGORIES),
+  isSuspense: z.boolean().optional(),
+  parentCode: z.string().optional(),
+});
+
+const CoaBatchSchema = z.object({
+  rows: z.array(CoaRowSchema).min(1).max(5000),
+});
 
 export async function POST(
   request: Request,
@@ -28,26 +35,20 @@ export async function POST(
     return forbidden("Cross-tenant access denied");
 
   try {
-    const body = await request.json();
-    const rows: CoaRow[] = body?.rows;
-
-    if (!Array.isArray(rows) || rows.length === 0 || rows.length > 5000) {
+    const parsed = CoaBatchSchema.safeParse(await request.json());
+    if (!parsed.success) {
       return NextResponse.json(
-        { success: false, error: "rows must be an array with 1-5000 items" },
+        { success: false, error: "Invalid input", details: parsed.error.issues },
         { status: 400 }
       );
     }
+    const { rows } = parsed.data;
 
     const values = rows.map((row) => ({
       tenantId,
       accountCode: row.accountCode,
       accountName: row.accountName,
-      category: row.category as
-        | "asset"
-        | "liability"
-        | "equity"
-        | "revenue"
-        | "expense",
+      category: row.category,
       isSuspense: row.isSuspense ?? false,
     }));
 
@@ -71,9 +72,6 @@ export async function POST(
     );
   } catch (error) {
     console.error("COA batch insert error:", error);
-    return NextResponse.json(
-      { success: false, error: "Failed to import chart of accounts" },
-      { status: 500 }
-    );
+    return mapPgError(error, "Failed to import chart of accounts");
   }
 }

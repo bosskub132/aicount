@@ -32,21 +32,17 @@ export default function OnboardingTemplatePage() {
     setError(null);
     setLoading(true);
     try {
-      if (tenantId) {
-        const body: { type: string; name?: string } = { type: templateChoice };
-        if (templateChoice === "custom" && customTemplateName.trim()) {
-          body.name = customTemplateName.trim();
-        }
-        const res = await fetch(`/api/tenants/${tenantId}/templates`, {
+      if (tenantId && templateChoice === "custom") {
+        const name = customTemplateName.trim() || "My Custom Template";
+        const res = await fetch(`/api/tenants/${tenantId}/custom-export-templates`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             "x-tenant-id": tenantId,
           },
-          body: JSON.stringify(body),
+          body: JSON.stringify({ name, columnMappings: [], isActive: false }),
         });
-        // Non-fatal — template endpoint may not be implemented yet
-        if (!res.ok && res.status !== 404) {
+        if (!res.ok && res.status !== 409) {
           const text = await res.text();
           let errorMsg = "Failed to save template selection.";
           try { errorMsg = JSON.parse(text).error || errorMsg; } catch { /* ignore */ }
