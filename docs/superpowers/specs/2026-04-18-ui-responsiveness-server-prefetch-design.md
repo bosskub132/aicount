@@ -1,7 +1,7 @@
 # UI Responsiveness via Server Prefetch — Design
 
 **Date:** 2026-04-18
-**Status:** Approved, ready for implementation plan
+**Status:** Implemented 2026-04-19 (Plans A–D on `bugfix/refactor-ui`)
 **Author:** brainstormed with Claude
 
 ## Problem
@@ -253,3 +253,44 @@ None at design time. File TBD items here if they surface during implementation.
 ### Removed (cleanup PR)
 - `DEFAULT_WORKSPACE_TENANT_ID` zero-UUID fallback paths.
 - `localStorage.getItem("workspaceTenantId")` hygiene cleanup effect (after ~1 month).
+
+---
+
+## Completed (2026-04-19)
+
+**Plan A** — tenant-resolution cleanup (cookie is sole source of truth):
+- Dropped `x-tenant-id` client-side header from hooks + pages (~80 call sites)
+- Dropped `?tenantId=` query params from client fetches
+- Middleware reads cookie only (+ path param for `/api/tenants/:id/*`)
+- Deleted `DEFAULT_WORKSPACE_TENANT_ID` + `isDefaultWorkspaceTenantId` exports
+- Removed `localStorage.removeItem("workspaceTenantId")` hygiene effect
+- Added Vitest guard `src/lib/test/no-client-tenant-header.test.ts`
+- Fixed 4 API routes that still required `?tenantId=` (approval-queue, export/templates, workspace-role, search)
+
+**Plan B** — Tier 1a:
+- `/dashboard` — server-prefetch monthly-comparison chart
+- `/extractions` — server-prefetch document detail when `?docId=` present
+- `/approvals` — N/A (redirects to `/documents?tab=pending`)
+
+**Plan C** — Tier 1b (Reports + Ledger):
+- `/ledger` — server-prefetch journal entries first page
+- `/reports/financial/{trial-balance,balance-sheet,profit-loss,cash-flow,journal-listing}` — current month
+- `/reports/tax/{pnd3,pnd53,pp30,pp36,purchase-vat,sales-vat}` — current month
+- `/reports/wht` — current month
+
+**Plan D** — Tier 2 (partial):
+- `/payables` — AP aging with status filter
+- `/receivables` — AR aging for current month
+- `/bank-recon` — bank statements list (transactions still client-driven after selection)
+
+**Bug fixes discovered during migration:**
+- Trial balance API/page shape mismatch (aggregates + row fields) — fixed
+- Ledger `.data.data` vs `.data.data.entries` mismatch — fixed
+
+## Follow-up (not yet done)
+
+- **Master data pages** (`/settings/masterdata/{coa,vendors,customers,departments,products}`) — use inline `fetch + useEffect`, need React Query refactor before prefetch.
+- **`/reports/financial/gl-detail`, `/ledger` Account Ledger tab** — require user-selected `accountCode`; no mount fetch to prefetch.
+- **`/bank-recon` transactions** — prefetch on default statement (once selection UX decided).
+- **E2E coverage** — duplicate `documents-first-paint.spec.ts` for the newly migrated pages.
+- **Manual first-paint verification** — DevTools Network zero-XHR check per page.
