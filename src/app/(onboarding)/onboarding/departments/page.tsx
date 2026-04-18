@@ -38,9 +38,7 @@ export default function OnboardingDepartmentsPage() {
 
     async function loadDepartments() {
       try {
-        const res = await fetch(`/api/tenants/${tid}/departments`, {
-          headers: { "x-tenant-id": tid },
-        });
+        const res = await fetch(`/api/tenants/${tid}/departments`);
         if (res.ok) {
           const json = (await res.json()) as { success: boolean; data: Department[] };
           if (json.success && Array.isArray(json.data)) {
@@ -87,7 +85,7 @@ export default function OnboardingDepartmentsPage() {
       if (localDepts.length > 0 && tenantId) {
         const res = await fetch(`/api/tenants/${tenantId}/departments/batch`, {
           method: "POST",
-          headers: { "Content-Type": "application/json", "x-tenant-id": tenantId },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ rows: localDepts }),
         });
         if (!res.ok) {

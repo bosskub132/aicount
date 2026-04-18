@@ -519,7 +519,7 @@ function ExtractionsContent() {
 
       const res = await fetch(`/api/documents/${doc.id}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", "x-tenant-id": tenantId },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           tenantId,
           issuerName: editValues.issuerName ?? doc.issuerName ?? null,
@@ -565,7 +565,7 @@ function ExtractionsContent() {
     try {
       const res = await fetch(`/api/documents/${doc.id}/submit`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-tenant-id": tenantId },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ tenantId }),
       });
       const json = await res.json();
@@ -582,7 +582,7 @@ function ExtractionsContent() {
     try {
       const res = await fetch(`/api/documents/${doc.id}/undo`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-tenant-id": tenantId },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ tenantId }),
       });
       const json = await res.json();
@@ -600,7 +600,7 @@ function ExtractionsContent() {
     if (!doc) return;
     const res = await fetch(`/api/documents/${doc.id}/retry`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "x-tenant-id": tenantId },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ tenantId }),
     });
     if (res.ok) {
@@ -615,7 +615,7 @@ function ExtractionsContent() {
     if (!doc) return;
     fetch(`/api/documents/${doc.id}`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json", "x-tenant-id": tenantId },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ tenantId, extractionStatus: "manual" }),
     });
   }

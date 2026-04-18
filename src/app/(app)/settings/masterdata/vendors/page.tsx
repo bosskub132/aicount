@@ -91,9 +91,7 @@ export default function MasterDataVendorsPage() {
     try {
       const sp = new URLSearchParams({ page: String(page), limit: String(limit) });
       if (debouncedSearch) sp.set("search", debouncedSearch);
-      const response = await fetch(`/api/tenants/${tenantId}/vendors?${sp}`, {
-        headers: { "x-tenant-id": tenantId },
-      });
+      const response = await fetch(`/api/tenants/${tenantId}/vendors?${sp}`);
       const json = (await response.json()) as { success: boolean; data?: VendorRow[]; meta?: { total: number; totalPages: number }; error?: string };
       if (json.success) {
         setRows(json.data || []);
@@ -146,7 +144,7 @@ export default function MasterDataVendorsPage() {
       if (editTarget) {
         const response = await fetch(`/api/tenants/${tenantId}/vendors`, {
           method: "PUT",
-          headers: { "Content-Type": "application/json", "x-tenant-id": tenantId },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             id: editTarget.id,
             taxId,
@@ -171,7 +169,7 @@ export default function MasterDataVendorsPage() {
       } else {
         const response = await fetch(`/api/tenants/${tenantId}/vendors`, {
           method: "POST",
-          headers: { "Content-Type": "application/json", "x-tenant-id": tenantId },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             taxId,
             name,
@@ -205,7 +203,7 @@ export default function MasterDataVendorsPage() {
     try {
       const response = await fetch(`/api/tenants/${tenantId}/vendors`, {
         method: "DELETE",
-        headers: { "Content-Type": "application/json", "x-tenant-id": tenantId },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id }),
       });
       const json = (await response.json()) as { success: boolean; error?: string };
@@ -463,7 +461,7 @@ export default function MasterDataVendorsPage() {
           onImport={async (importedRows) => {
             const res = await fetch(`/api/tenants/${tenantId}/vendors/batch`, {
               method: "POST",
-              headers: { "Content-Type": "application/json", "x-tenant-id": tenantId },
+              headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ rows: importedRows }),
             });
             const json = (await res.json()) as { success: boolean; data?: { count: number }; error?: string };

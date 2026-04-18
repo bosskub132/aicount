@@ -26,10 +26,7 @@ export default function AiUsagePage() {
     try {
       const res = await fetch("/api/settings/suggestions", {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          "x-tenant-id": tenantId,
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ suggestionsEnabled: enabled }),
       });
       const json = await res.json();

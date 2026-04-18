@@ -143,9 +143,7 @@ export default function UploadPage() {
     const timer = setInterval(async () => {
       try {
         const tid = getWorkspaceTenantId();
-        const res = await fetch(`/api/documents/${documentId}?tenantId=${tid}`, {
-          headers: { "x-tenant-id": tid },
-        });
+        const res = await fetch(`/api/documents/${documentId}?tenantId=${tid}`);
         if (!res.ok) return;
 
         const json = await res.json();
@@ -223,7 +221,6 @@ export default function UploadPage() {
       const response = await fetch("/api/documents/upload-batch", {
         method: "POST",
         body: form,
-        headers: { "x-tenant-id": getWorkspaceTenantId() },
       });
       const json = await response.json();
 

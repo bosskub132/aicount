@@ -88,8 +88,7 @@ export default function AccountingTemplatesPage() {
     setLoading(true);
     try {
       const response = await fetch(
-        `/api/tenants/${tenantId}/custom-export-templates`,
-        { headers: { "x-tenant-id": tenantId } }
+        `/api/tenants/${tenantId}/custom-export-templates`
       );
       const json = (await response.json()) as {
         success: boolean;
@@ -106,7 +105,6 @@ export default function AccountingTemplatesPage() {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
-                "x-tenant-id": tenantId,
               },
               body: JSON.stringify({
                 name: "Default Express",
@@ -241,7 +239,6 @@ export default function AccountingTemplatesPage() {
             method: "PUT",
             headers: {
               "Content-Type": "application/json",
-              "x-tenant-id": tenantId,
             },
             body: JSON.stringify({
               id: editTarget.id,
@@ -268,7 +265,6 @@ export default function AccountingTemplatesPage() {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              "x-tenant-id": tenantId,
             },
             body: JSON.stringify({
               name: templateName,
@@ -304,7 +300,6 @@ export default function AccountingTemplatesPage() {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
-            "x-tenant-id": tenantId,
           },
           body: JSON.stringify({ id, isActive: true }),
         }
@@ -335,7 +330,6 @@ export default function AccountingTemplatesPage() {
           method: "DELETE",
           headers: {
             "Content-Type": "application/json",
-            "x-tenant-id": tenantId,
           },
           body: JSON.stringify({ id }),
         }

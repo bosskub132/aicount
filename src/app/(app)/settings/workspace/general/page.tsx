@@ -41,9 +41,7 @@ export default function WorkspaceGeneralPage() {
 
     async function fetchTenant() {
       try {
-        const response = await fetch(`/api/tenants/${id}`, {
-          headers: { "x-tenant-id": id },
-        });
+        const response = await fetch(`/api/tenants/${id}`);
         const json = (await response.json()) as { success: boolean; data?: TenantData; error?: string };
         if (json.success && json.data) {
           const d = json.data;
@@ -76,10 +74,7 @@ export default function WorkspaceGeneralPage() {
     try {
       const response = await fetch(`/api/tenants/${tenantId}`, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          "x-tenant-id": tenantId,
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, taxId, vatRegistered, baseCurrency, dataRetentionYears, industry: industry || undefined, companySize: companySize || undefined }),
       });
       const json = (await response.json()) as { success: boolean; error?: string };

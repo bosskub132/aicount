@@ -64,9 +64,7 @@ export default function MasterDataProductsPage() {
     try {
       const sp = new URLSearchParams({ page: String(page), limit: String(limit) });
       if (debouncedSearch) sp.set("search", debouncedSearch);
-      const response = await fetch(`/api/tenants/${tenantId}/products?${sp}`, {
-        headers: { "x-tenant-id": tenantId },
-      });
+      const response = await fetch(`/api/tenants/${tenantId}/products?${sp}`);
       const json = (await response.json()) as { success: boolean; data?: ProductRow[]; meta?: { total: number; totalPages: number }; error?: string };
       if (json.success) {
         setRows(json.data || []);
@@ -116,7 +114,7 @@ export default function MasterDataProductsPage() {
       if (editTarget) {
         const response = await fetch(`/api/tenants/${tenantId}/products`, {
           method: "PUT",
-          headers: { "Content-Type": "application/json", "x-tenant-id": tenantId },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             id: editTarget.id,
             itemName,
@@ -136,7 +134,7 @@ export default function MasterDataProductsPage() {
       } else {
         const response = await fetch(`/api/tenants/${tenantId}/products`, {
           method: "POST",
-          headers: { "Content-Type": "application/json", "x-tenant-id": tenantId },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             itemCode,
             itemName,
@@ -166,7 +164,7 @@ export default function MasterDataProductsPage() {
     try {
       const response = await fetch(`/api/tenants/${tenantId}/products`, {
         method: "DELETE",
-        headers: { "Content-Type": "application/json", "x-tenant-id": tenantId },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id }),
       });
       const json = (await response.json()) as { success: boolean; error?: string };

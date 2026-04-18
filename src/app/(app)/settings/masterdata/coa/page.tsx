@@ -78,9 +78,7 @@ export default function MasterDataCoaPage() {
     try {
       const sp = new URLSearchParams({ page: String(page), limit: String(limit) });
       if (debouncedSearch) sp.set("search", debouncedSearch);
-      const response = await fetch(`/api/tenants/${tenantId}/coa?${sp}`, {
-        headers: { "x-tenant-id": tenantId },
-      });
+      const response = await fetch(`/api/tenants/${tenantId}/coa?${sp}`);
       const json = (await response.json()) as { success: boolean; data?: CoaRow[]; meta?: { total: number; totalPages: number }; error?: string };
       if (json.success) {
         setRows(json.data || []);
@@ -123,7 +121,7 @@ export default function MasterDataCoaPage() {
       if (editTarget) {
         const response = await fetch(`/api/tenants/${tenantId}/coa`, {
           method: "PUT",
-          headers: { "Content-Type": "application/json", "x-tenant-id": tenantId },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             id: editTarget.id,
             accountName,
@@ -142,7 +140,7 @@ export default function MasterDataCoaPage() {
       } else {
         const response = await fetch(`/api/tenants/${tenantId}/coa`, {
           method: "POST",
-          headers: { "Content-Type": "application/json", "x-tenant-id": tenantId },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ accountCode, accountName, category, isSuspense }),
         });
         const json = (await response.json()) as { success: boolean; error?: string };
@@ -166,7 +164,7 @@ export default function MasterDataCoaPage() {
     try {
       const response = await fetch(`/api/tenants/${tenantId}/coa`, {
         method: "DELETE",
-        headers: { "Content-Type": "application/json", "x-tenant-id": tenantId },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id }),
       });
       const json = (await response.json()) as { success: boolean; error?: string };
@@ -376,7 +374,7 @@ export default function MasterDataCoaPage() {
           onImport={async (importedRows) => {
             const res = await fetch(`/api/tenants/${tenantId}/coa/batch`, {
               method: "POST",
-              headers: { "Content-Type": "application/json", "x-tenant-id": tenantId },
+              headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ rows: importedRows }),
             });
             const json = (await res.json()) as { success: boolean; data?: { count: number }; error?: string };

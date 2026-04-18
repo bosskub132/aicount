@@ -313,9 +313,7 @@ function LedgerPageContent() {
   useEffect(() => {
     const tid = getWorkspaceTenantId();
     if (!tid || isDefaultWorkspaceTenantId(tid)) return;
-    fetch(`/api/tenants/${tid}/coa?limit=500`, {
-      headers: { "x-tenant-id": tid },
-    })
+    fetch(`/api/tenants/${tid}/coa?limit=500`)
       .then((r) => r.json())
       .then((json) => {
         if (json.success && Array.isArray(json.data)) {
