@@ -61,14 +61,14 @@ export function useDocumentMutations() {
     queryClient.invalidateQueries({ queryKey: ["document"] });
   };
 
-  const headers = { "Content-Type": "application/json", "x-tenant-id": tenantId };
+  const headers = { "Content-Type": "application/json" };
 
   const submit = useMutation({
     mutationFn: async (docId: string) => {
       const res = await fetch(`/api/documents/${docId}/submit`, {
         method: "POST",
         headers,
-        body: JSON.stringify({ tenantId }),
+        body: JSON.stringify({}),
       });
       const json = await res.json();
       if (!json.success) throw new Error(json.error);
@@ -82,7 +82,7 @@ export function useDocumentMutations() {
       const res = await fetch(`/api/documents/${docId}/approve`, {
         method: "POST",
         headers,
-        body: JSON.stringify({ tenantId }),
+        body: JSON.stringify({}),
       });
       const json = await res.json();
       if (!json.success) throw new Error(json.error);
@@ -96,7 +96,7 @@ export function useDocumentMutations() {
       const res = await fetch(`/api/documents/${docId}/reject`, {
         method: "POST",
         headers,
-        body: JSON.stringify({ tenantId, comment }),
+        body: JSON.stringify({ comment }),
       });
       const json = await res.json();
       if (!json.success) throw new Error(json.error);
@@ -110,7 +110,7 @@ export function useDocumentMutations() {
       const res = await fetch(`/api/documents/${docId}/re-ocr`, {
         method: "POST",
         headers,
-        body: JSON.stringify({ tenantId }),
+        body: JSON.stringify({}),
       });
       const json = await res.json();
       if (!json.success) throw new Error(json.error);
@@ -121,7 +121,7 @@ export function useDocumentMutations() {
 
   const deleteDoc = useMutation({
     mutationFn: async (docId: string) => {
-      const res = await fetch(`/api/documents/${docId}?tenantId=${tenantId}`, {
+      const res = await fetch(`/api/documents/${docId}`, {
         method: "DELETE",
         headers,
       });

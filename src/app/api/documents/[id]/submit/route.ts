@@ -37,14 +37,12 @@ export async function POST(
     if (!ctx) return unauthorized();
 
     const { id } = await context.params;
-    const body = (await request.json()) as SubmitBody;
+    const body = (await request.json().catch(() => ({}))) as Partial<SubmitBody>;
+    const tenantId = body.tenantId || ctx.tenantId;
 
-    if (!body?.tenantId) {
-      return NextResponse.json({ success: false, error: "tenantId is required" }, { status: 400 });
-    }
-    if (!ensureTenantScope(ctx.tenantId, body.tenantId)) return forbidden("Cross-tenant access denied");
+    if (!ensureTenantScope(ctx.tenantId, tenantId)) return forbidden("Cross-tenant access denied");
 
-    const realRole = await resolveUserRole(ctx.userId, body.tenantId);
+    const realRole = await resolveUserRole(ctx.userId, tenantId);
     if (!ensureRole(realRole, ["admin", "maker"])) {
       return forbidden("Only maker or admin can submit documents for approval (checker reviews separately).");
     }
@@ -52,7 +50,7 @@ export async function POST(
     const [doc] = await db
       .select()
       .from(documents)
-      .where(and(eq(documents.id, id), eq(documents.tenantId, body.tenantId)))
+      .where(and(eq(documents.id, id), eq(documents.tenantId, tenantId)))
       .limit(1);
 
     if (!doc) {
@@ -65,7 +63,7 @@ export async function POST(
       );
     }
 
-    const locked = await isDocumentMonthLocked(body.tenantId, doc.documentDate);
+    const locked = await isDocumentMonthLocked(tenantId, doc.documentDate);
     if (locked && !(ctx.role === "admin" && body.overrideLockedPeriod)) {
       return NextResponse.json(
         { success: false, error: "Document period is locked. Admin override required." },
@@ -78,7 +76,7 @@ export async function POST(
     const [tenant] = await db
       .select({ taxId: tenants.taxId })
       .from(tenants)
-      .where(eq(tenants.id, body.tenantId))
+      .where(eq(tenants.id, tenantId))
       .limit(1);
 
     const classified = classifyTransaction({
@@ -98,7 +96,7 @@ export async function POST(
     const wht = detectWht({ lineItemsText, subtotal: Number(doc.subtotal || 0) });
 
     const autoJournal = await buildAutoJournalEntries({
-      tenantId: body.tenantId,
+      tenantId: tenantId,
       journalType: classified.journalType,
       direction: classified.direction as "REVENUE" | "EXPENSE",
       ocrRaw: nextOcrRaw,
@@ -140,14 +138,14 @@ export async function POST(
     await inngest.send({
       name: "document/pending_approval",
       data: {
-        tenantId: body.tenantId,
+        tenantId: tenantId,
         documentId: doc.id,
         makerUserId: ctx.userId,
       },
     });
 
     await writeAuditLog({
-      tenantId: body.tenantId,
+      tenantId: tenantId,
       userId: ctx.userId,
       action: "document.submitted",
       entityType: "document",

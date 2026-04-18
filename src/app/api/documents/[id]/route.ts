@@ -248,11 +248,8 @@ export async function DELETE(
 
     const { id } = await context.params;
     const url = new URL(request.url);
-    const tenantId = url.searchParams.get("tenantId");
+    const tenantId = url.searchParams.get("tenantId") ?? ctx.tenantId;
 
-    if (!tenantId) {
-      return NextResponse.json({ success: false, error: "tenantId is required" }, { status: 400 });
-    }
     if (!ensureTenantScope(ctx.tenantId, tenantId)) return forbidden("Cross-tenant access denied");
 
     const [doc] = await db
