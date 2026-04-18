@@ -1,8 +1,11 @@
 "use client";
 
-import { Menu, Search } from "lucide-react";
-import { useUIStore } from "@/lib/stores/ui-store";
+import { Menu, Search, LogOut, Settings } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
+import { useUIStore, useToast } from "@/lib/stores/ui-store";
 import { Avatar } from "@/components/avatar";
+import { DropdownMenu } from "@/components/dropdown-menu";
 
 interface HeaderProps {
   title: string;
@@ -11,6 +14,20 @@ interface HeaderProps {
 
 export function Header({ title, userName = "User" }: HeaderProps) {
   const setMobileMenuOpen = useUIStore((s) => s.setMobileMenuOpen);
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  const toast = useToast();
+
+  async function handleSignOut() {
+    try {
+      const res = await fetch("/api/auth/logout", { method: "POST" });
+      if (!res.ok) throw new Error("Logout failed");
+      queryClient.clear();
+      router.replace("/login");
+    } catch {
+      toast.error("Failed to sign out. Please try again.");
+    }
+  }
 
   return (
     <header className="sticky top-0 z-[var(--z-sticky)] flex h-14 items-center justify-between border-b border-[var(--border)] bg-white px-4 md:px-6">
@@ -39,8 +56,25 @@ export function Header({ title, userName = "User" }: HeaderProps) {
             ⌘K
           </kbd>
         </button>
-        {/* User avatar */}
-        <Avatar name={userName} size="md" />
+        {/* User avatar with menu */}
+        <DropdownMenu
+          trigger={<Avatar name={userName} size="md" />}
+          align="right"
+          items={[
+            {
+              label: "Settings",
+              icon: <Settings className="h-4 w-4" />,
+              onClick: () => router.push("/settings"),
+            },
+            { label: "", onClick: () => {}, divider: true },
+            {
+              label: "Sign out",
+              icon: <LogOut className="h-4 w-4" />,
+              destructive: true,
+              onClick: handleSignOut,
+            },
+          ]}
+        />
       </div>
     </header>
   );
