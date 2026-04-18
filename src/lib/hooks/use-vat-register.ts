@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { getWorkspaceTenantId, isDefaultWorkspaceTenantId } from "@/components/workspace-selector";
+import { getWorkspaceTenantId } from "@/components/workspace-selector";
 
 interface VatRegisterParams {
   period: string;
@@ -19,6 +19,6 @@ export function useVatRegister(params: VatRegisterParams) {
       if (!json.success) throw new Error(json.error || "Failed to fetch VAT register");
       return json.data;
     },
-    enabled: !!tenantId && !isDefaultWorkspaceTenantId(tenantId),
+    enabled: !!tenantId,
   });
 }

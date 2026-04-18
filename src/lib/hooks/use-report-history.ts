@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getWorkspaceTenantId, isDefaultWorkspaceTenantId } from "@/components/workspace-selector";
+import { getWorkspaceTenantId } from "@/components/workspace-selector";
 import { useToast } from "@/lib/stores/ui-store";
 
 interface ReportHistoryParams {
@@ -26,7 +26,7 @@ export function useReportHistory(params: ReportHistoryParams = {}) {
       if (!json.success) throw new Error(json.error || "Failed to fetch report history");
       return json.data;
     },
-    enabled: !!tenantId && !isDefaultWorkspaceTenantId(tenantId),
+    enabled: !!tenantId,
   });
 }
 

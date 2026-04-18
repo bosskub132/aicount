@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { getWorkspaceTenantId, isDefaultWorkspaceTenantId } from "@/components/workspace-selector";
+import { getWorkspaceTenantId } from "@/components/workspace-selector";
 
 interface JournalListingParams {
   period: string;
@@ -24,6 +24,6 @@ export function useJournalListing(params: JournalListingParams) {
       if (!json.success) throw new Error(json.error || "Failed to fetch journal listing");
       return json.data;
     },
-    enabled: !!tenantId && !isDefaultWorkspaceTenantId(tenantId),
+    enabled: !!tenantId,
   });
 }

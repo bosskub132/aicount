@@ -36,10 +36,7 @@ import {
   type JournalLine,
 } from "@/components/journal-line-editor";
 import { Tooltip } from "@/components/tooltip";
-import {
-  getWorkspaceTenantId,
-  isDefaultWorkspaceTenantId,
-} from "@/components/workspace-selector";
+import { getWorkspaceTenantId } from "@/components/workspace-selector";
 import {
   useJournalEntries,
   useJournalEntry,
@@ -202,7 +199,7 @@ function LedgerPageContent() {
   const mounted = useMounted();
   const toast = useToast();
   const tenantId = getWorkspaceTenantId();
-  const isDefault = isDefaultWorkspaceTenantId(tenantId);
+  const isDefault = !tenantId;
 
   // Tab
   const initialTab = searchParams.get("tab") || "journal";
@@ -312,7 +309,7 @@ function LedgerPageContent() {
 
   useEffect(() => {
     const tid = getWorkspaceTenantId();
-    if (!tid || isDefaultWorkspaceTenantId(tid)) return;
+    if (!tid) return;
     fetch(`/api/tenants/${tid}/coa?limit=500`)
       .then((r) => r.json())
       .then((json) => {

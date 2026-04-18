@@ -1,8 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import {
-  getWorkspaceTenantId,
-  isDefaultWorkspaceTenantId,
-} from "@/components/workspace-selector";
+import { getWorkspaceTenantId } from "@/components/workspace-selector";
 import { useToast } from "@/lib/stores/ui-store";
 
 interface WhtCertificateListParams {
@@ -34,7 +31,7 @@ export function useWhtCertificates(params: WhtCertificateListParams = {}) {
         throw new Error(json.error || "Failed to fetch WHT certificates");
       return json.data;
     },
-    enabled: !!tenantId && !isDefaultWorkspaceTenantId(tenantId),
+    enabled: !!tenantId,
   });
 }
 
@@ -55,8 +52,7 @@ export function useWhtCertificateStats(params: { period: string }) {
         throw new Error(json.error || "Failed to fetch WHT certificate stats");
       return json.data.stats;
     },
-    enabled:
-      !!tenantId && !isDefaultWorkspaceTenantId(tenantId) && !!params.period,
+    enabled: !!tenantId && !!params.period,
   });
 }
 

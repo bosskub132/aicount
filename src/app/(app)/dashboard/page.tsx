@@ -27,10 +27,7 @@ import { StatusBadge } from "@/components/badge";
 import { Button } from "@/components/button";
 import { Skeleton } from "@/components/skeleton";
 import { EmptyState } from "@/components/empty-state";
-import {
-  getWorkspaceTenantId,
-  isDefaultWorkspaceTenantId,
-} from "@/components/workspace-selector";
+import { getWorkspaceTenantId } from "@/components/workspace-selector";
 import {
   useMonthlyComparison,
   useStatusBreakdown,
@@ -81,7 +78,7 @@ export default function DashboardPage() {
   const toast = useToast();
 
   const tenantId = getWorkspaceTenantId();
-  const isDefault = isDefaultWorkspaceTenantId(tenantId);
+  const isDefault = !tenantId;
 
   const monthly = useMonthlyComparison(6);
   const statusBreakdown = useStatusBreakdown();

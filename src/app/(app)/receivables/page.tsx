@@ -27,10 +27,7 @@ import { Skeleton } from "@/components/skeleton";
 import { EmptyState } from "@/components/empty-state";
 import { AgingMiniBar } from "@/components/aging-mini-bar";
 import { CurrencyInput } from "@/components/currency-input";
-import {
-  getWorkspaceTenantId,
-  isDefaultWorkspaceTenantId,
-} from "@/components/workspace-selector";
+import { getWorkspaceTenantId } from "@/components/workspace-selector";
 import { useReceivables } from "@/lib/hooks/use-receivables";
 import { useRecordPayment } from "@/lib/hooks/use-payments";
 import { useToast } from "@/lib/stores/ui-store";
@@ -191,7 +188,7 @@ function ReceivablesPageContent() {
   const mounted = useMounted();
   const toast = useToast();
   const tenantId = getWorkspaceTenantId();
-  const isDefault = isDefaultWorkspaceTenantId(tenantId);
+  const isDefault = !tenantId;
 
   // Filters
   const [page, setPage] = useState(1);

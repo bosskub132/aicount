@@ -31,10 +31,7 @@ import { Pagination } from "@/components/pagination";
 import { Skeleton } from "@/components/skeleton";
 import { EmptyState } from "@/components/empty-state";
 import { StatCard } from "@/components/stat-card";
-import {
-  getWorkspaceTenantId,
-  isDefaultWorkspaceTenantId,
-} from "@/components/workspace-selector";
+import { getWorkspaceTenantId } from "@/components/workspace-selector";
 import { usePayables } from "@/lib/hooks/use-payables";
 import { useMounted } from "@/lib/hooks/use-mounted";
 import { useRecordPayment } from "@/lib/hooks/use-payments";
@@ -136,7 +133,7 @@ function PayablesPageContent() {
   const toast = useToast();
   const mounted = useMounted();
   const tenantId = getWorkspaceTenantId();
-  const isDefault = isDefaultWorkspaceTenantId(tenantId);
+  const isDefault = !tenantId;
 
   // Filters
   const [page, setPage] = useState(1);

@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { getWorkspaceTenantId, isDefaultWorkspaceTenantId } from "@/components/workspace-selector";
+import { getWorkspaceTenantId } from "@/components/workspace-selector";
 
 interface TaxPnd53Params {
   period: string;
@@ -17,6 +17,6 @@ export function useTaxPnd53(params: TaxPnd53Params) {
       if (!json.success) throw new Error(json.error || "Failed to fetch PND53 report");
       return json.data;
     },
-    enabled: !!tenantId && !isDefaultWorkspaceTenantId(tenantId),
+    enabled: !!tenantId,
   });
 }

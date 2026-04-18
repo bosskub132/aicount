@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { getWorkspaceTenantId, isDefaultWorkspaceTenantId } from "@/components/workspace-selector";
+import { getWorkspaceTenantId } from "@/components/workspace-selector";
 
 interface BalanceSheetParams {
   period: string;
@@ -20,6 +20,6 @@ export function useBalanceSheet(params: BalanceSheetParams) {
       if (!json.success) throw new Error(json.error || "Failed to fetch balance sheet");
       return json.data;
     },
-    enabled: !!tenantId && !isDefaultWorkspaceTenantId(tenantId),
+    enabled: !!tenantId,
   });
 }

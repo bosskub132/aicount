@@ -17,10 +17,7 @@ import { Select } from "@/components/select";
 import { Skeleton } from "@/components/skeleton";
 import { EmptyState } from "@/components/empty-state";
 import { ConfidenceBar } from "@/components/confidence-bar";
-import {
-  getWorkspaceTenantId,
-  isDefaultWorkspaceTenantId,
-} from "@/components/workspace-selector";
+import { getWorkspaceTenantId } from "@/components/workspace-selector";
 import {
   useBankRecon,
   useConfirmMatch,
@@ -167,7 +164,7 @@ function BankReconContent() {
     [deleteMatch],
   );
 
-  if (isDefaultWorkspaceTenantId(tenantId)) {
+  if (!tenantId) {
     return (
       <EmptyState
         icon={<Landmark className="h-10 w-10" />}
