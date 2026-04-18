@@ -8,11 +8,16 @@ interface ProfitLossParams {
   comparison?: string;
 }
 
+export const profitLossKeys = {
+  detail: (tenantId: string, params: ProfitLossParams) =>
+    ["profit-loss", tenantId, params] as const,
+};
+
 export function useProfitLoss(params: ProfitLossParams) {
   const tenantId = getWorkspaceTenantId();
 
   return useQuery({
-    queryKey: ["profit-loss", tenantId, params],
+    queryKey: profitLossKeys.detail(tenantId, params),
     queryFn: async () => {
       const sp = new URLSearchParams({ period: params.period, scope: params.scope });
       if (params.department) sp.set("department", params.department);
