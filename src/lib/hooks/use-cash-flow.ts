@@ -7,11 +7,16 @@ interface CashFlowParams {
   comparison?: string;
 }
 
+export const cashFlowKeys = {
+  detail: (tenantId: string, params: CashFlowParams) =>
+    ["cash-flow", tenantId, params] as const,
+};
+
 export function useCashFlow(params: CashFlowParams) {
   const tenantId = getWorkspaceTenantId();
 
   return useQuery({
-    queryKey: ["cash-flow", tenantId, params],
+    queryKey: cashFlowKeys.detail(tenantId, params),
     queryFn: async () => {
       const sp = new URLSearchParams({ period: params.period, scope: params.scope });
       if (params.comparison) sp.set("comparison", params.comparison);
