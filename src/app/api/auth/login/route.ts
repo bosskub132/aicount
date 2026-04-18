@@ -14,21 +14,47 @@ const LoginSchema = z.object({
   password: z.string().min(1),
 });
 
+function mapSupabaseAuthError(message: string): string {
+  const m = message.toLowerCase();
+  if (m.includes("invalid login credentials")) {
+    return "Email or password is incorrect. Please double-check and try again.";
+  }
+  if (m.includes("email not confirmed")) {
+    return "Please verify your email before signing in. Check your inbox for the verification link.";
+  }
+  if (m.includes("too many requests") || m.includes("rate limit")) {
+    return "Too many sign-in attempts. Please wait a minute and try again.";
+  }
+  if (m.includes("user not found")) {
+    return "No account found for this email. Try signing up instead.";
+  }
+  return "Sign-in failed. Please try again.";
+}
+
 export async function POST(request: Request) {
   try {
     if (!validateCsrf(request)) {
-      return NextResponse.json({ success: false, error: "CSRF validation failed" }, { status: 403 });
+      return NextResponse.json(
+        { success: false, error: "Request blocked for security. Please reload the page and try again." },
+        { status: 403 }
+      );
     }
 
     const ip = request.headers.get("x-real-ip") || request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
     const rate = await checkRateLimitAsync({ key: `auth-login:${ip}`, limit: 30, windowMs: 15 * 60 * 1000 });
     if (!rate.ok) {
-      return NextResponse.json({ success: false, error: "Too many login attempts" }, { status: 429 });
+      return NextResponse.json(
+        { success: false, error: "Too many sign-in attempts. Please wait a few minutes and try again." },
+        { status: 429 }
+      );
     }
 
     const parsed = LoginSchema.safeParse(await request.json());
     if (!parsed.success) {
-      return NextResponse.json({ success: false, error: "Invalid input" }, { status: 400 });
+      return NextResponse.json(
+        { success: false, error: "Please enter a valid email and password." },
+        { status: 400 }
+      );
     }
     const body = parsed.data;
 
@@ -54,7 +80,10 @@ export async function POST(request: Request) {
       password: body.password,
     });
     if (error) {
-      return NextResponse.json({ success: false, error: error.message }, { status: 401 });
+      return NextResponse.json(
+        { success: false, error: mapSupabaseAuthError(error.message) },
+        { status: 401 }
+      );
     }
 
     const response = NextResponse.json({
@@ -99,7 +128,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("[auth/login POST]", error);
     return NextResponse.json(
-      { success: false, error: "Invalid email or password" },
+      { success: false, error: "Something went wrong while signing in. Please try again." },
       { status: 500 }
     );
   }
