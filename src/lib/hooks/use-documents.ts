@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getWorkspaceTenantId } from "@/components/workspace-selector";
 
-interface DocumentsParams {
+export interface DocumentsParams {
   status?: string;
   page?: number;
   limit?: number;
@@ -10,12 +10,20 @@ interface DocumentsParams {
   search?: string;
 }
 
+export const documentKeys = {
+  all: ["documents"] as const,
+  list: (tenantId: string, params: DocumentsParams) =>
+    ["documents", tenantId, params] as const,
+  detail: (id: string, tenantId: string) =>
+    ["document", id, tenantId] as const,
+};
+
 export function useDocuments(params: DocumentsParams = {}) {
   const tenantId = getWorkspaceTenantId();
   const { status, page = 1, limit = 20, sort = "createdAt", order = "desc", search } = params;
 
   return useQuery({
-    queryKey: ["documents", tenantId, params],
+    queryKey: documentKeys.list(tenantId, params),
     queryFn: async () => {
       const sp = new URLSearchParams({ tenantId, page: String(page), limit: String(limit), sort, order });
       if (status) sp.set("status", status);
@@ -26,13 +34,14 @@ export function useDocuments(params: DocumentsParams = {}) {
       return json;
     },
     enabled: !!tenantId && tenantId !== "00000000-0000-0000-0000-000000000000",
+    staleTime: 2 * 60_000,
   });
 }
 
 export function useDocument(id: string | null) {
   const tenantId = getWorkspaceTenantId();
   return useQuery({
-    queryKey: ["document", id, tenantId],
+    queryKey: documentKeys.detail(id ?? "", tenantId),
     queryFn: async () => {
       const res = await fetch(`/api/documents/${id}?tenantId=${tenantId}`);
       const json = await res.json();
