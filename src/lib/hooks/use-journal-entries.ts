@@ -12,11 +12,18 @@ interface JournalEntriesFilters {
   search?: string;
 }
 
+export const journalEntriesKeys = {
+  list: (tenantId: string, filters: JournalEntriesFilters) =>
+    ["journal-entries", tenantId, filters] as const,
+  detail: (tenantId: string, entryId: string | null) =>
+    ["journal-entry", tenantId, entryId] as const,
+};
+
 export function useJournalEntries(tenantId: string, filters: JournalEntriesFilters = {}) {
   const { status, dateFrom, dateTo, page = 1, limit = 20, sort = "createdAt", order = "desc", search } = filters;
 
   return useQuery({
-    queryKey: ["journal-entries", tenantId, filters],
+    queryKey: journalEntriesKeys.list(tenantId, filters),
     queryFn: async () => {
       const sp = new URLSearchParams({ page: String(page), limit: String(limit), sort, order });
       if (status) sp.set("status", status);
