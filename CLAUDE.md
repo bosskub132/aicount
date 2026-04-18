@@ -113,7 +113,12 @@ if (!ensureTenantScope(ctx.tenantId, tenantId)) return forbidden("Cross-tenant a
 - **Testing locally:** Routes expect headers set by proxy.ts, not cookies:
   `curl -H "x-user-id: UUID" -H "x-tenant-id: UUID" -H "x-user-role: admin" http://localhost:3000/api/...`
 - Users link to tenants via `tenant_assignments` table (not profiles or workspace_members)
-- **Client-side fetches**: ALL `fetch()` calls to `/api/*` MUST include `"x-tenant-id": tenantId` in headers — proxy.ts falls back to zero UUID without it, causing cross-tenant denied errors
+- **Client-side fetches**: NEVER set `"x-tenant-id"` header or `?tenantId=` query param — middleware injects from cookie (`workspaceTenantId`). Guarded by `src/lib/test/no-client-tenant-header.test.ts`
+- API routes fall back to cookie tenant when query param absent: `searchParams.get("tenantId") ?? ctx.tenantId`
+- `DEFAULT_WORKSPACE_TENANT_ID` / `isDefaultWorkspaceTenantId` are REMOVED — use `!tenantId` for the "no workspace selected" check
+- `NEXT_PUBLIC_APP_URL` must match the browser's `Origin` header — `src/lib/api/csrf.ts` rejects mismatches with 403. For local dev set `http://localhost:3000`; otherwise login fails
+- Server prefetch pattern: Server Component `page.tsx` resolves tenant via `getTenantIdFromRequest(userId)` from cookie, calls DB query in `src/lib/db/queries/`, uses `queryClient.setQueryData(keys.xxx(...), result)` + `<HydrationBoundary>`. Client body lives in `*-client.tsx`. Prefer `setQueryData` over `prefetchQuery` (matches envelope shape exactly). See `src/app/(app)/documents/page.tsx` as reference
+- Each hook exports a `<resource>Keys` factory (e.g., `documentKeys.list(tenantId, params)`). Snapshot contract test pins the key shape so server + client agree
 
 ## Design System Components (Phase 1)
 
