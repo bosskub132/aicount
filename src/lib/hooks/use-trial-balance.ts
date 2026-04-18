@@ -7,11 +7,16 @@ interface TrialBalanceParams {
   department?: string;
 }
 
+export const trialBalanceKeys = {
+  detail: (tenantId: string, params: TrialBalanceParams) =>
+    ["trial-balance", tenantId, params] as const,
+};
+
 export function useTrialBalance(params: TrialBalanceParams) {
   const tenantId = getWorkspaceTenantId();
 
   return useQuery({
-    queryKey: ["trial-balance", tenantId, params],
+    queryKey: trialBalanceKeys.detail(tenantId, params),
     queryFn: async () => {
       const sp = new URLSearchParams({ period: params.period, scope: params.scope });
       if (params.department) sp.set("department", params.department);
