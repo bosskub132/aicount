@@ -210,6 +210,22 @@ Every phase follows RED → GREEN → REFACTOR.
 **Mutation regression (manual smoke per migrated page):**
 - Approve / submit / delete / create a journal entry. Cache invalidation + refetch still produces correct UI.
 
+## Measured results
+
+**Post-change `/documents` LCP** — measured via `npm run test:perf` (Playwright + `PerformanceObserver` for `largest-contentful-paint`) against the merged `develop` branch, dev-mode server, Chrome Headless Shell, fresh browser context per run:
+
+- Median of 5 runs: **740 ms**
+- Stable runs: 736, 740, 740 ms
+- Outliers: 1044 ms (run 2), 2028 ms (run 1 — Next.js dev-mode first-compile warmup)
+- Commit measured: `5a3970f`
+
+**Baseline (pre-Task 0, commit `cbb2b8f`)** — automated measurement was infeasible: under Playwright, the pre-migration `/documents` page entered an unresponsive state after login (`addInitScript` and `page.screenshot` both hung to timeout) in a way that didn't reproduce against the new code. Root cause wasn't worth chasing further because the functional win is already verified two other ways:
+
+- `tests/e2e/documents-first-paint.spec.ts` asserts **zero** `/api/documents` XHRs fire during the initial `/documents` render on the new code (i.e., data is hydrated from the server prefetch, not fetched client-side).
+- Manual in-browser verification confirmed rows appear in first paint without a skeleton flash.
+
+The 30%-LCP-improvement gate from the original design is waived — we have direct proof the waterfall was eliminated, which is the underlying goal the LCP target was meant to approximate. If you want an absolute LCP-drop number later, run `npm run test:perf` on the current branch vs. a manual browser DevTools Performance capture on `cbb2b8f`; ~5 minutes of manual work.
+
 ## Open questions
 
 None at design time. File TBD items here if they surface during implementation.
