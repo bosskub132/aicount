@@ -7,11 +7,16 @@ interface BalanceSheetParams {
   comparison?: string;
 }
 
+export const balanceSheetKeys = {
+  detail: (tenantId: string, params: BalanceSheetParams) =>
+    ["balance-sheet", tenantId, params] as const,
+};
+
 export function useBalanceSheet(params: BalanceSheetParams) {
   const tenantId = getWorkspaceTenantId();
 
   return useQuery({
-    queryKey: ["balance-sheet", tenantId, params],
+    queryKey: balanceSheetKeys.detail(tenantId, params),
     queryFn: async () => {
       const sp = new URLSearchParams({ period: params.period, scope: params.scope });
       if (params.comparison) sp.set("comparison", params.comparison);
