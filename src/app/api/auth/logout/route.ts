@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { WORKSPACE_COOKIE } from "@/lib/api/tenant";
 
+const isProd = process.env.NODE_ENV === "production";
+
 export async function POST(request: Request) {
   try {
     const supabase = await createSupabaseServerClient();
@@ -9,18 +11,35 @@ export async function POST(request: Request) {
 
     const response = NextResponse.json({ success: true });
 
-    // Clear our tenant cookies
-    response.cookies.set(WORKSPACE_COOKIE, "", { path: "/", maxAge: 0 });
-    response.cookies.set("workspaceTenantIdPublic", "", { path: "/", maxAge: 0 });
+    // Match original attributes so the browser replaces (deletes) the exact cookie
+    response.cookies.set(WORKSPACE_COOKIE, "", {
+      httpOnly: true,
+      sameSite: "lax",
+      path: "/",
+      secure: isProd,
+      maxAge: 0,
+    });
+    response.cookies.set("workspaceTenantIdPublic", "", {
+      httpOnly: false,
+      sameSite: "lax",
+      path: "/",
+      secure: isProd,
+      maxAge: 0,
+    });
 
-    // Defensively clear any leftover Supabase auth cookies directly on the
-    // response. signOut() already writes cookie deletions via next/headers
-    // cookies(), but mixing that path with response.cookies.set() can produce
-    // inconsistent merges — clear here too so the browser gets a clean state.
+    // Defensively clear Supabase auth cookies — signOut writes them via
+    // next/headers cookies(), but mixing that with NextResponse.cookies can
+    // produce inconsistent merges. List every sb-* cookie from the request
+    // and emit matching delete headers.
     for (const cookie of request.headers.get("cookie")?.split(";") ?? []) {
       const name = cookie.split("=")[0]?.trim();
       if (name && name.startsWith("sb-")) {
-        response.cookies.set(name, "", { path: "/", maxAge: 0 });
+        response.cookies.set(name, "", {
+          path: "/",
+          maxAge: 0,
+          sameSite: "lax",
+          secure: isProd,
+        });
       }
     }
 
