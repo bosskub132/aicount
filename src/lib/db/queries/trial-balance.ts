@@ -7,6 +7,23 @@ export interface TrialBalanceParams {
   scope: "monthly" | "quarterly" | "yearly";
 }
 
+export interface TrialBalanceRow {
+  accountCode: string;
+  accountName: string;
+  category: string;
+  debit: number;
+  credit: number;
+}
+
+export interface TrialBalanceResult {
+  period: string;
+  scope: string;
+  rows: TrialBalanceRow[];
+  totalDebit: number;
+  totalCredit: number;
+  accountCount: number;
+}
+
 function resolvePeriod(period: string, scope: string): { start: Date; end: Date } {
   const now = new Date();
 
@@ -36,15 +53,27 @@ function resolvePeriod(period: string, scope: string): { start: Date; end: Date 
   return { start: new Date(year, month - 1, 1), end: new Date(year, month, 0) };
 }
 
-export async function getTrialBalance(tenantId: string, params: TrialBalanceParams) {
+const CATEGORY_LABEL: Record<string, string> = {
+  asset: "Asset",
+  liability: "Liability",
+  equity: "Equity",
+  revenue: "Revenue",
+  expense: "Expense",
+};
+
+export async function getTrialBalance(
+  tenantId: string,
+  params: TrialBalanceParams
+): Promise<TrialBalanceResult> {
   const { start, end } = resolvePeriod(params.period, params.scope);
 
   const rows = await db
     .select({
       accountCode: journalLines.accountCode,
       accountName: chartOfAccounts.accountName,
-      totalDebit: sql<number>`sum(${journalLines.debit})`,
-      totalCredit: sql<number>`sum(${journalLines.credit})`,
+      category: chartOfAccounts.category,
+      totalDebit: sql<number>`coalesce(sum(cast(${journalLines.debit} as numeric)), 0)`,
+      totalCredit: sql<number>`coalesce(sum(cast(${journalLines.credit} as numeric)), 0)`,
     })
     .from(journalLines)
     .innerJoin(journalEntries, eq(journalLines.journalEntryId, journalEntries.id))
@@ -62,11 +91,25 @@ export async function getTrialBalance(tenantId: string, params: TrialBalancePara
         eq(journalEntries.status, "posted")
       )
     )
-    .groupBy(journalLines.accountCode, chartOfAccounts.accountName);
+    .groupBy(journalLines.accountCode, chartOfAccounts.accountName, chartOfAccounts.category);
+
+  const normalized: TrialBalanceRow[] = rows.map((r) => ({
+    accountCode: r.accountCode,
+    accountName: r.accountName ?? r.accountCode,
+    category: CATEGORY_LABEL[String(r.category ?? "expense")] ?? "Expense",
+    debit: Number(r.totalDebit),
+    credit: Number(r.totalCredit),
+  }));
+
+  const totalDebit = normalized.reduce((s, r) => s + r.debit, 0);
+  const totalCredit = normalized.reduce((s, r) => s + r.credit, 0);
 
   return {
     period: `${start.toISOString().slice(0, 10)}..${end.toISOString().slice(0, 10)}`,
     scope: params.scope,
-    rows,
+    rows: normalized,
+    totalDebit,
+    totalCredit,
+    accountCount: normalized.length,
   };
 }

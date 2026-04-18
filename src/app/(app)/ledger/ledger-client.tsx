@@ -261,25 +261,27 @@ function LedgerPageContent() {
     alDateTo || undefined,
   );
 
-  // Derived data
+  // Derived data — API returns { success, data: { entries, total, page, pageSize, stats } }
   const rows: JournalEntryRow[] = useMemo(
-    () => (journalEntries.data?.data ?? []) as JournalEntryRow[],
+    () => (journalEntries.data?.data?.entries ?? []) as JournalEntryRow[],
     [journalEntries.data],
   );
-  const meta = journalEntries.data?.meta ?? {
-    total: 0,
-    page: 1,
-    limit: 20,
-    totalPages: 1,
+  const apiTotal = journalEntries.data?.data?.total ?? 0;
+  const apiPageSize = journalEntries.data?.data?.pageSize ?? 20;
+  const meta = {
+    total: apiTotal,
+    page: journalEntries.data?.data?.page ?? 1,
+    limit: apiPageSize,
+    totalPages: Math.max(1, Math.ceil(apiTotal / apiPageSize)),
   };
 
   // Stats (from API response or computed from rows)
   const stats = useMemo(() => {
-    const summary = journalEntries.data?.summary;
+    const summary = journalEntries.data?.data?.stats;
     if (summary) {
       return {
-        entriesThisMonth: Number(summary.entriesThisMonth ?? 0),
-        draftsPending: Number(summary.draftsPending ?? 0),
+        entriesThisMonth: Number(summary.entriesThisMonth ?? summary.totalEntries ?? 0),
+        draftsPending: Number(summary.draftsPending ?? summary.draftCount ?? 0),
         totalDebits: Number(summary.totalDebits ?? 0),
         totalCredits: Number(summary.totalCredits ?? 0),
       };
