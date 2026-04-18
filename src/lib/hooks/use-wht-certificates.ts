@@ -10,11 +10,18 @@ interface WhtCertificateListParams {
   limit?: number;
 }
 
+export const whtCertificatesKeys = {
+  list: (tenantId: string, params: WhtCertificateListParams) =>
+    ["wht-certificates", tenantId, params] as const,
+  stats: (tenantId: string, period: string) =>
+    ["wht-certificates", "stats", tenantId, period] as const,
+};
+
 export function useWhtCertificates(params: WhtCertificateListParams = {}) {
   const tenantId = getWorkspaceTenantId();
 
   return useQuery({
-    queryKey: ["wht-certificates", tenantId, params],
+    queryKey: whtCertificatesKeys.list(tenantId, params),
     queryFn: async () => {
       const sp = new URLSearchParams();
       if (params.period) sp.set("period", params.period);
@@ -39,7 +46,7 @@ export function useWhtCertificateStats(params: { period: string }) {
   const tenantId = getWorkspaceTenantId();
 
   return useQuery({
-    queryKey: ["wht-certificates", "stats", tenantId, params.period],
+    queryKey: whtCertificatesKeys.stats(tenantId, params.period),
     queryFn: async () => {
       const sp = new URLSearchParams();
       sp.set("period", params.period);
