@@ -37,10 +37,7 @@ export default function OnboardingTemplatePage() {
         const name = customTemplateName.trim() || "My Custom Template";
         const res = await fetch(`/api/tenants/${tenantId}/custom-export-templates`, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-tenant-id": tenantId,
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ name, columnMappings: [], isActive: false }),
         });
         if (!res.ok && res.status !== 409) {

@@ -83,11 +83,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   // Preserve: workspace deletion banner
   useEffect(() => {
     const tenantId = getWorkspaceTenantId();
-    if (!tenantId || tenantId === "00000000-0000-0000-0000-000000000000") return;
+    if (!tenantId) return;
 
-    fetch(`/api/tenants/${tenantId}`, {
-      headers: { "x-tenant-id": tenantId },
-    })
+    fetch(`/api/tenants/${tenantId}`)
       .then((r) => r.json())
       .then((json) => {
         if (json.success && json.data?.deletedAt) {

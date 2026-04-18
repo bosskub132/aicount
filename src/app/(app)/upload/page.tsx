@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Upload, FileText, AlertTriangle } from "lucide-react";
-import { getWorkspaceTenantId, isDefaultWorkspaceTenantId } from "@/components/workspace-selector";
+import { getWorkspaceTenantId } from "@/components/workspace-selector";
 import { UploadQueue } from "@/components/upload-queue";
 import type { UploadFile } from "@/components/upload-queue";
 import { Card } from "@/components/card";
@@ -41,7 +41,7 @@ export default function UploadPage() {
   // Check tenant on mount
   useEffect(() => {
     const tid = getWorkspaceTenantId();
-    setIsDefaultTenant(isDefaultWorkspaceTenantId(tid));
+    setIsDefaultTenant(!tid);
   }, []);
 
   // Cleanup poll timers and preview URLs on unmount
@@ -143,9 +143,7 @@ export default function UploadPage() {
     const timer = setInterval(async () => {
       try {
         const tid = getWorkspaceTenantId();
-        const res = await fetch(`/api/documents/${documentId}?tenantId=${tid}`, {
-          headers: { "x-tenant-id": tid },
-        });
+        const res = await fetch(`/api/documents/${documentId}`);
         if (!res.ok) return;
 
         const json = await res.json();
@@ -223,7 +221,6 @@ export default function UploadPage() {
       const response = await fetch("/api/documents/upload-batch", {
         method: "POST",
         body: form,
-        headers: { "x-tenant-id": getWorkspaceTenantId() },
       });
       const json = await response.json();
 

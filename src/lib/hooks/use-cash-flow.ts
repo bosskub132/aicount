@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { getWorkspaceTenantId, isDefaultWorkspaceTenantId } from "@/components/workspace-selector";
+import { getWorkspaceTenantId } from "@/components/workspace-selector";
 
 interface CashFlowParams {
   period: string;
@@ -7,11 +7,16 @@ interface CashFlowParams {
   comparison?: string;
 }
 
+export const cashFlowKeys = {
+  detail: (tenantId: string, params: CashFlowParams) =>
+    ["cash-flow", tenantId, params] as const,
+};
+
 export function useCashFlow(params: CashFlowParams) {
   const tenantId = getWorkspaceTenantId();
 
   return useQuery({
-    queryKey: ["cash-flow", tenantId, params],
+    queryKey: cashFlowKeys.detail(tenantId, params),
     queryFn: async () => {
       const sp = new URLSearchParams({ period: params.period, scope: params.scope });
       if (params.comparison) sp.set("comparison", params.comparison);
@@ -20,6 +25,6 @@ export function useCashFlow(params: CashFlowParams) {
       if (!json.success) throw new Error(json.error || "Failed to fetch cash flow");
       return json.data;
     },
-    enabled: !!tenantId && !isDefaultWorkspaceTenantId(tenantId),
+    enabled: !!tenantId,
   });
 }

@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { getWorkspaceTenantId, isDefaultWorkspaceTenantId } from "@/components/workspace-selector";
+import { getWorkspaceTenantId } from "@/components/workspace-selector";
 
 interface BalanceSheetParams {
   period: string;
@@ -7,11 +7,16 @@ interface BalanceSheetParams {
   comparison?: string;
 }
 
+export const balanceSheetKeys = {
+  detail: (tenantId: string, params: BalanceSheetParams) =>
+    ["balance-sheet", tenantId, params] as const,
+};
+
 export function useBalanceSheet(params: BalanceSheetParams) {
   const tenantId = getWorkspaceTenantId();
 
   return useQuery({
-    queryKey: ["balance-sheet", tenantId, params],
+    queryKey: balanceSheetKeys.detail(tenantId, params),
     queryFn: async () => {
       const sp = new URLSearchParams({ period: params.period, scope: params.scope });
       if (params.comparison) sp.set("comparison", params.comparison);
@@ -20,6 +25,6 @@ export function useBalanceSheet(params: BalanceSheetParams) {
       if (!json.success) throw new Error(json.error || "Failed to fetch balance sheet");
       return json.data;
     },
-    enabled: !!tenantId && !isDefaultWorkspaceTenantId(tenantId),
+    enabled: !!tenantId,
   });
 }

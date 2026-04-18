@@ -5,12 +5,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { Building2, ChevronDown } from "lucide-react";
 
-export const DEFAULT_WORKSPACE_TENANT_ID = "00000000-0000-0000-0000-000000000000";
-
-export function isDefaultWorkspaceTenantId(id: string | null | undefined) {
-  return !id || id === DEFAULT_WORKSPACE_TENANT_ID;
-}
-
 type Workspace = {
   tenantId: string;
   tenantName: string;
@@ -62,12 +56,6 @@ export function WorkspaceSelector() {
     void loadWorkspaces();
   }, []);
 
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.removeItem("workspaceTenantId");
-    }
-  }, []);
-
   async function selectWorkspace(id: string) {
     const res = await fetch("/api/workspace/switch", {
       method: "POST",
@@ -85,7 +73,7 @@ export function WorkspaceSelector() {
   }
 
   const current = workspaces.find((w) => w.tenantId === tenantId);
-  const unsetClient = isDefaultWorkspaceTenantId(tenantId) && workspaces.length > 0;
+  const unsetClient = !tenantId && workspaces.length > 0;
 
   return (
     <div className="relative">

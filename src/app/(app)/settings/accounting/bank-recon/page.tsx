@@ -66,9 +66,7 @@ export default function BankReconSettingsPage() {
     if (!tenantId) return;
     setSettingsLoading(true);
     try {
-      const response = await fetch(`/api/tenants/${tenantId}/bank-recon-settings`, {
-        headers: { "x-tenant-id": tenantId },
-      });
+      const response = await fetch(`/api/tenants/${tenantId}/bank-recon-settings`);
       const json = (await response.json()) as { success: boolean; data?: ReconSettings; error?: string };
       if (json.success && json.data) {
         setSettings({
@@ -90,9 +88,7 @@ export default function BankReconSettingsPage() {
     if (!tenantId) return;
     setAccountsLoading(true);
     try {
-      const response = await fetch(`/api/tenants/${tenantId}/bank-accounts`, {
-        headers: { "x-tenant-id": tenantId },
-      });
+      const response = await fetch(`/api/tenants/${tenantId}/bank-accounts`);
       const json = (await response.json()) as { success: boolean; data?: BankAccountRow[]; error?: string };
       if (json.success) {
         setAccounts(json.data || []);
@@ -118,7 +114,7 @@ export default function BankReconSettingsPage() {
     try {
       const response = await fetch(`/api/tenants/${tenantId}/bank-recon-settings`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json", "x-tenant-id": tenantId },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(settings),
       });
       const json = (await response.json()) as { success: boolean; error?: string };
@@ -161,7 +157,7 @@ export default function BankReconSettingsPage() {
       if (editTarget) {
         const response = await fetch(`/api/tenants/${tenantId}/bank-accounts`, {
           method: "PUT",
-          headers: { "Content-Type": "application/json", "x-tenant-id": tenantId },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             id: editTarget.id,
             bankName,
@@ -180,7 +176,7 @@ export default function BankReconSettingsPage() {
       } else {
         const response = await fetch(`/api/tenants/${tenantId}/bank-accounts`, {
           method: "POST",
-          headers: { "Content-Type": "application/json", "x-tenant-id": tenantId },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             bankName,
             accountNumber,
@@ -208,7 +204,7 @@ export default function BankReconSettingsPage() {
     try {
       const response = await fetch(`/api/tenants/${tenantId}/bank-accounts`, {
         method: "DELETE",
-        headers: { "Content-Type": "application/json", "x-tenant-id": tenantId },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id }),
       });
       const json = (await response.json()) as { success: boolean; error?: string };

@@ -53,9 +53,7 @@ export default function OnboardingChartOfAccountsPage() {
 
     async function loadCoa() {
       try {
-        const res = await fetch(`/api/tenants/${tid}/coa`, {
-          headers: { "x-tenant-id": tid },
-        });
+        const res = await fetch(`/api/tenants/${tid}/coa`);
         if (res.ok) {
           const json = (await res.json()) as { success: boolean; data: CoaRow[] };
           if (json.success && Array.isArray(json.data)) {
@@ -75,9 +73,7 @@ export default function OnboardingChartOfAccountsPage() {
   // Fetch cross-tenant suggestions for COA
   useEffect(() => {
     if (!tenantId) return;
-    fetch(`/api/onboarding/suggestions?step=coa`, {
-      headers: { "x-tenant-id": tenantId },
-    })
+    fetch(`/api/onboarding/suggestions?step=coa`)
       .then((r) => r.json())
       .then((data: { suggestions?: typeof coaSuggestions }) =>
         setCoaSuggestions(data.suggestions ?? [])
@@ -117,10 +113,7 @@ export default function OnboardingChartOfAccountsPage() {
       if (unsavedRows.length > 0 && tenantId) {
         const res = await fetch(`/api/tenants/${tenantId}/coa/batch`, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-tenant-id": tenantId,
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ rows: unsavedRows }),
         });
         if (!res.ok) {

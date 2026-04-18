@@ -288,7 +288,7 @@ export default function ExportPage() {
     queryKey: ["export-template-docs", tenantId, selectedTemplateId],
     queryFn: async () => {
       const res = await fetch(
-        `/api/export/templates?tenantId=${tenantId}&templateId=${selectedTemplateId}`,
+        `/api/export/templates?templateId=${selectedTemplateId}`,
       );
       const json = await res.json();
       if (!json.success) throw new Error(json.error);

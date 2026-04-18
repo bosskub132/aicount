@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { getWorkspaceTenantId, isDefaultWorkspaceTenantId } from "@/components/workspace-selector";
+import { getWorkspaceTenantId } from "@/components/workspace-selector";
 
 interface JournalListingParams {
   period: string;
@@ -9,11 +9,16 @@ interface JournalListingParams {
   limit?: number;
 }
 
+export const journalListingKeys = {
+  detail: (tenantId: string, params: JournalListingParams) =>
+    ["journal-listing", tenantId, params] as const,
+};
+
 export function useJournalListing(params: JournalListingParams) {
   const tenantId = getWorkspaceTenantId();
 
   return useQuery({
-    queryKey: ["journal-listing", tenantId, params],
+    queryKey: journalListingKeys.detail(tenantId, params),
     queryFn: async () => {
       const sp = new URLSearchParams({ period: params.period, scope: params.scope });
       if (params.type) sp.set("type", params.type);
@@ -24,6 +29,6 @@ export function useJournalListing(params: JournalListingParams) {
       if (!json.success) throw new Error(json.error || "Failed to fetch journal listing");
       return json.data;
     },
-    enabled: !!tenantId && !isDefaultWorkspaceTenantId(tenantId),
+    enabled: !!tenantId,
   });
 }

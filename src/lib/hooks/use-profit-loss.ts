@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { getWorkspaceTenantId, isDefaultWorkspaceTenantId } from "@/components/workspace-selector";
+import { getWorkspaceTenantId } from "@/components/workspace-selector";
 
 interface ProfitLossParams {
   period: string;
@@ -8,11 +8,16 @@ interface ProfitLossParams {
   comparison?: string;
 }
 
+export const profitLossKeys = {
+  detail: (tenantId: string, params: ProfitLossParams) =>
+    ["profit-loss", tenantId, params] as const,
+};
+
 export function useProfitLoss(params: ProfitLossParams) {
   const tenantId = getWorkspaceTenantId();
 
   return useQuery({
-    queryKey: ["profit-loss", tenantId, params],
+    queryKey: profitLossKeys.detail(tenantId, params),
     queryFn: async () => {
       const sp = new URLSearchParams({ period: params.period, scope: params.scope });
       if (params.department) sp.set("department", params.department);
@@ -22,6 +27,6 @@ export function useProfitLoss(params: ProfitLossParams) {
       if (!json.success) throw new Error(json.error || "Failed to fetch profit & loss");
       return json.data;
     },
-    enabled: !!tenantId && !isDefaultWorkspaceTenantId(tenantId),
+    enabled: !!tenantId,
   });
 }

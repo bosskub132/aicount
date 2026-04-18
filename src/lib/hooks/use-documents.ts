@@ -25,7 +25,7 @@ export function useDocuments(params: DocumentsParams = {}) {
   return useQuery({
     queryKey: documentKeys.list(tenantId, params),
     queryFn: async () => {
-      const sp = new URLSearchParams({ tenantId, page: String(page), limit: String(limit), sort, order });
+      const sp = new URLSearchParams({ page: String(page), limit: String(limit), sort, order });
       if (status) sp.set("status", status);
       if (search) sp.set("search", search);
       const res = await fetch(`/api/documents?${sp}`);
@@ -33,7 +33,7 @@ export function useDocuments(params: DocumentsParams = {}) {
       if (!json.success) throw new Error(json.error || "Failed to fetch documents");
       return json;
     },
-    enabled: !!tenantId && tenantId !== "00000000-0000-0000-0000-000000000000",
+    enabled: !!tenantId,
     staleTime: 2 * 60_000,
   });
 }
@@ -43,12 +43,12 @@ export function useDocument(id: string | null) {
   return useQuery({
     queryKey: documentKeys.detail(id ?? "", tenantId),
     queryFn: async () => {
-      const res = await fetch(`/api/documents/${id}?tenantId=${tenantId}`);
+      const res = await fetch(`/api/documents/${id}`);
       const json = await res.json();
       if (!json.success) throw new Error(json.error);
       return json.data;
     },
-    enabled: !!id && !!tenantId && tenantId !== "00000000-0000-0000-0000-000000000000",
+    enabled: !!id && !!tenantId,
   });
 }
 

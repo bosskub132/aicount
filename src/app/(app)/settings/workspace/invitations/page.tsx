@@ -54,9 +54,7 @@ export default function WorkspaceInvitationsPage() {
   const fetchInvitations = useCallback(async (id: string) => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/tenants/${id}/invitations`, {
-        headers: { "x-tenant-id": id },
-      });
+      const response = await fetch(`/api/tenants/${id}/invitations`);
       const json = (await response.json()) as { success: boolean; data?: InvitationRow[]; error?: string };
       if (json.success) {
         setInvitations(json.data ?? []);
@@ -77,10 +75,7 @@ export default function WorkspaceInvitationsPage() {
     try {
       const response = await fetch(`/api/tenants/${tenantId}/invitations`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-tenant-id": tenantId,
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: inviteEmail, role: inviteRole }),
       });
       const json = (await response.json()) as { success: boolean; error?: string };
@@ -104,10 +99,7 @@ export default function WorkspaceInvitationsPage() {
     try {
       const response = await fetch(`/api/tenants/${tenantId}/invitations`, {
         method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-          "x-tenant-id": tenantId,
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ invitationId: invitation.invitationId }),
       });
       const json = (await response.json()) as { success: boolean; error?: string };
@@ -129,7 +121,6 @@ export default function WorkspaceInvitationsPage() {
     try {
       const res = await fetch(`/api/tenants/${tenantId}/invitations/${invitationId}/resend`, {
         method: "POST",
-        headers: { "x-tenant-id": tenantId },
       });
       const json = (await res.json()) as { success: boolean; error?: string };
       if (json.success) {

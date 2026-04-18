@@ -1,17 +1,22 @@
 import { useQuery } from "@tanstack/react-query";
-import { getWorkspaceTenantId, isDefaultWorkspaceTenantId } from "@/components/workspace-selector";
+import { getWorkspaceTenantId } from "@/components/workspace-selector";
 
 interface VatRegisterParams {
   period: string;
   direction: "EXPENSE" | "REVENUE";
 }
 
+export const vatRegisterKeys = {
+  detail: (tenantId: string, params: VatRegisterParams) =>
+    ["vat-register", tenantId, params] as const,
+};
+
 export function useVatRegister(params: VatRegisterParams) {
   const tenantId = getWorkspaceTenantId();
   const endpoint = params.direction === "EXPENSE" ? "purchase-vat" : "sales-vat";
 
   return useQuery({
-    queryKey: ["vat-register", tenantId, params],
+    queryKey: vatRegisterKeys.detail(tenantId, params),
     queryFn: async () => {
       const sp = new URLSearchParams({ period: params.period });
       const res = await fetch(`/api/tenants/${tenantId}/reports/tax/${endpoint}?${sp}`);
@@ -19,6 +24,6 @@ export function useVatRegister(params: VatRegisterParams) {
       if (!json.success) throw new Error(json.error || "Failed to fetch VAT register");
       return json.data;
     },
-    enabled: !!tenantId && !isDefaultWorkspaceTenantId(tenantId),
+    enabled: !!tenantId,
   });
 }

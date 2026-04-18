@@ -9,11 +9,16 @@ interface ReceivablesFilters {
   search?: string;
 }
 
+export const receivablesKeys = {
+  list: (tenantId: string, filters: ReceivablesFilters) =>
+    ["receivables", tenantId, filters] as const,
+};
+
 export function useReceivables(tenantId: string, filters: ReceivablesFilters = {}) {
   const { status, dateFrom, dateTo, page = 1, limit = 20, search } = filters;
 
   return useQuery({
-    queryKey: ["receivables", tenantId, filters],
+    queryKey: receivablesKeys.list(tenantId, filters),
     queryFn: async () => {
       const sp = new URLSearchParams({ page: String(page), limit: String(limit) });
       if (status) sp.set("status", status);

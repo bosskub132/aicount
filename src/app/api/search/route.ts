@@ -9,10 +9,10 @@ export async function GET(request: Request) {
   if (!ctx) return unauthorized();
 
   const url = new URL(request.url);
-  const tenantId = url.searchParams.get("tenantId") || "";
+  const tenantId = url.searchParams.get("tenantId") || ctx.tenantId;
   const q = (url.searchParams.get("q") || "").trim();
-  if (!tenantId || !q) {
-    return NextResponse.json({ success: false, error: "tenantId and q are required" }, { status: 400 });
+  if (!q) {
+    return NextResponse.json({ success: false, error: "q is required" }, { status: 400 });
   }
   if (!ensureTenantScope(ctx.tenantId, tenantId)) return forbidden("Cross-tenant access denied");
 

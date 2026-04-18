@@ -57,8 +57,8 @@ export default function WorkspaceDeletePage() {
     async function loadData() {
       try {
         const [tenantRes, membersRes, profileRes] = await Promise.all([
-          fetch(`/api/tenants/${id}`, { headers: { "x-tenant-id": id } }),
-          fetch(`/api/tenants/${id}/assignments`, { headers: { "x-tenant-id": id } }),
+          fetch(`/api/tenants/${id}`),
+          fetch(`/api/tenants/${id}/assignments`),
           fetch("/api/auth/profile"),
         ]);
         const profileJson = await profileRes.json();
@@ -102,7 +102,6 @@ export default function WorkspaceDeletePage() {
     try {
       const response = await fetch(`/api/tenants/${tenantId}/cancel-deletion`, {
         method: "POST",
-        headers: { "x-tenant-id": tenantId },
       });
       const json = (await response.json()) as { success: boolean; error?: string };
       if (json.success) {
@@ -128,10 +127,7 @@ export default function WorkspaceDeletePage() {
     try {
       const response = await fetch(`/api/tenants/${tenantId}/transfer-ownership`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-tenant-id": tenantId,
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ newOwnerId }),
       });
       const json = (await response.json()) as { success: boolean; error?: string };
@@ -154,10 +150,7 @@ export default function WorkspaceDeletePage() {
     try {
       const response = await fetch(`/api/tenants/${tenantId}`, {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          "x-tenant-id": tenantId,
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "soft_delete" }),
       });
       const json = (await response.json()) as { success: boolean; error?: string };

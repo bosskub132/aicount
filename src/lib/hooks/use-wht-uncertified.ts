@@ -1,8 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import {
-  getWorkspaceTenantId,
-  isDefaultWorkspaceTenantId,
-} from "@/components/workspace-selector";
+import { getWorkspaceTenantId } from "@/components/workspace-selector";
 
 export function useWhtUncertified(params: { period: string }) {
   const tenantId = getWorkspaceTenantId();
@@ -22,7 +19,6 @@ export function useWhtUncertified(params: { period: string }) {
         );
       return json.data;
     },
-    enabled:
-      !!tenantId && !isDefaultWorkspaceTenantId(tenantId) && !!params.period,
+    enabled: !!tenantId && !!params.period,
   });
 }

@@ -72,13 +72,11 @@ export async function updateSession(request: NextRequest) {
     }
 
     const pathTenantIdMatch = request.nextUrl.pathname.match(/^\/api\/tenants\/([^/]+)/);
-    const queryTenantId = request.nextUrl.searchParams.get("tenantId");
     const cookieTenantId = request.cookies.get("workspaceTenantId")?.value;
     const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     const tenantId =
       (cookieTenantId && UUID_RE.test(cookieTenantId) ? cookieTenantId : undefined) ||
       pathTenantIdMatch?.[1] ||
-      queryTenantId ||
       "00000000-0000-0000-0000-000000000000";
 
     // Resolve role from tenant_assignments for API routes (accurate role check)

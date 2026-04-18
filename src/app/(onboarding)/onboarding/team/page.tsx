@@ -42,9 +42,7 @@ export default function OnboardingTeamPage() {
 
     async function loadInvitations() {
       try {
-        const res = await fetch(`/api/tenants/${tid}/invitations`, {
-          headers: { "x-tenant-id": tid },
-        });
+        const res = await fetch(`/api/tenants/${tid}/invitations`);
         if (res.ok) {
           const json = (await res.json()) as { success: boolean; data: Invitation[] };
           if (json.success && Array.isArray(json.data)) {
@@ -69,10 +67,7 @@ export default function OnboardingTeamPage() {
     try {
       const res = await fetch(`/api/tenants/${tenantId}/invitations`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-tenant-id": tenantId,
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: email.trim(), role }),
       });
       const json = (await res.json()) as { success: boolean; error?: string };

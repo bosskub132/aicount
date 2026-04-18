@@ -48,9 +48,7 @@ export default function WorkspaceMembersPage() {
   async function fetchMembers(id: string) {
     setLoading(true);
     try {
-      const response = await fetch(`/api/tenants/${id}/assignments`, {
-        headers: { "x-tenant-id": id },
-      });
+      const response = await fetch(`/api/tenants/${id}/assignments`);
       const json = (await response.json()) as { success: boolean; data?: MemberRow[]; error?: string };
       if (json.success) {
         setMembers(json.data ?? []);
@@ -74,10 +72,7 @@ export default function WorkspaceMembersPage() {
     try {
       const response = await fetch(`/api/tenants/${tenantId}/assignments`, {
         method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-          "x-tenant-id": tenantId,
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ assignmentId }),
       });
       const json = (await response.json()) as { success: boolean; error?: string };

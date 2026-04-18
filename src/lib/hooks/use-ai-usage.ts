@@ -1,17 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { getWorkspaceTenantId } from "@/components/workspace-selector";
 
-const isValidTenant = (id: string) =>
-  !!id && id !== "00000000-0000-0000-0000-000000000000";
-
 export function useTenantAiUsage() {
   const tenantId = getWorkspaceTenantId();
   return useQuery({
     queryKey: ["ai-usage", tenantId],
     queryFn: async () => {
-      const res = await fetch("/api/settings/ai-usage", {
-        headers: { "x-tenant-id": tenantId },
-      });
+      const res = await fetch("/api/settings/ai-usage");
       const json = await res.json();
       if (!json.success) throw new Error(json.error);
       return json.data as {
@@ -28,6 +23,6 @@ export function useTenantAiUsage() {
         suggestionsEnabled: boolean;
       };
     },
-    enabled: isValidTenant(tenantId),
+    enabled: !!tenantId,
   });
 }

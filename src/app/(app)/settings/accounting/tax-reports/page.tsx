@@ -37,9 +37,7 @@ export default function AccountingTaxReportsPage() {
     if (!tenantId) return;
     async function fetchTenant() {
       try {
-        const res = await fetch(`/api/tenants/${tenantId}`, {
-          headers: { "x-tenant-id": tenantId },
-        });
+        const res = await fetch(`/api/tenants/${tenantId}`);
         const json = (await res.json()) as {
           success: boolean;
           data?: { taxId?: string };

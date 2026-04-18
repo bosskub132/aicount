@@ -90,12 +90,8 @@ export default function OnboardingVendorsCustomersPage() {
     }
 
     Promise.all([
-      fetch(`/api/tenants/${tid}/vendors`, {
-        headers: { "x-tenant-id": tid },
-      }).then((r) => r.json()),
-      fetch(`/api/tenants/${tid}/customers`, {
-        headers: { "x-tenant-id": tid },
-      }).then((r) => r.json()),
+      fetch(`/api/tenants/${tid}/vendors`).then((r) => r.json()),
+      fetch(`/api/tenants/${tid}/customers`).then((r) => r.json()),
     ])
       .then(
         ([vJson, cJson]: [
@@ -117,9 +113,7 @@ export default function OnboardingVendorsCustomersPage() {
     if (!tenantId) return;
     const taxIds = vendors.map((v) => v.taxId).filter(Boolean);
     if (taxIds.length === 0) return;
-    fetch(`/api/onboarding/suggestions?step=vendors&vendorTaxIds=${taxIds.join(",")}`, {
-      headers: { "x-tenant-id": tenantId },
-    })
+    fetch(`/api/onboarding/suggestions?step=vendors&vendorTaxIds=${taxIds.join(",")}`)
       .then((r) => r.json())
       .then((data: { suggestions?: typeof whtSuggestions }) =>
         setWhtSuggestions(data.suggestions ?? [])
@@ -252,7 +246,7 @@ export default function OnboardingVendorsCustomersPage() {
         if (localVendors.length > 0) {
           const res = await fetch(`/api/tenants/${tenantId}/vendors/batch`, {
             method: "POST",
-            headers: { "Content-Type": "application/json", "x-tenant-id": tenantId },
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ rows: localVendors }),
           });
           if (!res.ok) {
@@ -266,7 +260,7 @@ export default function OnboardingVendorsCustomersPage() {
         if (localCustomers.length > 0) {
           const res = await fetch(`/api/tenants/${tenantId}/customers/batch`, {
             method: "POST",
-            headers: { "Content-Type": "application/json", "x-tenant-id": tenantId },
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ rows: localCustomers }),
           });
           if (!res.ok) {

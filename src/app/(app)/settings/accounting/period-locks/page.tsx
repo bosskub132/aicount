@@ -67,9 +67,7 @@ export default function AccountingPeriodLocksPage() {
     if (!tenantId) return;
     setLoading(true);
     try {
-      const response = await fetch(`/api/tenants/${tenantId}/period-locks`, {
-        headers: { "x-tenant-id": tenantId },
-      });
+      const response = await fetch(`/api/tenants/${tenantId}/period-locks`);
       const json = (await response.json()) as {
         success: boolean;
         data?: PeriodLockApiItem[];
@@ -112,10 +110,7 @@ export default function AccountingPeriodLocksPage() {
     try {
       const response = await fetch(`/api/tenants/${tenantId}/period-locks`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-tenant-id": tenantId,
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ yearMonth }),
       });
       const json = (await response.json()) as {
@@ -141,10 +136,7 @@ export default function AccountingPeriodLocksPage() {
     try {
       const response = await fetch(`/api/tenants/${tenantId}/period-locks`, {
         method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-          "x-tenant-id": tenantId,
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ yearMonth: unlockTarget }),
       });
       const json = (await response.json()) as {
