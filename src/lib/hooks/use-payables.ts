@@ -9,11 +9,16 @@ interface PayablesFilters {
   search?: string;
 }
 
+export const payablesKeys = {
+  list: (tenantId: string, filters: PayablesFilters) =>
+    ["payables", tenantId, filters] as const,
+};
+
 export function usePayables(tenantId: string, filters: PayablesFilters = {}) {
   const { status, dateFrom, dateTo, page = 1, limit = 20, search } = filters;
 
   return useQuery({
-    queryKey: ["payables", tenantId, filters],
+    queryKey: payablesKeys.list(tenantId, filters),
     queryFn: async () => {
       const sp = new URLSearchParams({ page: String(page), limit: String(limit) });
       if (status) sp.set("status", status);
