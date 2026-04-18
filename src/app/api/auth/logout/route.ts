@@ -11,32 +11,33 @@ export async function POST(request: Request) {
 
     const response = NextResponse.json({ success: true });
 
-    // Match original attributes so the browser replaces (deletes) the exact cookie
-    response.cookies.set(WORKSPACE_COOKIE, "", {
+    // Use delete with full attribute match so the browser truly removes the
+    // cookie (not just empties its value). Mismatched attrs = browser treats
+    // delete as a different cookie and keeps the original.
+    response.cookies.delete({
+      name: WORKSPACE_COOKIE,
+      path: "/",
+      sameSite: "lax",
+      secure: isProd,
       httpOnly: true,
-      sameSite: "lax",
-      path: "/",
-      secure: isProd,
-      maxAge: 0,
     });
-    response.cookies.set("workspaceTenantIdPublic", "", {
-      httpOnly: false,
-      sameSite: "lax",
+    response.cookies.delete({
+      name: "workspaceTenantIdPublic",
       path: "/",
+      sameSite: "lax",
       secure: isProd,
-      maxAge: 0,
+      httpOnly: false,
     });
 
-    // Defensively clear Supabase auth cookies — signOut writes them via
-    // next/headers cookies(), but mixing that with NextResponse.cookies can
-    // produce inconsistent merges. List every sb-* cookie from the request
-    // and emit matching delete headers.
+    // Defensively clear any Supabase auth cookies. signOut writes via
+    // next/headers cookies(), which can miss the response if we build it
+    // separately — so emit explicit deletes here.
     for (const cookie of request.headers.get("cookie")?.split(";") ?? []) {
       const name = cookie.split("=")[0]?.trim();
       if (name && name.startsWith("sb-")) {
-        response.cookies.set(name, "", {
+        response.cookies.delete({
+          name,
           path: "/",
-          maxAge: 0,
           sameSite: "lax",
           secure: isProd,
         });
