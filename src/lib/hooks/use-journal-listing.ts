@@ -9,11 +9,16 @@ interface JournalListingParams {
   limit?: number;
 }
 
+export const journalListingKeys = {
+  detail: (tenantId: string, params: JournalListingParams) =>
+    ["journal-listing", tenantId, params] as const,
+};
+
 export function useJournalListing(params: JournalListingParams) {
   const tenantId = getWorkspaceTenantId();
 
   return useQuery({
-    queryKey: ["journal-listing", tenantId, params],
+    queryKey: journalListingKeys.detail(tenantId, params),
     queryFn: async () => {
       const sp = new URLSearchParams({ period: params.period, scope: params.scope });
       if (params.type) sp.set("type", params.type);
