@@ -6,7 +6,7 @@ export function useExportTemplates() {
   return useQuery({
     queryKey: ["export-templates", tenantId],
     queryFn: async () => {
-      const res = await fetch(`/api/export/templates?tenantId=${tenantId}`);
+      const res = await fetch(`/api/export/templates`);
       const json = await res.json();
       if (!json.success) throw new Error(json.error);
       return json.data;

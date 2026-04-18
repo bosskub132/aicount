@@ -80,7 +80,7 @@ function DocumentsPageContent() {
   useEffect(() => {
     if (!tenantId || tenantId === "00000000-0000-0000-0000-000000000000") return;
 
-    fetch(`/api/auth/workspace-role?tenantId=${tenantId}`, { credentials: "same-origin" })
+    fetch(`/api/auth/workspace-role`, { credentials: "same-origin" })
       .then((r) => r.json())
       .then((json) => {
         if (json?.success && json.data) {

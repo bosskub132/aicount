@@ -36,7 +36,7 @@ export function useApprovalQueue() {
   return useQuery({
     queryKey: ["approval-queue", tenantId],
     queryFn: async () => {
-      const res = await fetch(`/api/documents/approval-queue?tenantId=${tenantId}`);
+      const res = await fetch(`/api/documents/approval-queue`);
       const json = await res.json();
       if (!json.success) throw new Error(json.error);
       return json.data;

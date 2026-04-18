@@ -143,7 +143,7 @@ export default function UploadPage() {
     const timer = setInterval(async () => {
       try {
         const tid = getWorkspaceTenantId();
-        const res = await fetch(`/api/documents/${documentId}?tenantId=${tid}`);
+        const res = await fetch(`/api/documents/${documentId}`);
         if (!res.ok) return;
 
         const json = await res.json();
