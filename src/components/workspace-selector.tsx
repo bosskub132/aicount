@@ -56,12 +56,6 @@ export function WorkspaceSelector() {
     void loadWorkspaces();
   }, []);
 
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.removeItem("workspaceTenantId");
-    }
-  }, []);
-
   async function selectWorkspace(id: string) {
     const res = await fetch("/api/workspace/switch", {
       method: "POST",
