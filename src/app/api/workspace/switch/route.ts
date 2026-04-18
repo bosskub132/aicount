@@ -45,5 +45,12 @@ export async function POST(request: Request) {
 
   const response = NextResponse.json({ success: true, data: { tenantId: parsed.tenantId } });
   response.cookies.set(WORKSPACE_COOKIE, parsed.tenantId, workspaceCookieOptions);
+  response.cookies.set("workspaceTenantIdPublic", parsed.tenantId, {
+    httpOnly: false,
+    sameSite: "lax",
+    path: "/",
+    secure: process.env.NODE_ENV === "production",
+    maxAge: 60 * 60 * 24 * 365,
+  });
   return response;
 }

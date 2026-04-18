@@ -95,5 +95,6 @@ describe("POST /api/workspace/switch", () => {
     expect(setCookie.toLowerCase()).toContain("httponly");
     expect(setCookie.toLowerCase()).toContain("samesite=lax");
     expect(setCookie.toLowerCase()).toContain("path=/");
+    expect(setCookie.toLowerCase()).toContain("workspacetenantidpublic=");
   });
 });
