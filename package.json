@@ -15,7 +15,8 @@
     "release:preflight": "node scripts/release-preflight.mjs",
     "test": "vitest",
     "test:coverage": "vitest --coverage",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test e2e/",
+    "test:perf": "playwright test perf/ --reporter=list"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.78.0",
