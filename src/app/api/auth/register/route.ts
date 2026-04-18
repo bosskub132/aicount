@@ -13,21 +13,52 @@ const RegisterSchema = z.object({
   name: z.string().max(200).optional(),
 });
 
+function mapSupabaseSignUpError(message: string): string {
+  const m = message.toLowerCase();
+  if (m.includes("already registered") || m.includes("user already")) {
+    return "An account already exists for this email. Try signing in instead.";
+  }
+  if (m.includes("password") && m.includes("6 characters")) {
+    return "Password must be at least 6 characters.";
+  }
+  if (m.includes("password")) {
+    return "Password doesn't meet requirements. Choose a stronger password.";
+  }
+  if (m.includes("email") && (m.includes("invalid") || m.includes("not valid"))) {
+    return "Please enter a valid email address.";
+  }
+  if (m.includes("rate limit") || m.includes("too many")) {
+    return "Too many sign-up attempts. Please wait a few minutes and try again.";
+  }
+  return "Sign-up failed. Please try again.";
+}
+
 export async function POST(request: Request) {
   try {
     if (!validateCsrf(request)) {
-      return NextResponse.json({ success: false, error: "CSRF validation failed" }, { status: 403 });
+      return NextResponse.json(
+        { success: false, error: "Request blocked for security. Please reload the page and try again." },
+        { status: 403 }
+      );
     }
 
     const ip = request.headers.get("x-real-ip") || request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
     const rate = await checkRateLimitAsync({ key: `auth-register:${ip}`, limit: 20, windowMs: 15 * 60 * 1000 });
     if (!rate.ok) {
-      return NextResponse.json({ success: false, error: "Too many register attempts" }, { status: 429 });
+      return NextResponse.json(
+        { success: false, error: "Too many sign-up attempts. Please wait a few minutes and try again." },
+        { status: 429 }
+      );
     }
 
     const parsed = RegisterSchema.safeParse(await request.json());
     if (!parsed.success) {
-      return NextResponse.json({ success: false, error: "Invalid input" }, { status: 400 });
+      const firstIssue = parsed.error.issues[0];
+      let msg = "Please check your details and try again.";
+      if (firstIssue?.path[0] === "email") msg = "Please enter a valid email address.";
+      else if (firstIssue?.path[0] === "password") msg = "Password must be at least 6 characters.";
+      else if (firstIssue?.path[0] === "name") msg = "Name is too long (max 200 characters).";
+      return NextResponse.json({ success: false, error: msg }, { status: 400 });
     }
     const body = parsed.data;
 
@@ -47,7 +78,10 @@ export async function POST(request: Request) {
     });
     if (error) {
       console.error("[register] supabase error:", error.message);
-      return NextResponse.json({ success: false, error: "Registration failed. Please try again." }, { status: 400 });
+      return NextResponse.json(
+        { success: false, error: mapSupabaseSignUpError(error.message) },
+        { status: 400 }
+      );
     }
 
     let profileSynced = false;
@@ -78,7 +112,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("[auth/register POST]", error);
     return NextResponse.json(
-      { success: false, error: "Register failed" },
+      { success: false, error: "Something went wrong while creating your account. Please try again." },
       { status: 500 }
     );
   }

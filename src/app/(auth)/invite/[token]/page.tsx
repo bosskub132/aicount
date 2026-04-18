@@ -3,10 +3,12 @@
 
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function InvitePage() {
   const params = useParams();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const token = params.token as string;
   const [status, setStatus] = useState<"loading" | "ready" | "accepted" | "error">("loading");
   const [invitation, setInvitation] = useState<any>(null);
@@ -17,7 +19,7 @@ export default function InvitePage() {
       .then((res) => res.json())
       .then((json) => {
         if (!json.success) {
-          setError(json.error || "Invalid invitation");
+          setError(json.error || "We couldn't load this invitation. Check the link or ask for a new one.");
           setStatus("error");
           return;
         }
@@ -25,30 +27,38 @@ export default function InvitePage() {
         setStatus("ready");
       })
       .catch(() => {
-        setError("Failed to load invitation");
+        setError("Network error loading invitation. Please check your connection and try again.");
         setStatus("error");
       });
   }, [token]);
 
   async function acceptInvite() {
     setStatus("loading");
-    const res = await fetch(`/api/invite/${token}`, { method: "POST" });
-    const json = await res.json();
+    try {
+      const res = await fetch(`/api/invite/${token}`, { method: "POST" });
+      const json = await res.json();
 
-    if (!json.success) {
-      setError(json.error || "Accept failed");
+      if (!json.success) {
+        setError(json.error || "Couldn't accept the invitation. Please try again.");
+        setStatus("error");
+        return;
+      }
+
+      if (json.data.requiresAuth) {
+        router.push(`/signup?invite=${token}&email=${encodeURIComponent(json.data.email)}`);
+        return;
+      }
+
+      setStatus("accepted");
+      queryClient.clear();
+      setTimeout(() => {
+        router.replace("/dashboard");
+        router.refresh();
+      }, 1200);
+    } catch {
+      setError("Network error. Please try again.");
       setStatus("error");
-      return;
     }
-
-    if (json.data.requiresAuth) {
-      router.push(`/signup?invite=${token}&email=${encodeURIComponent(json.data.email)}`);
-      return;
-    }
-
-    setStatus("accepted");
-    localStorage.setItem("workspaceTenantId", json.data.tenantId);
-    setTimeout(() => router.push("/dashboard"), 1500);
   }
 
   if (status === "loading") {
@@ -61,12 +71,20 @@ export default function InvitePage() {
 
   if (status === "error") {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="max-w-md space-y-3 text-center">
-          <h1 className="text-xl font-semibold text-red-600">Invitation Error</h1>
-          <p className="text-slate-600">{error}</p>
-          <button onClick={() => router.push("/login")} className="rounded bg-slate-900 px-4 py-2 text-white">
-            Go to Login
+      <div className="flex min-h-screen items-center justify-center p-4">
+        <div className="max-w-md space-y-4 rounded-lg border border-slate-200 bg-white p-6 text-center shadow-sm">
+          <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-red-50">
+            <svg className="h-5 w-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+            </svg>
+          </div>
+          <h1 className="text-lg font-semibold text-slate-900">We couldn&apos;t open this invitation</h1>
+          <p className="text-sm text-slate-600">{error}</p>
+          <button
+            onClick={() => router.push("/login")}
+            className="w-full rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-slate-800"
+          >
+            Go to sign in
           </button>
         </div>
       </div>

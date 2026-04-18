@@ -12,17 +12,26 @@ const ResendVerificationSchema = z.object({
 export async function POST(request: Request) {
   try {
     if (!validateCsrf(request)) {
-      return NextResponse.json({ success: false, error: "CSRF validation failed" }, { status: 403 });
+      return NextResponse.json(
+        { success: false, error: "Request blocked for security. Please reload the page and try again." },
+        { status: 403 }
+      );
     }
     const ip = request.headers.get("x-real-ip") || request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
     const rate = await checkRateLimitAsync({ key: `resend-verify:${ip}`, limit: 5, windowMs: 15 * 60 * 1000 });
     if (!rate.ok) {
-      return NextResponse.json({ success: false, error: "Too many attempts" }, { status: 429 });
+      return NextResponse.json(
+        { success: false, error: "Too many requests. Please wait 15 minutes before requesting another verification email." },
+        { status: 429 }
+      );
     }
 
     const parsed = ResendVerificationSchema.safeParse(await request.json());
     if (!parsed.success) {
-      return NextResponse.json({ success: false, error: "Invalid input" }, { status: 400 });
+      return NextResponse.json(
+        { success: false, error: "Please enter a valid email address." },
+        { status: 400 }
+      );
     }
     const body = parsed.data;
 
