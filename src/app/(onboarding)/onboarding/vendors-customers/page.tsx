@@ -9,6 +9,7 @@ import { Select } from "@/components/select";
 import { Tabs } from "@/components/tabs";
 import { FileImport } from "@/components/file-import";
 import { SuggestionPill } from "@/components/suggestion-pill";
+import { getWorkspaceTenantId } from "@/components/workspace-selector";
 
 interface VendorRow {
   name: string;
@@ -81,7 +82,7 @@ export default function OnboardingVendorsCustomersPage() {
   >([]);
 
   useEffect(() => {
-    const tid = localStorage.getItem("workspaceTenantId") || "";
+    const tid = getWorkspaceTenantId();
     setTenantId(tid);
     if (!tid) {
       setFetching(false);

@@ -6,6 +6,7 @@ import { ArrowLeft, ArrowRight, Layers, Plus, Trash2, X } from "lucide-react";
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
 import { FileImport } from "@/components/file-import";
+import { getWorkspaceTenantId } from "@/components/workspace-selector";
 
 interface Department {
   deptCode: string;
@@ -27,7 +28,7 @@ export default function OnboardingDepartmentsPage() {
   const [mode, setMode] = useState<"manual" | "import">("manual");
 
   useEffect(() => {
-    const tid = localStorage.getItem("workspaceTenantId") || "";
+    const tid = getWorkspaceTenantId();
     setTenantId(tid);
 
     if (!tid) {

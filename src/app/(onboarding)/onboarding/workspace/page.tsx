@@ -105,9 +105,17 @@ export default function OnboardingWorkspacePage() {
         tenantId = json.data.id;
       }
 
-      // Persist tenantId locally for subsequent onboarding steps
+      // Set tenant cookies server-side so middleware and subsequent onboarding
+      // pages can resolve the tenant.
       if (tenantId) {
-        localStorage.setItem("workspaceTenantId", tenantId);
+        const switchRes = await fetch("/api/workspace/switch", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ tenantId }),
+        });
+        if (!switchRes.ok) {
+          throw new Error("Couldn't activate the new workspace. Please try again.");
+        }
       }
 
       // Advance onboarding step
@@ -119,7 +127,7 @@ export default function OnboardingWorkspacePage() {
 
       router.push("/onboarding/chart-of-accounts");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong.");
+      setError(err instanceof Error ? err.message : "Couldn't save your workspace. Please try again.");
     } finally {
       setLoading(false);
     }
