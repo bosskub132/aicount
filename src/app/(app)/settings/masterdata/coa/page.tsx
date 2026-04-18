@@ -13,6 +13,7 @@ import { Toggle } from "@/components/toggle";
 import { FileImport } from "@/components/file-import";
 import { Pagination } from "@/components/pagination";
 import { useToast } from "@/lib/stores/ui-store";
+import { getWorkspaceTenantId } from "@/components/workspace-selector";
 
 type CoaCategory = "asset" | "liability" | "equity" | "revenue" | "expense";
 
@@ -58,7 +59,7 @@ export default function MasterDataCoaPage() {
   const [isSuspense, setIsSuspense] = useState(false);
 
   useEffect(() => {
-    const id = localStorage.getItem("workspaceTenantId") || "";
+    const id = getWorkspaceTenantId();
     setTenantId(id);
   }, []);
 

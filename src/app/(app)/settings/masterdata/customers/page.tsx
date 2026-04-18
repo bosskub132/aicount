@@ -9,6 +9,7 @@ import { DataTable, type Column } from "@/components/data-table";
 import { FileImport } from "@/components/file-import";
 import { Pagination } from "@/components/pagination";
 import { useToast } from "@/lib/stores/ui-store";
+import { getWorkspaceTenantId } from "@/components/workspace-selector";
 
 interface CustomerRow {
   id: string;
@@ -44,7 +45,7 @@ export default function MasterDataCustomersPage() {
   const [creditTermDays, setCreditTermDays] = useState("");
 
   useEffect(() => {
-    const id = localStorage.getItem("workspaceTenantId") || "";
+    const id = getWorkspaceTenantId();
     setTenantId(id);
   }, []);
 

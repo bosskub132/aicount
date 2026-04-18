@@ -8,6 +8,7 @@ import { Toggle } from "@/components/toggle";
 import { Modal } from "@/components/modal";
 import { DataTable, type Column } from "@/components/data-table";
 import { useToast } from "@/lib/stores/ui-store";
+import { getWorkspaceTenantId } from "@/components/workspace-selector";
 
 interface BankAccountRow {
   id: string;
@@ -56,7 +57,7 @@ export default function BankReconSettingsPage() {
   const [glAccountCode, setGlAccountCode] = useState("");
 
   useEffect(() => {
-    const id = localStorage.getItem("workspaceTenantId") || "";
+    const id = getWorkspaceTenantId();
     setTenantId(id);
   }, []);
 

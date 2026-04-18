@@ -9,6 +9,7 @@ import { Header } from "@/components/header";
 import { ToastProvider } from "@/components/toast";
 import { GlobalSearch } from "@/components/global-search";
 import { OfflineBanner } from "@/components/offline-banner";
+import { getWorkspaceTenantId } from "@/components/workspace-selector";
 
 import { AppQueryProvider } from "@/lib/providers/query-provider";
 
@@ -81,7 +82,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   // Preserve: workspace deletion banner
   useEffect(() => {
-    const tenantId = localStorage.getItem("workspaceTenantId");
+    const tenantId = getWorkspaceTenantId();
     if (!tenantId || tenantId === "00000000-0000-0000-0000-000000000000") return;
 
     fetch(`/api/tenants/${tenantId}`, {

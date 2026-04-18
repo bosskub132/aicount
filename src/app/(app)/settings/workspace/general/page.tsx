@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Building2, Save } from "lucide-react";
+import { getWorkspaceTenantId } from "@/components/workspace-selector";
 
 type TenantData = {
   id: string;
@@ -30,7 +31,7 @@ export default function WorkspaceGeneralPage() {
   const [companySize, setCompanySize] = useState("");
 
   useEffect(() => {
-    const id = localStorage.getItem("workspaceTenantId") ?? "";
+    const id = getWorkspaceTenantId();
     setTenantId(id);
 
     if (!id) {

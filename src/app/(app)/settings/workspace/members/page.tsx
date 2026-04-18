@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Users, Trash2 } from "lucide-react";
+import { getWorkspaceTenantId } from "@/components/workspace-selector";
 
 type MemberRow = {
   assignmentId: string;
@@ -28,7 +29,7 @@ export default function WorkspaceMembersPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const id = localStorage.getItem("workspaceTenantId") ?? "";
+    const id = getWorkspaceTenantId();
     setTenantId(id);
 
     if (!id) {

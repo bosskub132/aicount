@@ -6,6 +6,7 @@ import { ClipboardList, FileText, Receipt } from "lucide-react";
 import { Button } from "@/components/button";
 import { Select } from "@/components/select";
 import { useToast } from "@/lib/stores/ui-store";
+import { getWorkspaceTenantId } from "@/components/workspace-selector";
 
 const WHT_RATE_OPTIONS = [
   { value: "1", label: "1%" },
@@ -23,7 +24,7 @@ export default function AccountingTaxReportsPage() {
   const [whtRate, setWhtRate] = useState("3");
 
   useEffect(() => {
-    const id = localStorage.getItem("workspaceTenantId") || "";
+    const id = getWorkspaceTenantId();
     setTenantId(id);
 
     const savedRate = localStorage.getItem("defaultWhtRate");
