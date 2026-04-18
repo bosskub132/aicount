@@ -10,9 +10,6 @@ import type {
   DuplicateOutcome,
 } from "@/lib/services/suggestions/types";
 
-const isValidTenant = (id: string) =>
-  !!id && id !== "00000000-0000-0000-0000-000000000000";
-
 export function useSuggestions(documentId: string | undefined) {
   const tenantId = getWorkspaceTenantId();
 
@@ -34,7 +31,7 @@ export function useSuggestions(documentId: string | undefined) {
         duplicates: DuplicateCandidate[];
       };
     },
-    enabled: isValidTenant(tenantId) && !!documentId,
+    enabled: !!tenantId && !!documentId,
   });
 
   const pendingSuggestions = (query.data?.suggestions ?? []).filter(

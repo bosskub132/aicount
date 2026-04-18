@@ -1,8 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { getWorkspaceTenantId } from "@/components/workspace-selector";
 
-const isValidTenant = (id: string) => !!id && id !== "00000000-0000-0000-0000-000000000000";
-
 export function useMonthlyComparison(months = 6) {
   const tenantId = getWorkspaceTenantId();
   return useQuery({
@@ -13,7 +11,7 @@ export function useMonthlyComparison(months = 6) {
       if (!json.success) throw new Error(json.error);
       return json.data;
     },
-    enabled: isValidTenant(tenantId),
+    enabled: !!tenantId,
   });
 }
 
@@ -27,7 +25,7 @@ export function useStatusBreakdown() {
       if (!json.success) throw new Error(json.error);
       return json.data;
     },
-    enabled: isValidTenant(tenantId),
+    enabled: !!tenantId,
   });
 }
 
@@ -41,6 +39,6 @@ export function useApprovalQueue() {
       if (!json.success) throw new Error(json.error);
       return json.data;
     },
-    enabled: isValidTenant(tenantId),
+    enabled: !!tenantId,
   });
 }

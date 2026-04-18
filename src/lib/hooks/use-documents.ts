@@ -33,7 +33,7 @@ export function useDocuments(params: DocumentsParams = {}) {
       if (!json.success) throw new Error(json.error || "Failed to fetch documents");
       return json;
     },
-    enabled: !!tenantId && tenantId !== "00000000-0000-0000-0000-000000000000",
+    enabled: !!tenantId,
     staleTime: 2 * 60_000,
   });
 }
@@ -48,7 +48,7 @@ export function useDocument(id: string | null) {
       if (!json.success) throw new Error(json.error);
       return json.data;
     },
-    enabled: !!id && !!tenantId && tenantId !== "00000000-0000-0000-0000-000000000000",
+    enabled: !!id && !!tenantId,
   });
 }
 

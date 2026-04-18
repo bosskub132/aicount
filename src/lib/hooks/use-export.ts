@@ -11,7 +11,7 @@ export function useExportTemplates() {
       if (!json.success) throw new Error(json.error);
       return json.data;
     },
-    enabled: !!tenantId && tenantId !== "00000000-0000-0000-0000-000000000000",
+    enabled: !!tenantId,
   });
 }
 
@@ -25,7 +25,7 @@ export function useExportHistory() {
       if (!json.success) throw new Error(json.error);
       return json.data;
     },
-    enabled: !!tenantId && tenantId !== "00000000-0000-0000-0000-000000000000",
+    enabled: !!tenantId,
   });
 }
 

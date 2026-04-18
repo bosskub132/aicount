@@ -78,7 +78,7 @@ function DocumentsPageContent() {
 
   // Fetch workspace role on mount
   useEffect(() => {
-    if (!tenantId || tenantId === "00000000-0000-0000-0000-000000000000") return;
+    if (!tenantId) return;
 
     fetch(`/api/auth/workspace-role`, { credentials: "same-origin" })
       .then((r) => r.json())

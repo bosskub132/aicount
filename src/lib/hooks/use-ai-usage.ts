@@ -1,9 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { getWorkspaceTenantId } from "@/components/workspace-selector";
 
-const isValidTenant = (id: string) =>
-  !!id && id !== "00000000-0000-0000-0000-000000000000";
-
 export function useTenantAiUsage() {
   const tenantId = getWorkspaceTenantId();
   return useQuery({
@@ -26,6 +23,6 @@ export function useTenantAiUsage() {
         suggestionsEnabled: boolean;
       };
     },
-    enabled: isValidTenant(tenantId),
+    enabled: !!tenantId,
   });
 }
