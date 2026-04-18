@@ -5,11 +5,16 @@ interface TaxPp30Params {
   period: string;
 }
 
+export const taxPp30Keys = {
+  detail: (tenantId: string, params: TaxPp30Params) =>
+    ["tax-pp30", tenantId, params] as const,
+};
+
 export function useTaxPp30(params: TaxPp30Params) {
   const tenantId = getWorkspaceTenantId();
 
   return useQuery({
-    queryKey: ["tax-pp30", tenantId, params],
+    queryKey: taxPp30Keys.detail(tenantId, params),
     queryFn: async () => {
       const sp = new URLSearchParams({ period: params.period });
       const res = await fetch(`/api/tenants/${tenantId}/reports/tax/pp30?${sp}`);
