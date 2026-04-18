@@ -6,12 +6,17 @@ interface VatRegisterParams {
   direction: "EXPENSE" | "REVENUE";
 }
 
+export const vatRegisterKeys = {
+  detail: (tenantId: string, params: VatRegisterParams) =>
+    ["vat-register", tenantId, params] as const,
+};
+
 export function useVatRegister(params: VatRegisterParams) {
   const tenantId = getWorkspaceTenantId();
   const endpoint = params.direction === "EXPENSE" ? "purchase-vat" : "sales-vat";
 
   return useQuery({
-    queryKey: ["vat-register", tenantId, params],
+    queryKey: vatRegisterKeys.detail(tenantId, params),
     queryFn: async () => {
       const sp = new URLSearchParams({ period: params.period });
       const res = await fetch(`/api/tenants/${tenantId}/reports/tax/${endpoint}?${sp}`);
