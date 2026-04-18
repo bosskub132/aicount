@@ -56,7 +56,28 @@ test(`measure /documents LCP over ${RUNS} runs`, async ({ browser }) => {
       await page.getByLabel("Email").fill(EMAIL!);
       await page.getByLabel("Password").fill(PASSWORD!);
       await page.getByRole("button", { name: /sign in/i }).click();
-      await page.waitForURL(/\/dashboard|\/onboarding/, { timeout: 15_000 });
+
+      // Login page redirects to "/" which then routes based on onboarding state.
+      // Wait until we're off /login, then for networkidle.
+      try {
+        await page.waitForURL((url) => !url.pathname.startsWith("/login"), {
+          timeout: 20_000,
+        });
+      } catch (e) {
+        // Dump on-page error for diagnosis
+        const errorText = await page
+          .locator("text=/incorrect|invalid|failed|wrong|rate limit/i")
+          .first()
+          .textContent()
+          .catch(() => null);
+        throw new Error(
+          `Login didn't navigate away from /login within 20s. ` +
+            `On-page error: ${errorText ?? "(none visible)"}. ` +
+            `Check credentials in .env.local — they must be valid for the ACTIVE environment ` +
+            `(staging vs prod). Original error: ${(e as Error).message}`
+        );
+      }
+      await page.waitForLoadState("networkidle", { timeout: 15_000 }).catch(() => {});
 
       // If there's no workspace cookie yet (multi-tenant user), pick the first
       // workspace from the selector to set one. For single-tenant users the
@@ -74,34 +95,51 @@ test(`measure /documents LCP over ${RUNS} runs`, async ({ browser }) => {
         await page.waitForLoadState("networkidle").catch(() => {});
       }
 
-      // 2. Navigate to /documents — this is what we're measuring
-      await page.goto("/documents");
+      console.log(`  Run ${i + 1}/${RUNS}: landed on ${page.url()} after login`);
 
-      // Wait for either a row or an empty-state marker
+      // 2. Install a PerformanceObserver BEFORE navigating so we see the LCP
+      //    event during the /documents navigation. getEntriesByType works
+      //    only within the same document; since page.goto creates a new
+      //    document, we inject the observer via page.addInitScript.
+      await page.addInitScript(() => {
+        (window as unknown as { __lcp: number }).__lcp = 0;
+        new PerformanceObserver((entryList) => {
+          const entries = entryList.getEntries();
+          const last = entries[entries.length - 1];
+          if (last) {
+            (window as unknown as { __lcp: number }).__lcp = last.startTime;
+          }
+        }).observe({ type: "largest-contentful-paint", buffered: true });
+      });
+
+      // Navigate to /documents — this is what we're measuring
+      await page.goto("/documents", { waitUntil: "load" });
+
+      // Wait for first row (or empty-state) to indicate the page is done rendering
       await page
-        .locator("table tbody tr, [data-empty], text=/no documents/i")
+        .locator("table tbody tr, [class*='empty'], text=/no documents/i")
         .first()
         .waitFor({ timeout: 15_000 })
         .catch(() => {});
-      await page.waitForLoadState("networkidle").catch(() => {});
 
-      // Trigger LCP finalization (Chrome stops updating LCP on first interaction)
+      // Give the browser a beat to finalize LCP entries
+      await page.waitForTimeout(500);
       await page.keyboard.press("Tab");
+      await page.waitForTimeout(200);
 
-      // 3. Read LCP entries
-      const lcp = await page.evaluate(() => {
-        const entries = performance.getEntriesByType(
-          "largest-contentful-paint"
-        ) as PerformanceEntry[];
-        if (entries.length === 0) return null;
-        return entries[entries.length - 1].startTime;
-      });
+      // 3. Read LCP from the observer we injected
+      const lcp = await page.evaluate(
+        () => (window as unknown as { __lcp: number }).__lcp || 0
+      );
 
       if (typeof lcp === "number" && lcp > 0) {
         samples.push(lcp);
-        console.log(`  Run ${i + 1}/${RUNS}: LCP = ${lcp.toFixed(0)} ms`);
+        console.log(`  Run ${i + 1}/${RUNS}: LCP = ${lcp.toFixed(0)} ms (url: ${page.url()})`);
       } else {
-        console.log(`  Run ${i + 1}/${RUNS}: LCP not captured`);
+        const rowCount = await page.locator("table tbody tr").count();
+        console.log(
+          `  Run ${i + 1}/${RUNS}: LCP not captured. url=${page.url()} rows=${rowCount}`
+        );
       }
     } finally {
       await context.close();
