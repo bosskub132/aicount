@@ -8,6 +8,7 @@ import { Input } from "@/components/input";
 import { Select } from "@/components/select";
 import { FileImport } from "@/components/file-import";
 import { SuggestionPill } from "@/components/suggestion-pill";
+import { getWorkspaceTenantId } from "@/components/workspace-selector";
 
 interface CoaRow {
   accountCode: string;
@@ -42,7 +43,7 @@ export default function OnboardingChartOfAccountsPage() {
   >([]);
 
   useEffect(() => {
-    const tid = localStorage.getItem("workspaceTenantId") || "";
+    const tid = getWorkspaceTenantId();
     setTenantId(tid);
 
     if (!tid) {

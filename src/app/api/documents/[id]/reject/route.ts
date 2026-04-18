@@ -23,23 +23,23 @@ export async function POST(
     if (!ctx) return unauthorized();
 
     const { id } = await context.params;
-    const body = (await request.json()) as {
-      tenantId: string;
+    const body = (await request.json().catch(() => ({}))) as {
+      tenantId?: string;
       rejectionComment?: string;
+      comment?: string;
     };
+    const tenantId = body.tenantId || ctx.tenantId;
+    const rejectionComment = body.rejectionComment ?? body.comment;
 
-    const realRole = await resolveUserRole(ctx.userId, body.tenantId || ctx.tenantId);
+    const realRole = await resolveUserRole(ctx.userId, tenantId);
     if (!ensureRole(realRole, ["admin", "checker"])) return forbidden("Only checker/admin can reject");
 
-    if (!body.tenantId) {
-      return NextResponse.json({ success: false, error: "tenantId is required" }, { status: 400 });
-    }
-    if (!ensureTenantScope(ctx.tenantId, body.tenantId)) return forbidden("Cross-tenant access denied");
+    if (!ensureTenantScope(ctx.tenantId, tenantId)) return forbidden("Cross-tenant access denied");
 
     const [doc] = await db
       .select()
       .from(documents)
-      .where(and(eq(documents.id, id), eq(documents.tenantId, body.tenantId)))
+      .where(and(eq(documents.id, id), eq(documents.tenantId, tenantId)))
       .limit(1);
 
     if (!doc) {
@@ -53,7 +53,7 @@ export async function POST(
       );
     }
 
-    const locked = await isDocumentMonthLocked(body.tenantId, doc.documentDate);
+    const locked = await isDocumentMonthLocked(tenantId, doc.documentDate);
     if (locked) {
       return NextResponse.json(
         { success: false, error: "Document period is locked. Cannot reject." },
@@ -74,7 +74,7 @@ export async function POST(
       .update(documents)
       .set({
         status: "REJECTED",
-        rejectionComment: body.rejectionComment || "Rejected by checker",
+        rejectionComment: rejectionComment || "Rejected by checker",
         ocrRaw: {
           ...docRaw,
           rejectCount: rejectCount + 1,
@@ -83,7 +83,7 @@ export async function POST(
             {
               rejectedAt: new Date().toISOString(),
               rejectedBy: ctx.userId,
-              comment: body.rejectionComment || "Rejected by checker",
+              comment: rejectionComment || "Rejected by checker",
             },
           ],
         },
@@ -95,19 +95,19 @@ export async function POST(
       name: "document/rejected",
       data: {
         userId: doc.uploadedBy,
-        tenantId: body.tenantId,
+        tenantId: tenantId,
         documentId: id,
-        comment: body.rejectionComment || "Rejected by checker",
+        comment: rejectionComment || "Rejected by checker",
       },
     });
 
     await writeAuditLog({
-      tenantId: body.tenantId,
+      tenantId: tenantId,
       userId: ctx.userId,
       action: "document.rejected",
       entityType: "document",
       entityId: id,
-      metadata: { rejectionComment: body.rejectionComment || null },
+      metadata: { rejectionComment: rejectionComment || null },
       ipAddress: ctx.ipAddress,
     });
 

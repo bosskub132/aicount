@@ -6,6 +6,7 @@ import { ArrowLeft, ArrowRight, Users, User, CheckCircle2, KeyRound, X } from "l
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
 import { Select } from "@/components/select";
+import { getWorkspaceTenantId } from "@/components/workspace-selector";
 
 interface Invitation {
   email: string;
@@ -31,7 +32,7 @@ export default function OnboardingTeamPage() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    const tid = localStorage.getItem("workspaceTenantId") || "";
+    const tid = getWorkspaceTenantId();
     setTenantId(tid);
 
     if (!tid) {

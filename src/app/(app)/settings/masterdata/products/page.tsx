@@ -8,6 +8,7 @@ import { Modal } from "@/components/modal";
 import { DataTable, type Column } from "@/components/data-table";
 import { Pagination } from "@/components/pagination";
 import { useToast } from "@/lib/stores/ui-store";
+import { getWorkspaceTenantId } from "@/components/workspace-selector";
 
 interface ProductRow {
   id: string;
@@ -44,7 +45,7 @@ export default function MasterDataProductsPage() {
   const [expenseGl, setExpenseGl] = useState("");
 
   useEffect(() => {
-    const id = localStorage.getItem("workspaceTenantId") || "";
+    const id = getWorkspaceTenantId();
     setTenantId(id);
   }, []);
 

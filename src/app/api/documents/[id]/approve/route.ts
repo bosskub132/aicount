@@ -23,24 +23,19 @@ export async function POST(
     if (!ctx) return unauthorized();
 
     const { id } = await context.params;
-    const body = (await request.json()) as { tenantId: string; approvedBy?: string };
+    const body = (await request.json().catch(() => ({}))) as { tenantId?: string; approvedBy?: string };
+    const tenantId = body.tenantId || ctx.tenantId;
     const approvedBy = body.approvedBy || ctx.userId;
 
-    const realRole = await resolveUserRole(ctx.userId, body.tenantId || ctx.tenantId);
+    const realRole = await resolveUserRole(ctx.userId, tenantId);
     if (!ensureRole(realRole, ["admin", "checker"])) return forbidden("Only checker/admin can approve");
 
-    if (!body.tenantId) {
-      return NextResponse.json(
-        { success: false, error: "tenantId is required" },
-        { status: 400 }
-      );
-    }
-    if (!ensureTenantScope(ctx.tenantId, body.tenantId)) return forbidden("Cross-tenant access denied");
+    if (!ensureTenantScope(ctx.tenantId, tenantId)) return forbidden("Cross-tenant access denied");
 
     const [doc] = await db
       .select()
       .from(documents)
-      .where(and(eq(documents.id, id), eq(documents.tenantId, body.tenantId)))
+      .where(and(eq(documents.id, id), eq(documents.tenantId, tenantId)))
       .limit(1);
 
     if (!doc) {
@@ -54,7 +49,7 @@ export async function POST(
       );
     }
 
-    const locked = await isDocumentMonthLocked(body.tenantId, doc.documentDate);
+    const locked = await isDocumentMonthLocked(tenantId, doc.documentDate);
     if (locked) {
       return NextResponse.json(
         { success: false, error: "Document period is locked. Cannot approve." },
@@ -63,7 +58,7 @@ export async function POST(
     }
 
     if (realRole === "checker") {
-      const submitterId = await getLastAuditUserId(body.tenantId, id, "document.submitted");
+      const submitterId = await getLastAuditUserId(tenantId, id, "document.submitted");
       if (submitterId && submitterId === ctx.userId) {
         return forbidden(
           "Checker cannot approve a document they submitted. Use another checker or an admin."
@@ -82,7 +77,7 @@ export async function POST(
       .where(eq(documents.id, id));
 
     await writeAuditLog({
-      tenantId: body.tenantId,
+      tenantId: tenantId,
       userId: ctx.userId,
       action: "document.approved",
       entityType: "document",

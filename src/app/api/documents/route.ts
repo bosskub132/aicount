@@ -1,17 +1,15 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { and, asc, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
-import { documents } from "@/lib/db/schema";
-import { getRequestContext, unauthorized, forbidden, ensureTenantScope } from "@/lib/api/request-context";
-
-const SORT_FIELDS: Record<string, typeof documents.createdAt> = {
-  createdAt: documents.createdAt,
-  issuerName: documents.issuerName as any,
-  grandTotal: documents.grandTotal as any,
-  documentDate: documents.documentDate as any,
-  status: documents.status as any,
-};
+import {
+  ensureTenantScope,
+  forbidden,
+  getRequestContext,
+  unauthorized,
+} from "@/lib/api/request-context";
+import {
+  DOCUMENT_STATUSES,
+  type DocumentStatus,
+  listDocuments,
+} from "@/lib/db/queries/documents";
 
 export async function GET(request: Request) {
   try {
@@ -19,104 +17,46 @@ export async function GET(request: Request) {
     if (!ctx) return unauthorized();
 
     const { searchParams } = new URL(request.url);
-    const tenantId = searchParams.get("tenantId");
+    const tenantId = searchParams.get("tenantId") ?? ctx.tenantId;
 
-    if (!tenantId) {
-      return NextResponse.json({ success: false, error: "tenantId is required" }, { status: 400 });
+    if (!ensureTenantScope(ctx.tenantId, tenantId)) {
+      return forbidden("Cross-tenant access denied");
     }
-    if (!ensureTenantScope(ctx.tenantId, tenantId)) return forbidden("Cross-tenant access denied");
 
     const statusParam = searchParams.get("status");
-    const VALID_STATUSES = new Set(["DRAFT","OCR_PROCESSING","ACTION_REQUIRED","QUERY","PENDING_APPROVAL","APPROVED","EXPORTED","REJECTED","VOID"]);
-    const statuses = statusParam ? statusParam.split(",").map((s) => s.trim()).filter(Boolean) : [];
-    if (statuses.length > 0 && !statuses.every((s) => VALID_STATUSES.has(s))) {
+    const statuses: DocumentStatus[] = statusParam
+      ? (statusParam
+          .split(",")
+          .map((s) => s.trim())
+          .filter((s): s is DocumentStatus =>
+            (DOCUMENT_STATUSES as readonly string[]).includes(s)
+          ))
+      : [];
+    if (statusParam && statuses.length === 0) {
       return NextResponse.json({ success: false, error: "Invalid status" }, { status: 400 });
     }
-    // Cap search length to prevent DB load
-    const search = (searchParams.get("search")?.trim() || "").slice(0, 200) || undefined;
+
     const page = Math.max(1, Number(searchParams.get("page") || 1));
     const limit = Math.min(100, Math.max(1, Number(searchParams.get("limit") || 20)));
-    const sort = searchParams.get("sort") || "createdAt";
+    const sort = (searchParams.get("sort") || "createdAt") as
+      | "createdAt"
+      | "issuerName"
+      | "grandTotal"
+      | "documentDate"
+      | "status";
     const order = searchParams.get("order") === "asc" ? "asc" : "desc";
+    const search = searchParams.get("search") || undefined;
 
-    const conditions = [eq(documents.tenantId, tenantId)];
-
-    if (statuses.length === 1) {
-      conditions.push(eq(documents.status, statuses[0] as any));
-    } else if (statuses.length > 1) {
-      conditions.push(inArray(documents.status, statuses as any));
-    }
-
-    if (search) {
-      const pattern = `%${search}%`;
-      conditions.push(
-        or(
-          ilike(documents.issuerName, pattern),
-          ilike(documents.documentNumber, pattern)
-        ) as any
-      );
-    }
-
-    const where = and(...conditions);
-    const sortColumn = SORT_FIELDS[sort] || documents.createdAt;
-    const orderBy = order === "asc" ? asc(sortColumn) : desc(sortColumn);
-    const offset = (page - 1) * limit;
-
-    const [rows, countResult] = await Promise.all([
-      db
-        .select({
-          id: documents.id,
-          tenantId: documents.tenantId,
-          status: documents.status,
-          docType: documents.docType,
-          direction: documents.direction,
-          issuerName: documents.issuerName,
-          issuerTaxId: documents.issuerTaxId,
-          issuerBranch: documents.issuerBranch,
-          documentNumber: documents.documentNumber,
-          documentDate: documents.documentDate,
-          subtotal: documents.subtotal,
-          vatAmount: documents.vatAmount,
-          grandTotal: documents.grandTotal,
-          whtAmount: documents.whtAmount,
-          whtRate: documents.whtRate,
-          whtIncomeType: documents.whtIncomeType,
-          discountAmount: documents.discountAmount,
-          fileUrl: documents.fileUrl,
-          fileHash: documents.fileHash,
-          intakeSource: documents.intakeSource,
-          batchId: documents.batchId,
-          parentDocumentId: documents.parentDocumentId,
-          uploadedBy: documents.uploadedBy,
-          approvedBy: documents.approvedBy,
-          approvedAt: documents.approvedAt,
-          voidReason: documents.voidReason,
-          createdAt: documents.createdAt,
-          updatedAt: documents.updatedAt,
-        })
-        .from(documents)
-        .where(where)
-        .orderBy(orderBy)
-        .limit(limit)
-        .offset(offset),
-      db
-        .select({ total: sql<number>`count(*)::int` })
-        .from(documents)
-        .where(where),
-    ]);
-
-    const total = countResult[0]?.total ?? 0;
-
-    return NextResponse.json({
-      success: true,
-      data: rows,
-      meta: {
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit),
-      },
+    const result = await listDocuments(tenantId, {
+      page,
+      limit,
+      statuses: statuses.length > 0 ? statuses : undefined,
+      search,
+      sort,
+      order,
     });
+
+    return NextResponse.json({ success: true, ...result });
   } catch (error) {
     console.error("[documents GET]", error);
     return NextResponse.json(

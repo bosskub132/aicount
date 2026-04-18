@@ -16,6 +16,7 @@ import { Select } from "@/components/select";
 import { Modal } from "@/components/modal";
 import { Badge } from "@/components/badge";
 import { useToast } from "@/lib/stores/ui-store";
+import { getWorkspaceTenantId } from "@/components/workspace-selector";
 
 type ColumnMapping = {
   position: number;
@@ -78,7 +79,7 @@ export default function AccountingTemplatesPage() {
   const [columns, setColumns] = useState<ColumnMapping[]>([]);
 
   useEffect(() => {
-    const id = localStorage.getItem("workspaceTenantId") || "";
+    const id = getWorkspaceTenantId();
     setTenantId(id);
   }, []);
 

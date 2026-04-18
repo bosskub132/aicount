@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, FileSpreadsheet, X } from "lucide-react";
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
+import { getWorkspaceTenantId } from "@/components/workspace-selector";
 
 export default function OnboardingTemplatePage() {
   const router = useRouter();
@@ -16,7 +17,7 @@ export default function OnboardingTemplatePage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const tid = localStorage.getItem("workspaceTenantId") || "";
+    const tid = getWorkspaceTenantId();
     setTenantId(tid);
   }, []);
 

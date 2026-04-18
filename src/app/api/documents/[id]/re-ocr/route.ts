@@ -14,17 +14,15 @@ export async function POST(
     if (!ctx) return unauthorized();
 
     const { id } = await context.params;
-    const body = (await request.json()) as { tenantId: string };
+    const body = (await request.json().catch(() => ({}))) as { tenantId?: string };
+    const tenantId = body.tenantId || ctx.tenantId;
 
-    if (!body.tenantId) {
-      return NextResponse.json({ success: false, error: "tenantId is required" }, { status: 400 });
-    }
-    if (!ensureTenantScope(ctx.tenantId, body.tenantId)) return forbidden("Cross-tenant access denied");
+    if (!ensureTenantScope(ctx.tenantId, tenantId)) return forbidden("Cross-tenant access denied");
 
     const [doc] = await db
       .select({ id: documents.id, status: documents.status })
       .from(documents)
-      .where(and(eq(documents.id, id), eq(documents.tenantId, body.tenantId)))
+      .where(and(eq(documents.id, id), eq(documents.tenantId, tenantId)))
       .limit(1);
 
     if (!doc) {
@@ -43,7 +41,7 @@ export async function POST(
       name: "document/uploaded",
       data: {
         documentId: id,
-        tenantId: body.tenantId,
+        tenantId,
       },
     });
 

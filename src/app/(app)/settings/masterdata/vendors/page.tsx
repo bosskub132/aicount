@@ -12,6 +12,7 @@ import { Toggle } from "@/components/toggle";
 import { FileImport } from "@/components/file-import";
 import { Pagination } from "@/components/pagination";
 import { useToast } from "@/lib/stores/ui-store";
+import { getWorkspaceTenantId } from "@/components/workspace-selector";
 
 interface VendorRow {
   id: string;
@@ -71,7 +72,7 @@ export default function MasterDataVendorsPage() {
   const [defaultWhtRate, setDefaultWhtRate] = useState("3");
 
   useEffect(() => {
-    const id = localStorage.getItem("workspaceTenantId") || "";
+    const id = getWorkspaceTenantId();
     setTenantId(id);
   }, []);
 

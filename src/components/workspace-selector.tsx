@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 import { Building2, ChevronDown } from "lucide-react";
 
 export const DEFAULT_WORKSPACE_TENANT_ID = "00000000-0000-0000-0000-000000000000";
@@ -18,7 +20,8 @@ type Workspace = {
 
 export function getWorkspaceTenantId() {
   if (typeof window === "undefined") return "";
-  return localStorage.getItem("workspaceTenantId") || "";
+  const match = document.cookie.match(/(?:^|;\s*)workspaceTenantIdPublic=([^;]+)/);
+  return match ? decodeURIComponent(match[1]) : "";
 }
 
 export function WorkspaceSelector() {
@@ -27,6 +30,8 @@ export function WorkspaceSelector() {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+  const router = useRouter();
 
   async function loadWorkspaces() {
     setLoading(true);
@@ -57,11 +62,26 @@ export function WorkspaceSelector() {
     void loadWorkspaces();
   }, []);
 
-  function selectWorkspace(id: string) {
-    localStorage.setItem("workspaceTenantId", id);
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("workspaceTenantId");
+    }
+  }, []);
+
+  async function selectWorkspace(id: string) {
+    const res = await fetch("/api/workspace/switch", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ tenantId: id }),
+    });
+    if (!res.ok) {
+      setLoadError("Failed to switch workspace. Please try again.");
+      return;
+    }
     setTenantId(id);
     setOpen(false);
-    window.location.reload();
+    queryClient.clear();
+    router.refresh();
   }
 
   const current = workspaces.find((w) => w.tenantId === tenantId);

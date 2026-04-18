@@ -1717,12 +1717,16 @@ If `tenant.ts` is below 100%, add a test for the uncovered branch. If `documents
 
 - [ ] **Step 3: Commit coverage report if baseline needs tracking**
 
-No commit needed unless adding tests. Write the current numbers here for the follow-up plan:
+Measured at commit 4003b1e:
 
 ```
-tenant.ts:          __% (target 100%)
-documents.ts:       __% (target 90%)
-overall:            __% (report only)
+tenant.ts (src/lib/api):     100% statements, 100% branches, 100% functions (target 100% ✅)
+documents.ts (lib/db/queries): 60% statements, 73.78% branches, 37.5% functions
+  — listDocuments alone is well covered; the file's total is pulled down by pre-existing
+    sibling helpers (getDocumentById, getDocumentWithLines, replaceJournalLines,
+    markDocumentsApproved) that have no tests. Covering those is out of scope for
+    this plan; will be addressed in the follow-up plan's query-layer migrations.
+overall (project):           ~4% (untouched; most of the codebase has no tests yet)
 ```
 
 ---

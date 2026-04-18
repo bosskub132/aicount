@@ -7,6 +7,7 @@ import { Modal } from "@/components/modal";
 import { DataTable, type Column } from "@/components/data-table";
 import { Badge } from "@/components/badge";
 import { useToast } from "@/lib/stores/ui-store";
+import { getWorkspaceTenantId } from "@/components/workspace-selector";
 
 interface PeriodLockRow {
   yearMonth: string;
@@ -58,7 +59,7 @@ export default function AccountingPeriodLocksPage() {
   const [unlockTarget, setUnlockTarget] = useState<string | null>(null);
 
   useEffect(() => {
-    const id = localStorage.getItem("workspaceTenantId") || "";
+    const id = getWorkspaceTenantId();
     setTenantId(id);
   }, []);
 

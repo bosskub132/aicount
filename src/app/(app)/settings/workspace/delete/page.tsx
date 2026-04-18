@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Trash2, AlertTriangle, ArrowRight } from "lucide-react";
+import { getWorkspaceTenantId } from "@/components/workspace-selector";
 
 type TenantData = {
   id: string;
@@ -45,7 +46,7 @@ export default function WorkspaceDeletePage() {
   const [cancelError, setCancelError] = useState("");
 
   useEffect(() => {
-    const id = localStorage.getItem("workspaceTenantId") ?? "";
+    const id = getWorkspaceTenantId();
     setTenantId(id);
 
     if (!id) {

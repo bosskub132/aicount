@@ -9,6 +9,7 @@ import { DataTable, type Column } from "@/components/data-table";
 import { Badge } from "@/components/badge";
 import { Modal } from "@/components/modal";
 import { useToast } from "@/lib/stores/ui-store";
+import { getWorkspaceTenantId } from "@/components/workspace-selector";
 
 interface InvitationRow {
   invitationId: string;
@@ -39,7 +40,7 @@ export default function WorkspaceInvitationsPage() {
   const [revoking, setRevoking] = useState(false);
 
   useEffect(() => {
-    const id = localStorage.getItem("workspaceTenantId") ?? "";
+    const id = getWorkspaceTenantId();
     setTenantId(id);
 
     if (!id) {

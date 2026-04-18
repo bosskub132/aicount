@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { invitations, profiles, tenantAssignments, tenants } from "@/lib/db/schema";
 import { getRequestContext } from "@/lib/api/request-context";
+import { WORKSPACE_COOKIE, workspaceCookieOptions } from "@/lib/api/tenant";
 
 export async function GET(
   _request: Request,
@@ -26,15 +27,25 @@ export async function GET(
     .limit(1);
 
   if (!invitation) {
-    return NextResponse.json({ success: false, error: "Invitation not found" }, { status: 404 });
+    return NextResponse.json(
+      { success: false, error: "This invitation link is invalid. Ask the workspace admin to send a new one." },
+      { status: 404 }
+    );
   }
 
   if (invitation.status !== "pending") {
-    return NextResponse.json({ success: false, error: `Invitation already ${invitation.status}` }, { status: 400 });
+    const label = invitation.status === "accepted" ? "already accepted" : invitation.status;
+    return NextResponse.json(
+      { success: false, error: `This invitation has been ${label}. Ask the workspace admin to send a new one if you still need access.` },
+      { status: 400 }
+    );
   }
 
   if (new Date(invitation.expiresAt) < new Date()) {
-    return NextResponse.json({ success: false, error: "Invitation has expired" }, { status: 400 });
+    return NextResponse.json(
+      { success: false, error: "This invitation has expired. Ask the workspace admin to send a new one." },
+      { status: 400 }
+    );
   }
 
   return NextResponse.json({ success: true, data: invitation });
@@ -55,13 +66,23 @@ export async function POST(
       .limit(1);
 
     if (!invitation) {
-      return NextResponse.json({ success: false, error: "Invitation not found" }, { status: 404 });
+      return NextResponse.json(
+        { success: false, error: "This invitation link is invalid. Ask the workspace admin to send a new one." },
+        { status: 404 }
+      );
     }
     if (invitation.status !== "pending") {
-      return NextResponse.json({ success: false, error: `Invitation already ${invitation.status}` }, { status: 400 });
+      const label = invitation.status === "accepted" ? "already accepted" : invitation.status;
+      return NextResponse.json(
+        { success: false, error: `This invitation has been ${label}.` },
+        { status: 400 }
+      );
     }
     if (new Date(invitation.expiresAt) < new Date()) {
-      return NextResponse.json({ success: false, error: "Invitation has expired" }, { status: 400 });
+      return NextResponse.json(
+        { success: false, error: "This invitation has expired. Ask the workspace admin to send a new one." },
+        { status: 400 }
+      );
     }
 
     // If user is logged in, accept directly
@@ -83,10 +104,19 @@ export async function POST(
         .set({ isOnboardingComplete: true, updatedAt: new Date() })
         .where(eq(profiles.id, ctx.userId));
 
-      return NextResponse.json({
+      const response = NextResponse.json({
         success: true,
         data: { tenantId: invitation.tenantId, role: invitation.role, accepted: true },
       });
+      response.cookies.set(WORKSPACE_COOKIE, invitation.tenantId, workspaceCookieOptions);
+      response.cookies.set("workspaceTenantIdPublic", invitation.tenantId, {
+        httpOnly: false,
+        sameSite: "lax",
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+        maxAge: 60 * 60 * 24 * 365,
+      });
+      return response;
     }
 
     // If not logged in, tell client to redirect to signup
@@ -101,7 +131,7 @@ export async function POST(
   } catch (error) {
     console.error("[invite/:token POST]", error);
     return NextResponse.json(
-      { success: false, error: "Accept failed" },
+      { success: false, error: "Couldn't accept the invitation. Please try again." },
       { status: 500 }
     );
   }
