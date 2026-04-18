@@ -8,9 +8,7 @@ export function useMonthlyComparison(months = 6) {
   return useQuery({
     queryKey: ["monthly-comparison", tenantId, months],
     queryFn: async () => {
-      const res = await fetch(`/api/tenants/${tenantId}/reports/monthly-comparison?months=${months}`, {
-        headers: { "x-tenant-id": tenantId },
-      });
+      const res = await fetch(`/api/tenants/${tenantId}/reports/monthly-comparison?months=${months}`);
       const json = await res.json();
       if (!json.success) throw new Error(json.error);
       return json.data;
@@ -24,9 +22,7 @@ export function useStatusBreakdown() {
   return useQuery({
     queryKey: ["status-breakdown", tenantId],
     queryFn: async () => {
-      const res = await fetch(`/api/tenants/${tenantId}/reports/status-breakdown`, {
-        headers: { "x-tenant-id": tenantId },
-      });
+      const res = await fetch(`/api/tenants/${tenantId}/reports/status-breakdown`);
       const json = await res.json();
       if (!json.success) throw new Error(json.error);
       return json.data;
@@ -40,9 +36,7 @@ export function useApprovalQueue() {
   return useQuery({
     queryKey: ["approval-queue", tenantId],
     queryFn: async () => {
-      const res = await fetch(`/api/documents/approval-queue?tenantId=${tenantId}`, {
-        headers: { "x-tenant-id": tenantId },
-      });
+      const res = await fetch(`/api/documents/approval-queue?tenantId=${tenantId}`);
       const json = await res.json();
       if (!json.success) throw new Error(json.error);
       return json.data;

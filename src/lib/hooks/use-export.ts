@@ -20,9 +20,7 @@ export function useExportHistory() {
   return useQuery({
     queryKey: ["export-history", tenantId],
     queryFn: async () => {
-      const res = await fetch(`/api/tenants/${tenantId}/reports/export-history`, {
-        headers: { "x-tenant-id": tenantId },
-      });
+      const res = await fetch(`/api/tenants/${tenantId}/reports/export-history`);
       const json = await res.json();
       if (!json.success) throw new Error(json.error);
       return json.data;

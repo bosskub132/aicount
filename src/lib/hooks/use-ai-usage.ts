@@ -9,9 +9,7 @@ export function useTenantAiUsage() {
   return useQuery({
     queryKey: ["ai-usage", tenantId],
     queryFn: async () => {
-      const res = await fetch("/api/settings/ai-usage", {
-        headers: { "x-tenant-id": tenantId },
-      });
+      const res = await fetch("/api/settings/ai-usage");
       const json = await res.json();
       if (!json.success) throw new Error(json.error);
       return json.data as {

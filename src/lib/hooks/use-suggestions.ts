@@ -26,9 +26,7 @@ export function useSuggestions(documentId: string | undefined) {
   const query = useQuery({
     queryKey: ["suggestions", documentId, tenantId],
     queryFn: async () => {
-      const res = await fetch(`/api/documents/${documentId}/suggestions`, {
-        headers: { "x-tenant-id": tenantId },
-      });
+      const res = await fetch(`/api/documents/${documentId}/suggestions`);
       const json = await res.json();
       if (!json.success) throw new Error(json.error);
       return json.data as {
