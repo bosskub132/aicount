@@ -49,35 +49,58 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [userName, setUserName] = useState("User");
   const [workspaceDeleted, setWorkspaceDeleted] = useState<{ name: string; scheduledFor: string } | null>(null);
 
-  // Preserve: account deletion redirect + onboarding redirect
+  // Preserve: account deletion redirect + onboarding redirect (now tenant-scoped)
   useEffect(() => {
-    fetch("/api/auth/profile")
-      .then((r) => r.json())
-      .then((json) => {
-        if (json.success && json.data) {
-          setUserName(json.data.fullName || json.data.email || "User");
-          if (json.data.deletedAt) {
-            router.push("/account-deleted");
-            return;
-          }
-          if (!json.data.isOnboardingComplete) {
-            const STEP_ROUTES = [
-              "/onboarding",
-              "/onboarding/workspace",
-              "/onboarding/chart-of-accounts",
-              "/onboarding/vendors-customers",
-              "/onboarding/departments",
-              "/onboarding/team",
-              "/onboarding/template",
-              "/onboarding/complete",
-            ];
-            const step = json.data.onboardingStep || 0;
-            router.push(STEP_ROUTES[step] || "/onboarding");
-            return;
-          }
+    async function check() {
+      try {
+        const profileRes = await fetch("/api/auth/profile");
+        const profileJson = await profileRes.json();
+        if (!profileJson.success || !profileJson.data) return;
+
+        setUserName(profileJson.data.name || profileJson.data.email || "User");
+
+        if (profileJson.data.deletedAt) {
+          router.push("/account-deleted");
+          return;
         }
-      })
-      .catch(() => {});
+
+        // Tenant-scoped onboarding check
+        const tenantsRes = await fetch("/api/tenants", { credentials: "same-origin" });
+        const tenantsJson = (await tenantsRes.json()) as {
+          success?: boolean;
+          data?: Array<{ tenantId: string; isOnboardingComplete: boolean }>;
+        };
+        const tenants = tenantsJson.data ?? [];
+
+        if (tenants.length === 0) {
+          router.push("/onboarding");
+          return;
+        }
+
+        const cookieTenantId = getWorkspaceTenantId();
+        const active = tenants.find((t) => t.tenantId === cookieTenantId) ?? tenants[0];
+
+        if (!active.isOnboardingComplete) {
+          const STEP_ROUTES = [
+            "/onboarding",
+            "/onboarding/workspace",
+            "/onboarding/chart-of-accounts",
+            "/onboarding/vendors-customers",
+            "/onboarding/departments",
+            "/onboarding/team",
+            "/onboarding/template",
+            "/onboarding/complete",
+          ];
+          const stateRes = await fetch(`/api/tenants/${active.tenantId}/onboarding`);
+          const stateJson = (await stateRes.json()) as { data?: { onboardingStep: number } };
+          const step = Math.max(0, Math.min(7, stateJson.data?.onboardingStep ?? 0));
+          router.push(STEP_ROUTES[step]);
+        }
+      } catch {
+        /* network/transient errors — allow render to continue */
+      }
+    }
+    check();
   }, [router]);
 
   // Preserve: workspace deletion banner
