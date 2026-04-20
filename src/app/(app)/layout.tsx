@@ -10,6 +10,7 @@ import { ToastProvider } from "@/components/toast";
 import { GlobalSearch } from "@/components/global-search";
 import { OfflineBanner } from "@/components/offline-banner";
 import { getWorkspaceTenantId } from "@/components/workspace-selector";
+import { ResumeOnboardingBanner } from "@/components/resume-onboarding-banner";
 
 import { AppQueryProvider } from "@/lib/providers/query-provider";
 
@@ -143,6 +144,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           )}
 
           <main className="flex-1 overflow-y-auto p-4 md:p-6">
+            <ResumeOnboardingBanner />
             {children}
           </main>
         </div>
