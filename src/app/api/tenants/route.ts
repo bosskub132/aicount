@@ -2,10 +2,11 @@ import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { tenantAssignments, tenants } from "@/lib/db/schema";
-import { ensureRole, getRequestContext, resolveUserRole, unauthorized } from "@/lib/api/request-context";
+import { tenantAssignments } from "@/lib/db/schema";
+import { getRequestContext, unauthorized } from "@/lib/api/request-context";
 import { writeAuditLog } from "@/lib/services/audit";
 import { TENANT_COMPANY_SIZES, TENANT_INDUSTRIES } from "@/lib/utils/constants";
+import { createTenantWithOwner, listUserTenantsWithState } from "@/lib/db/queries/tenants";
 
 const CreateTenantSchema = z.object({
   name: z.string().min(1).max(200),
@@ -18,41 +19,14 @@ export async function GET(request: Request) {
   const ctx = getRequestContext(request);
   if (!ctx) return unauthorized();
 
-  const rows = await db
-    .select({
-      assignmentId: tenantAssignments.id,
-      role: tenantAssignments.role,
-      tenantId: tenants.id,
-      tenantName: tenants.name,
-      taxId: tenants.taxId,
-    })
-    .from(tenantAssignments)
-    .innerJoin(tenants, eq(tenantAssignments.tenantId, tenants.id))
-    .where(eq(tenantAssignments.userId, ctx.userId));
-
-  // Deduplicate by tenantId, combine roles into a comma-separated string
-  const byTenant = new Map<string, { assignmentId: string; tenantId: string; tenantName: string; taxId: string; roles: string[] }>();
-  for (const row of rows) {
-    const existing = byTenant.get(row.tenantId);
-    if (existing) {
-      existing.roles.push(row.role);
-    } else {
-      byTenant.set(row.tenantId, {
-        assignmentId: row.assignmentId,
-        tenantId: row.tenantId,
-        tenantName: row.tenantName,
-        taxId: row.taxId,
-        roles: [row.role],
-      });
-    }
-  }
-
-  const assigned = Array.from(byTenant.values()).map((t) => ({
-    assignmentId: t.assignmentId,
-    role: t.roles.join(", "),
+  const list = await listUserTenantsWithState(ctx.userId);
+  const assigned = list.map((t) => ({
     tenantId: t.tenantId,
     tenantName: t.tenantName,
     taxId: t.taxId,
+    role: t.roles.join(", "),
+    isOnboardingComplete: t.isOnboardingComplete,
+    isDefault: t.isDefault,
   }));
 
   return NextResponse.json({ success: true, data: assigned });
@@ -63,44 +37,38 @@ export async function POST(request: Request) {
     const ctx = getRequestContext(request);
     if (!ctx) return unauthorized();
 
-    // Allow any authenticated user to create their first tenant (onboarding).
-    // Admin role is only enforced for users who already have tenant assignments.
-    const existingAssignments = await db
-      .select({ id: tenantAssignments.id })
-      .from(tenantAssignments)
-      .where(eq(tenantAssignments.userId, ctx.userId))
-      .limit(1);
-
-    if (existingAssignments.length > 0) {
-      const realRole = await resolveUserRole(ctx.userId, ctx.tenantId);
-      if (!ensureRole(realRole, ["admin"])) {
-        return NextResponse.json({ success: false, error: "Only admin can create additional tenants" }, { status: 403 });
-      }
-    }
-
     const parsed = CreateTenantSchema.safeParse(await request.json());
     if (!parsed.success) {
       return NextResponse.json({ success: false, error: "Invalid input" }, { status: 400 });
     }
     const body = parsed.data;
 
-    const ownerUserId = ctx.userId;
-    const [created] = await db
-      .insert(tenants)
-      .values({
+    const existingCount = await db
+      .select({ id: tenantAssignments.id })
+      .from(tenantAssignments)
+      .where(eq(tenantAssignments.userId, ctx.userId))
+      .limit(1);
+    const isFirstWorkspace = existingCount.length === 0;
+
+    let created;
+    try {
+      created = await createTenantWithOwner({
+        ownerUserId: ctx.userId,
         name: body.name,
         taxId: body.taxId,
         industry: body.industry,
         companySize: body.companySize,
-        ownerUserId,
-      })
-      .returning();
-
-    // Grant workspace creator both maker and checker roles (admin-level access)
-    await db.insert(tenantAssignments).values([
-      { tenantId: created.id, userId: ownerUserId, role: "maker" as const },
-      { tenantId: created.id, userId: ownerUserId, role: "checker" as const },
-    ]);
+      });
+    } catch (error) {
+      const cause = (error as { cause?: { code?: string } })?.cause?.code;
+      if (cause === "23505") {
+        return NextResponse.json(
+          { success: false, error: "A workspace with this tax ID already exists" },
+          { status: 409 }
+        );
+      }
+      throw error;
+    }
 
     await writeAuditLog({
       tenantId: created.id,
@@ -108,7 +76,7 @@ export async function POST(request: Request) {
       action: "tenant.created",
       entityType: "tenant",
       entityId: created.id,
-      metadata: { name: created.name, taxId: created.taxId },
+      metadata: { name: created.name, taxId: created.taxId, isFirstWorkspace },
       ipAddress: ctx.ipAddress,
     });
 
@@ -121,4 +89,3 @@ export async function POST(request: Request) {
     );
   }
 }
-
