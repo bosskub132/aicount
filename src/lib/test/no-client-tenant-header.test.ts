@@ -18,6 +18,7 @@ describe("no client-side x-tenant-id headers", () => {
     const dirs = [
       path.join(root, "src", "app"),
       path.join(root, "src", "lib", "hooks"),
+      path.join(root, "src", "components"),
     ];
     const offenders: Array<{ file: string; lineNo: number; line: string }> = [];
 

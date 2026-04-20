@@ -6,6 +6,7 @@ import { ArrowLeft, ArrowRight, FileSpreadsheet, X } from "lucide-react";
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
 import { getWorkspaceTenantId } from "@/components/workspace-selector";
+import { FinishLaterButton } from "@/components/finish-later-button";
 
 export default function OnboardingTemplatePage() {
   const router = useRouter();
@@ -22,7 +23,9 @@ export default function OnboardingTemplatePage() {
   }, []);
 
   async function patchOnboardingStep(step: number) {
-    await fetch("/api/auth/profile", {
+    const tenantId = getWorkspaceTenantId();
+    if (!tenantId) return;
+    await fetch(`/api/tenants/${tenantId}/onboarding`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ onboardingStep: step }),
@@ -158,6 +161,8 @@ export default function OnboardingTemplatePage() {
         >
           Back
         </Button>
+
+        <FinishLaterButton />
 
         <Button
           variant="primary"

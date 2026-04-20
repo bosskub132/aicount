@@ -20,6 +20,7 @@ import {
   ClipboardList,
   Clock,
   DollarSign,
+  Plus,
 } from "lucide-react";
 
 type NavItem = {
@@ -48,6 +49,7 @@ const navGroups: NavGroup[] = [
       { label: "General", href: "/settings/workspace/general", icon: Building2 },
       { label: "Members & Roles", href: "/settings/workspace/members", icon: Users },
       { label: "Invitations", href: "/settings/workspace/invitations", icon: Mail },
+      { label: "Create New Workspace", href: "/settings/workspace/new", icon: Plus },
       { label: "Delete Workspace", href: "/settings/workspace/delete", icon: Trash2 },
     ],
   },

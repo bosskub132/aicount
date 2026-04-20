@@ -3,13 +3,15 @@
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { Building2, ChevronDown } from "lucide-react";
+import { Building2, ChevronDown, Plus, Star } from "lucide-react";
 
 type Workspace = {
   tenantId: string;
   tenantName: string;
   taxId: string;
   role: string;
+  isOnboardingComplete: boolean;
+  isDefault: boolean;
 };
 
 export function getWorkspaceTenantId() {
@@ -24,6 +26,7 @@ export function WorkspaceSelector() {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [busyDefaultId, setBusyDefaultId] = useState<string | null>(null);
   const queryClient = useQueryClient();
   const router = useRouter();
 
@@ -70,6 +73,26 @@ export function WorkspaceSelector() {
     setOpen(false);
     queryClient.clear();
     router.refresh();
+  }
+
+  async function setDefault(id: string) {
+    setBusyDefaultId(id);
+    try {
+      const res = await fetch("/api/profile/default-workspace", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ tenantId: id }),
+      });
+      if (!res.ok) {
+        setLoadError("Couldn't set default workspace. Try again.");
+        return;
+      }
+      setWorkspaces((ws) => ws.map((w) => ({ ...w, isDefault: w.tenantId === id })));
+    } catch {
+      setLoadError("Couldn't set default workspace. Try again.");
+    } finally {
+      setBusyDefaultId(null);
+    }
   }
 
   const current = workspaces.find((w) => w.tenantId === tenantId);
@@ -121,29 +144,68 @@ export function WorkspaceSelector() {
             )}
             {!loading && !loadError && workspaces.length === 0 && (
               <p className="px-3 py-2 text-xs text-[var(--muted-foreground)]">
-                No workspaces yet. Create a client in Settings or ask an admin to invite you.
+                No workspaces yet. Create one below or ask an admin to invite you.
               </p>
             )}
             {!loading &&
               !loadError &&
               workspaces.map((w) => (
-                <button
+                <div
                   key={w.tenantId}
-                  type="button"
-                  onClick={() => selectWorkspace(w.tenantId)}
-                  className={`flex w-full items-center gap-2 px-3 py-2 text-left text-xs hover:bg-[var(--muted)] cursor-pointer ${
-                    w.tenantId === tenantId ? "bg-[var(--muted)] font-medium" : ""
+                  className={`flex items-center gap-2 px-2 py-1.5 ${
+                    w.tenantId === tenantId ? "bg-[var(--muted)]" : ""
                   }`}
                 >
-                  <div className="h-6 w-6 flex-shrink-0 rounded-[var(--radius-input)] bg-[var(--primary-light)] flex items-center justify-center text-[10px] font-semibold text-[var(--primary)]">
-                    {w.tenantName.charAt(0).toUpperCase()}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="truncate text-[var(--foreground)]">{w.tenantName}</p>
-                    <p className="truncate text-[var(--muted-foreground)]">{w.taxId}</p>
-                  </div>
-                </button>
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); void setDefault(w.tenantId); }}
+                    disabled={busyDefaultId === w.tenantId}
+                    title={w.isDefault ? "Default workspace" : "Set as default"}
+                    aria-label={w.isDefault ? "Default workspace" : "Set as default"}
+                    className="flex-shrink-0 cursor-pointer"
+                  >
+                    <Star
+                      className={`h-3.5 w-3.5 ${
+                        w.isDefault
+                          ? "fill-[var(--warning)] text-[var(--warning)]"
+                          : "text-[var(--muted-foreground)]"
+                      }`}
+                    />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => selectWorkspace(w.tenantId)}
+                    className={`flex flex-1 items-center gap-2 rounded-[var(--radius-input)] px-2 py-1 text-left text-xs hover:bg-[var(--border)] cursor-pointer ${
+                      w.tenantId === tenantId ? "font-medium" : ""
+                    }`}
+                  >
+                    <div className="h-6 w-6 flex-shrink-0 rounded-[var(--radius-input)] bg-[var(--primary-light)] flex items-center justify-center text-[10px] font-semibold text-[var(--primary)]">
+                      {w.tenantName.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[var(--foreground)]">{w.tenantName}</p>
+                      <p className="truncate text-[var(--muted-foreground)]">{w.taxId}</p>
+                      {!w.isOnboardingComplete && (
+                        <span className="mt-0.5 inline-block rounded bg-[var(--warning-light)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--warning)]">
+                          Setup incomplete
+                        </span>
+                      )}
+                    </div>
+                  </button>
+                </div>
               ))}
+            {!loading && !loadError && (
+              <div className="border-t border-[var(--border)]">
+                <button
+                  type="button"
+                  onClick={() => { setOpen(false); router.push("/settings/workspace/new"); }}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-medium text-[var(--primary)] hover:bg-[var(--primary-light)] cursor-pointer"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  Create New Workspace
+                </button>
+              </div>
+            )}
           </div>
         </>
       )}

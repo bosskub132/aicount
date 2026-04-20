@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, ArrowRight, X } from "lucide-react";
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
@@ -16,8 +16,10 @@ interface TenantRow {
   companySize?: string | null;
 }
 
-export default function OnboardingWorkspacePage() {
+function OnboardingWorkspacePage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isNewWorkspaceMode = searchParams.get("new") === "true";
 
   const [existingTenantId, setExistingTenantId] = useState<string | null>(null);
   const [companyName, setCompanyName] = useState("");
@@ -28,8 +30,12 @@ export default function OnboardingWorkspacePage() {
   const [fetching, setFetching] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Pre-fill if user already has a tenant
+  // Pre-fill if user already has a tenant — skip in "new workspace" mode
   useEffect(() => {
+    if (isNewWorkspaceMode) {
+      setFetching(false);
+      return;
+    }
     async function loadTenants() {
       try {
         const res = await fetch("/api/tenants");
@@ -51,7 +57,7 @@ export default function OnboardingWorkspacePage() {
       }
     }
     loadTenants();
-  }, []);
+  }, [isNewWorkspaceMode]);
 
   function handleTaxIdChange(e: React.ChangeEvent<HTMLInputElement>) {
     const value = e.target.value.replace(/\D/g, "").slice(0, 13);
@@ -79,7 +85,7 @@ export default function OnboardingWorkspacePage() {
     try {
       let tenantId = existingTenantId;
 
-      if (existingTenantId) {
+      if (existingTenantId && !isNewWorkspaceMode) {
         // Update existing tenant
         const res = await fetch(`/api/tenants/${existingTenantId}`, {
           method: "PUT",
@@ -118,12 +124,14 @@ export default function OnboardingWorkspacePage() {
         }
       }
 
-      // Advance onboarding step
-      await fetch("/api/auth/profile", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ onboardingStep: 2 }),
-      });
+      // Advance onboarding step on the active tenant
+      if (tenantId) {
+        await fetch(`/api/tenants/${tenantId}/onboarding`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ onboardingStep: 2 }),
+        });
+      }
 
       router.push("/onboarding/chart-of-accounts");
     } catch (err) {
@@ -243,5 +251,19 @@ export default function OnboardingWorkspacePage() {
         </div>
       </form>
     </div>
+  );
+}
+
+export default function OnboardingWorkspacePageWrapper() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center py-20">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-[var(--primary)] border-t-transparent" />
+        </div>
+      }
+    >
+      <OnboardingWorkspacePage />
+    </Suspense>
   );
 }

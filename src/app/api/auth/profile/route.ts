@@ -8,8 +8,6 @@ import { validateCsrf } from "@/lib/api/csrf";
 
 const PatchProfileSchema = z.object({
   name: z.string().min(1).max(200).optional(),
-  isOnboardingComplete: z.boolean().optional(),
-  onboardingStep: z.number().int().min(0).max(10).optional(),
 });
 
 export async function GET(request: Request) {
@@ -21,9 +19,9 @@ export async function GET(request: Request) {
       id: profiles.id,
       email: profiles.email,
       name: profiles.name,
-      isOnboardingComplete: profiles.isOnboardingComplete,
-      onboardingStep: profiles.onboardingStep,
       isActive: profiles.isActive,
+      deletedAt: profiles.deletedAt,
+      defaultTenantId: profiles.defaultTenantId,
     })
     .from(profiles)
     .where(eq(profiles.id, ctx.userId))
@@ -54,12 +52,6 @@ export async function PATCH(request: Request) {
     if (body.name !== undefined) {
       updates.name = body.name;
     }
-    if (body.isOnboardingComplete !== undefined) {
-      updates.isOnboardingComplete = body.isOnboardingComplete;
-    }
-    if (body.onboardingStep !== undefined) {
-      updates.onboardingStep = body.onboardingStep;
-    }
 
     const [updated] = await db
       .update(profiles)
@@ -69,8 +61,6 @@ export async function PATCH(request: Request) {
         id: profiles.id,
         email: profiles.email,
         name: profiles.name,
-        isOnboardingComplete: profiles.isOnboardingComplete,
-        onboardingStep: profiles.onboardingStep,
       });
 
     return NextResponse.json({ success: true, data: updated });

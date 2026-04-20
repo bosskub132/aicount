@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { NextResponse, type NextRequest } from "next/server";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { profiles } from "@/lib/db/schema";
+import { tenantAssignments } from "@/lib/db/schema";
 import { getAppUrl } from "@/lib/utils/app-url";
 
 export async function GET(request: NextRequest) {
@@ -44,13 +44,13 @@ export async function GET(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   if (user) {
-    const [profile] = await db
-      .select({ isOnboardingComplete: profiles.isOnboardingComplete })
-      .from(profiles)
-      .where(eq(profiles.id, user.id))
+    const assignments = await db
+      .select({ id: tenantAssignments.id })
+      .from(tenantAssignments)
+      .where(eq(tenantAssignments.userId, user.id))
       .limit(1);
 
-    if (profile && !profile.isOnboardingComplete) {
+    if (assignments.length === 0) {
       return NextResponse.redirect(`${appUrl}/onboarding`);
     }
   }

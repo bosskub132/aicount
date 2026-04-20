@@ -266,6 +266,72 @@ export default function WorkspaceGeneralPage() {
           </form>
         )}
       </div>
+
+      <DefaultWorkspaceSection tenantId={tenantId} />
     </section>
+  );
+}
+
+function DefaultWorkspaceSection({ tenantId }: { tenantId: string }) {
+  const [isDefault, setIsDefault] = useState<boolean | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!tenantId) return;
+    fetch("/api/tenants", { credentials: "same-origin" })
+      .then((r) => r.json())
+      .then((j: { data?: Array<{ tenantId: string; isDefault: boolean }> }) => {
+        const found = (j.data ?? []).find((t) => t.tenantId === tenantId);
+        setIsDefault(!!found?.isDefault);
+      })
+      .catch(() => setIsDefault(false));
+  }, [tenantId]);
+
+  async function handleSet() {
+    if (!tenantId || isDefault) return;
+    setBusy(true);
+    setMsg(null);
+    const res = await fetch("/api/profile/default-workspace", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tenantId }),
+    });
+    if (res.ok) {
+      setIsDefault(true);
+      setMsg("Saved");
+    } else {
+      setMsg("Failed — try again");
+    }
+    setBusy(false);
+  }
+
+  return (
+    <div className="mt-6 rounded-lg border border-slate-200 bg-white p-6">
+      <h2 className="text-base font-semibold text-slate-900">Default Workspace</h2>
+      <p className="mt-1 text-sm text-slate-600">
+        The default workspace loads automatically when you sign in on a new device or after clearing
+        cookies.
+      </p>
+      <div className="mt-4 flex items-center gap-3">
+        {isDefault === null ? (
+          <span className="text-sm text-slate-500">Loading…</span>
+        ) : isDefault ? (
+          <span className="rounded bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700">
+            ★ Default workspace
+          </span>
+        ) : (
+          <button
+            type="button"
+            onClick={handleSet}
+            disabled={busy}
+            className="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+          >
+            {busy ? "Saving…" : "Set as default"}
+          </button>
+        )}
+        {msg && <span className="text-xs text-slate-500">{msg}</span>}
+      </div>
+    </div>
   );
 }

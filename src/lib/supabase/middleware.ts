@@ -72,12 +72,56 @@ export async function updateSession(request: NextRequest) {
     }
 
     const pathTenantIdMatch = request.nextUrl.pathname.match(/^\/api\/tenants\/([^/]+)/);
-    const cookieTenantId = request.cookies.get("workspaceTenantId")?.value;
+    const cookieTenantIdRaw = request.cookies.get("workspaceTenantId")?.value;
     const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    const tenantId =
-      (cookieTenantId && UUID_RE.test(cookieTenantId) ? cookieTenantId : undefined) ||
-      pathTenantIdMatch?.[1] ||
-      "00000000-0000-0000-0000-000000000000";
+    const cookieTenantId =
+      cookieTenantIdRaw && UUID_RE.test(cookieTenantIdRaw) ? cookieTenantIdRaw : undefined;
+
+    // Resolve tenantId with fallback chain: cookie → default_tenant_id (if assigned) → oldest assignment
+    let tenantId: string | undefined = cookieTenantId;
+    let cookieFellBack = false;
+
+    if (!tenantId) {
+      try {
+        const { data: profileRow } = await supabase
+          .from("profiles")
+          .select("default_tenant_id")
+          .eq("id", user.id)
+          .single();
+        const defaultId = (profileRow as { default_tenant_id?: string | null } | null)
+          ?.default_tenant_id;
+
+        if (defaultId) {
+          const { data: defaultAssignment } = await supabase
+            .from("tenant_assignments")
+            .select("tenant_id")
+            .eq("user_id", user.id)
+            .eq("tenant_id", defaultId)
+            .limit(1);
+          if (defaultAssignment && defaultAssignment.length > 0) {
+            tenantId = defaultId;
+            cookieFellBack = true;
+          }
+        }
+
+        if (!tenantId) {
+          const { data: oldest } = await supabase
+            .from("tenant_assignments")
+            .select("tenant_id")
+            .eq("user_id", user.id)
+            .order("created_at", { ascending: true })
+            .limit(1);
+          if (oldest && oldest.length > 0) {
+            tenantId = (oldest[0] as { tenant_id: string }).tenant_id;
+            cookieFellBack = true;
+          }
+        }
+      } catch {
+        // Fall back to path param or placeholder below
+      }
+    }
+
+    tenantId = tenantId || pathTenantIdMatch?.[1] || "00000000-0000-0000-0000-000000000000";
 
     // Resolve role from tenant_assignments for API routes (accurate role check)
     // For non-API routes, use metadata fallback (faster, role not critical for page rendering)
@@ -144,6 +188,19 @@ export async function updateSession(request: NextRequest) {
     supabaseResponse = NextResponse.next({ request: { headers: requestHeaders } });
     for (const cookie of existingCookies) {
       supabaseResponse.headers.append("set-cookie", cookie);
+    }
+
+    // Persist resolved tenant when falling back to default / oldest assignment
+    if (cookieFellBack && tenantId && tenantId !== "00000000-0000-0000-0000-000000000000") {
+      const cookieOpts = {
+        httpOnly: true,
+        sameSite: "lax" as const,
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+        maxAge: 60 * 60 * 24 * 365,
+      };
+      supabaseResponse.cookies.set("workspaceTenantId", tenantId, cookieOpts);
+      supabaseResponse.cookies.set("workspaceTenantIdPublic", tenantId, { ...cookieOpts, httpOnly: false });
     }
   }
 

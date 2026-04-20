@@ -7,6 +7,7 @@ import { Button } from "@/components/button";
 import { Input } from "@/components/input";
 import { Select } from "@/components/select";
 import { getWorkspaceTenantId } from "@/components/workspace-selector";
+import { FinishLaterButton } from "@/components/finish-later-button";
 
 interface Invitation {
   email: string;
@@ -85,7 +86,9 @@ export default function OnboardingTeamPage() {
   }
 
   async function patchOnboardingStep(step: number) {
-    await fetch("/api/auth/profile", {
+    const tenantId = getWorkspaceTenantId();
+    if (!tenantId) return;
+    await fetch(`/api/tenants/${tenantId}/onboarding`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ onboardingStep: step }),
@@ -241,6 +244,8 @@ export default function OnboardingTeamPage() {
         <Button variant="link" onClick={handleSkip}>
           I&apos;ll do this later
         </Button>
+
+        <FinishLaterButton />
 
         <Button
           variant="primary"
