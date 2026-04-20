@@ -29,15 +29,6 @@ export default function OnboardingWelcomePage() {
 
   async function handleStart() {
     setLoading(true);
-    try {
-      await fetch("/api/auth/profile", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ onboardingStep: 1 }),
-      });
-    } catch {
-      // Non-critical — proceed regardless
-    }
     router.push("/onboarding/workspace");
   }
 

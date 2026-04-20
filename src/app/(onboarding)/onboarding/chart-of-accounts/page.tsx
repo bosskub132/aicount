@@ -9,6 +9,7 @@ import { Select } from "@/components/select";
 import { FileImport } from "@/components/file-import";
 import { SuggestionPill } from "@/components/suggestion-pill";
 import { getWorkspaceTenantId } from "@/components/workspace-selector";
+import { FinishLaterButton } from "@/components/finish-later-button";
 
 interface CoaRow {
   accountCode: string;
@@ -97,7 +98,9 @@ export default function OnboardingChartOfAccountsPage() {
   }
 
   async function patchOnboardingStep(step: number) {
-    await fetch("/api/auth/profile", {
+    const tenantId = getWorkspaceTenantId();
+    if (!tenantId) return;
+    await fetch(`/api/tenants/${tenantId}/onboarding`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ onboardingStep: step }),
@@ -345,6 +348,8 @@ export default function OnboardingChartOfAccountsPage() {
         <Button variant="link" onClick={handleSkip}>
           I&apos;ll do this later
         </Button>
+
+        <FinishLaterButton />
 
         <Button
           variant="primary"

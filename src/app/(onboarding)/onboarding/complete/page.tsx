@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle2, ArrowRight, Lightbulb, Package } from "lucide-react";
 import { Button } from "@/components/button";
+import { getWorkspaceTenantId } from "@/components/workspace-selector";
 
 export default function OnboardingCompletePage() {
   const router = useRouter();
@@ -12,11 +13,33 @@ export default function OnboardingCompletePage() {
   async function handleComplete() {
     setCompleting(true);
     try {
-      await fetch("/api/auth/profile", {
+      const tenantId = getWorkspaceTenantId();
+      if (!tenantId) {
+        router.push("/dashboard");
+        return;
+      }
+
+      // Mark this tenant's onboarding complete
+      await fetch(`/api/tenants/${tenantId}/onboarding`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ isOnboardingComplete: true, onboardingStep: 7 }),
+        body: JSON.stringify({ isOnboardingComplete: true, onboardingStep: 8 }),
       });
+
+      // Auto-set as default if the user doesn't have one yet
+      const tenantsRes = await fetch("/api/tenants", { credentials: "same-origin" });
+      const tenantsJson = (await tenantsRes.json()) as {
+        data?: Array<{ tenantId: string; isDefault: boolean }>;
+      };
+      const hasDefault = (tenantsJson.data ?? []).some((t) => t.isDefault);
+      if (!hasDefault) {
+        await fetch("/api/profile/default-workspace", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ tenantId }),
+        });
+      }
+
       router.push("/dashboard");
     } catch {
       setCompleting(false);
