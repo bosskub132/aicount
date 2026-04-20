@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { invitations, profiles, tenantAssignments, tenants } from "@/lib/db/schema";
+import { invitations, tenantAssignments, tenants } from "@/lib/db/schema";
 import { getRequestContext } from "@/lib/api/request-context";
 import { WORKSPACE_COOKIE, workspaceCookieOptions } from "@/lib/api/tenant";
 
@@ -97,12 +97,6 @@ export async function POST(
         .update(invitations)
         .set({ status: "accepted" })
         .where(eq(invitations.id, invitation.id));
-
-      // Mark onboarding complete for invited users
-      await db
-        .update(profiles)
-        .set({ isOnboardingComplete: true, updatedAt: new Date() })
-        .where(eq(profiles.id, ctx.userId));
 
       const response = NextResponse.json({
         success: true,
