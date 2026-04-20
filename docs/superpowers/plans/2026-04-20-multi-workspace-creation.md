@@ -153,8 +153,17 @@ If a match already exists, skip this step.
 
 - [ ] **Step 4: Apply migration to local dev DB**
 
-Run: `npx drizzle-kit push` (or your project's migration command — check `package.json` scripts if unsure).
-Expected: Migration applies cleanly. No errors.
+This repo has no `db:push` or `db:migrate` npm script. Apply the generated SQL manually against the local dev database (or via the Supabase MCP `apply_migration` tool if connected). Verify with a quick query:
+
+```sql
+SELECT column_name FROM information_schema.columns
+WHERE table_name IN ('tenants', 'profiles')
+  AND column_name IN ('is_onboarding_complete', 'onboarding_step', 'default_tenant_id');
+```
+
+Expected: three rows — `tenants.is_onboarding_complete`, `tenants.onboarding_step`, `profiles.default_tenant_id`. No `profiles.is_onboarding_complete` / `profiles.onboarding_step`.
+
+**Staging note:** per project convention, do NOT apply this to production yet. Staging-only until explicit approval (Task 26 Step 3).
 
 - [ ] **Step 5: Commit**
 
@@ -203,13 +212,15 @@ git commit -m "test: add makeTenantRow fixture"
 
 ---
 
-## Task 4: Query layer — createTenantWithOwner (TDD)
+## Task 4: Query layer — test file scaffold + createTenantWithOwner (TDD)
 
 **Files:**
 - Create: `src/lib/db/queries/tenants.test.ts`
 - Create: `src/lib/db/queries/tenants.ts`
 
-- [ ] **Step 1: Write failing test for atomic create**
+**Important:** Tasks 4, 5, and 6 all add tests to the same `tenants.test.ts` file. Because `vi.mock("@/lib/db", ...)` is hoisted and can only be declared ONCE per file, this Task scaffolds ONE unified `db` mock with all the methods the later tasks need (`transaction`, `update`, `select`). Tasks 5 and 6 add test cases only — they do NOT re-declare `vi.mock`.
+
+- [ ] **Step 1: Write failing test with unified db mock**
 
 Create `src/lib/db/queries/tenants.test.ts`:
 
@@ -217,11 +228,32 @@ Create `src/lib/db/queries/tenants.test.ts`:
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { makeUserId, makeTenantRow } from "@/lib/test/fixtures";
 
-const txMock = vi.hoisted(() => ({
+// Shared mock state — extended by later tasks
+const state = vi.hoisted(() => ({
   insertCalls: [] as Array<{ table: string; values: unknown }>,
   returnedTenant: null as Record<string, unknown> | null,
   throwOnAssignmentsInsert: false,
+  updateSetValues: null as Record<string, unknown> | null,
+  updateReturnRows: [] as Record<string, unknown>[],
+  selectQueue: [] as unknown[][],
+  selectCalls: 0,
+  sqlFragments: [] as string[],
 }));
+
+vi.mock("drizzle-orm", async () => {
+  const actual = await vi.importActual<typeof import("drizzle-orm")>("drizzle-orm");
+  return {
+    ...actual,
+    sql: (strings: TemplateStringsArray, ...values: unknown[]) => {
+      const rendered = strings.reduce(
+        (acc, part, i) => acc + part + (values[i] !== undefined ? String(values[i]) : ""),
+        ""
+      );
+      state.sqlFragments.push(rendered);
+      return { _rendered: rendered };
+    },
+  };
+});
 
 vi.mock("@/lib/db", () => ({
   db: {
@@ -230,11 +262,11 @@ vi.mock("@/lib/db", () => ({
         insert: (table: { _: { name: string } }) => ({
           values: (values: unknown) => ({
             returning: async () => {
-              txMock.insertCalls.push({ table: table._.name, values });
+              state.insertCalls.push({ table: table._.name, values });
               if (table._.name === "tenants") {
-                return [txMock.returnedTenant];
+                return [state.returnedTenant];
               }
-              if (table._.name === "tenant_assignments" && txMock.throwOnAssignmentsInsert) {
+              if (table._.name === "tenant_assignments" && state.throwOnAssignmentsInsert) {
                 throw new Error("assignment insert failed");
               }
               return [];
@@ -244,29 +276,58 @@ vi.mock("@/lib/db", () => ({
       };
       return fn(tx);
     },
+    update: () => ({
+      set: (values: Record<string, unknown>) => {
+        state.updateSetValues = values;
+        return {
+          where: () => ({ returning: async () => state.updateReturnRows }),
+        };
+      },
+    }),
+    select: () => ({
+      from: () => ({
+        leftJoin: () => ({
+          where: () => ({
+            orderBy: () => ({ limit: async () => state.selectQueue[state.selectCalls++] ?? [] }),
+            limit: async () => state.selectQueue[state.selectCalls++] ?? [],
+          }),
+          limit: async () => state.selectQueue[state.selectCalls++] ?? [],
+        }),
+        where: () => ({
+          orderBy: () => ({ limit: async () => state.selectQueue[state.selectCalls++] ?? [] }),
+          limit: async () => state.selectQueue[state.selectCalls++] ?? [],
+        }),
+      }),
+    }),
   },
 }));
 
 vi.mock("@/lib/db/schema", () => ({
-  tenants: { _: { name: "tenants" } },
-  tenantAssignments: { _: { name: "tenant_assignments" } },
+  tenants: { _: { name: "tenants" }, id: "tenants.id", onboardingStep: "tenants.onboarding_step" },
+  tenantAssignments: {
+    _: { name: "tenant_assignments" },
+    userId: "ta.user_id",
+    tenantId: "ta.tenant_id",
+    createdAt: "ta.created_at",
+  },
+  profiles: { id: "profiles.id", defaultTenantId: "profiles.default_tenant_id" },
 }));
 
-const { createTenantWithOwner } = await import("./tenants");
+const queries = await import("./tenants");
 
 describe("createTenantWithOwner", () => {
   beforeEach(() => {
-    txMock.insertCalls = [];
-    txMock.returnedTenant = null;
-    txMock.throwOnAssignmentsInsert = false;
+    state.insertCalls = [];
+    state.returnedTenant = null;
+    state.throwOnAssignmentsInsert = false;
   });
 
   it("inserts tenant then two assignment rows (maker + checker)", async () => {
     const userId = makeUserId();
     const tenantRow = makeTenantRow();
-    txMock.returnedTenant = tenantRow;
+    state.returnedTenant = tenantRow;
 
-    const result = await createTenantWithOwner({
+    const result = await queries.createTenantWithOwner({
       ownerUserId: userId,
       name: "ACME",
       taxId: "1234567890123",
@@ -275,21 +336,21 @@ describe("createTenantWithOwner", () => {
     });
 
     expect(result).toEqual(tenantRow);
-    expect(txMock.insertCalls).toHaveLength(2);
-    expect(txMock.insertCalls[0].table).toBe("tenants");
-    expect(txMock.insertCalls[1].table).toBe("tenant_assignments");
-    expect(txMock.insertCalls[1].values).toEqual([
+    expect(state.insertCalls).toHaveLength(2);
+    expect(state.insertCalls[0].table).toBe("tenants");
+    expect(state.insertCalls[1].table).toBe("tenant_assignments");
+    expect(state.insertCalls[1].values).toEqual([
       { tenantId: tenantRow.id, userId, role: "maker" },
       { tenantId: tenantRow.id, userId, role: "checker" },
     ]);
   });
 
   it("rolls back if assignment insert fails", async () => {
-    txMock.returnedTenant = makeTenantRow();
-    txMock.throwOnAssignmentsInsert = true;
+    state.returnedTenant = makeTenantRow();
+    state.throwOnAssignmentsInsert = true;
 
     await expect(
-      createTenantWithOwner({
+      queries.createTenantWithOwner({
         ownerUserId: makeUserId(),
         name: "ACME",
         taxId: "1234567890123",
@@ -363,64 +424,34 @@ git commit -m "feat(db): createTenantWithOwner transactional helper"
 - Modify: `src/lib/db/queries/tenants.ts`
 - Modify: `src/lib/db/queries/tenants.test.ts`
 
-- [ ] **Step 1: Append failing test**
+- [ ] **Step 1: Append new `describe` block to the existing test file**
 
-Append to `src/lib/db/queries/tenants.test.ts`:
+Append to `src/lib/db/queries/tenants.test.ts` (the `state`, `vi.mock(...)`, and `queries` import from Task 4 are reused — do NOT redeclare them):
 
 ```typescript
-const sqlCalls = vi.hoisted(() => ({ value: [] as string[] }));
-
-vi.mock("drizzle-orm", async () => {
-  const actual = await vi.importActual<typeof import("drizzle-orm")>("drizzle-orm");
-  return {
-    ...actual,
-    sql: (strings: TemplateStringsArray, ...values: unknown[]) => {
-      const rendered = strings.reduce(
-        (acc, part, i) => acc + part + (values[i] !== undefined ? String(values[i]) : ""),
-        ""
-      );
-      sqlCalls.value.push(rendered);
-      return { _rendered: rendered };
-    },
-  };
-});
-
-vi.mock("@/lib/db", async () => {
-  const existing = await vi.importActual<{ db: unknown }>("@/lib/db");
-  return {
-    ...existing,
-    db: {
-      ...(existing.db as Record<string, unknown>),
-      update: () => ({
-        set: (values: Record<string, unknown>) => {
-          sqlCalls.value.push(JSON.stringify(values));
-          return {
-            where: () => ({ returning: async () => [{ id: "t1", onboardingStep: 5, isOnboardingComplete: false }] }),
-          };
-        },
-      }),
-    },
-  };
-});
-
-const { patchTenantOnboarding } = await import("./tenants");
-
 describe("patchTenantOnboarding", () => {
   beforeEach(() => {
-    sqlCalls.value = [];
+    state.sqlFragments = [];
+    state.updateSetValues = null;
+    state.updateReturnRows = [{ id: "t1", onboardingStep: 5, isOnboardingComplete: false }];
   });
 
   it("uses GREATEST when advancing onboardingStep", async () => {
-    await patchTenantOnboarding({ tenantId: "t1", onboardingStep: 3 });
-    const joined = sqlCalls.value.join(" ");
+    await queries.patchTenantOnboarding({ tenantId: "t1", onboardingStep: 3 });
+    const joined = state.sqlFragments.join(" ");
     expect(joined).toContain("GREATEST");
-    expect(joined).toContain("onboarding_step");
+  });
+
+  it("clamps step to [0, 8]", async () => {
+    await queries.patchTenantOnboarding({ tenantId: "t1", onboardingStep: 99 });
+    const joined = state.sqlFragments.join(" ");
+    // Clamped value 8 should appear in the rendered SQL fragment
+    expect(joined).toMatch(/8/);
   });
 
   it("accepts isOnboardingComplete updates", async () => {
-    await patchTenantOnboarding({ tenantId: "t1", isOnboardingComplete: true });
-    const joined = sqlCalls.value.join(" ");
-    expect(joined).toContain("isOnboardingComplete");
+    await queries.patchTenantOnboarding({ tenantId: "t1", isOnboardingComplete: true });
+    expect(state.updateSetValues?.isOnboardingComplete).toBe(true);
   });
 });
 ```
@@ -485,60 +516,40 @@ git commit -m "feat(db): patchTenantOnboarding with GREATEST step + clamping"
 - Modify: `src/lib/db/queries/tenants.ts`
 - Modify: `src/lib/db/queries/tenants.test.ts`
 
-- [ ] **Step 1: Append failing tests**
+- [ ] **Step 1: Append new `describe` block to the existing test file**
 
-Append to `src/lib/db/queries/tenants.test.ts`:
+Append to `src/lib/db/queries/tenants.test.ts` (mocks reused from Task 4):
 
 ```typescript
-const selectResult = vi.hoisted(() => ({ value: [] as unknown[] }));
-
-vi.mock("@/lib/db", async () => {
-  const existing = await vi.importActual<{ db: unknown }>("@/lib/db");
-  return {
-    ...existing,
-    db: {
-      ...(existing.db as Record<string, unknown>),
-      select: () => ({
-        from: () => ({
-          leftJoin: () => ({
-            where: () => ({
-              orderBy: () => ({ limit: async () => selectResult.value }),
-            }),
-          }),
-          where: () => ({
-            orderBy: () => ({ limit: async () => selectResult.value }),
-          }),
-        }),
-      }),
-    },
-  };
-});
-
-const { resolveDefaultTenant } = await import("./tenants");
-
 describe("resolveDefaultTenant", () => {
   beforeEach(() => {
-    selectResult.value = [];
+    state.selectQueue = [];
+    state.selectCalls = 0;
   });
 
   it("returns null when user has no assignments and no default", async () => {
-    selectResult.value = [];
-    const result = await resolveDefaultTenant("user-1");
+    state.selectQueue = [
+      [],  // profile lookup — no row
+      [],  // oldest assignment fallback — empty
+    ];
+    const result = await queries.resolveDefaultTenant("user-1");
     expect(result).toBeNull();
   });
 
   it("returns default_tenant_id when user still has assignment to it", async () => {
-    selectResult.value = [{ defaultTenantId: "t-default", hasAssignment: "t-default" }];
-    const result = await resolveDefaultTenant("user-1");
+    state.selectQueue = [
+      [{ defaultTenantId: "t-default", hasAssignment: "t-default" }],
+    ];
+    const result = await queries.resolveDefaultTenant("user-1");
     expect(result).toBe("t-default");
   });
 
   it("falls through to oldest assignment when default is stale", async () => {
-    selectResult.value = [{ defaultTenantId: "t-gone", hasAssignment: null }];
-    const oldestResult = [{ tenantId: "t-oldest" }];
-    // second select call returns oldest
-    selectResult.value = oldestResult;
-    const result = await resolveDefaultTenant("user-1");
+    state.selectQueue = [
+      [{ defaultTenantId: "t-gone", hasAssignment: null }],
+      [{ tenantId: "t-oldest" }],
+    ];
+    const result = await queries.resolveDefaultTenant("user-1");
     expect(result).toBe("t-oldest");
   });
 });
@@ -1318,53 +1329,67 @@ git commit -m "feat(middleware): fallback to default_tenant_id then oldest assig
 
 Run: `grep -n "isOnboardingComplete\|onboardingStep\|STEP_ROUTES" src/app/\(app\)/layout.tsx`
 
-- [ ] **Step 2: Replace the guard block**
+- [ ] **Step 2: Replace the guard block — preserve deletedAt + userName, swap onboarding check**
 
-In `src/app/(app)/layout.tsx`, the current block (~60-77) fetches `/api/auth/profile` and reads `json.data.isOnboardingComplete` and `json.data.onboardingStep`. Replace with:
-
-```typescript
-          // Tenant-scoped onboarding guard
-          const tenantsRes = await fetch("/api/tenants", { credentials: "same-origin" });
-          const tenantsJson = (await tenantsRes.json()) as {
-            success?: boolean;
-            data?: Array<{ tenantId: string; isOnboardingComplete: boolean }>;
-          };
-          const tenants = tenantsJson.data ?? [];
-
-          if (tenants.length === 0) {
-            router.push("/onboarding");
-            return;
-          }
-
-          const cookieTenantId = getWorkspaceTenantId();
-          const active = tenants.find((t) => t.tenantId === cookieTenantId) ?? tenants[0];
-
-          if (!active.isOnboardingComplete) {
-            const STEP_ROUTES = [
-              "/onboarding",
-              "/onboarding/workspace",
-              "/onboarding/chart-of-accounts",
-              "/onboarding/vendors-customers",
-              "/onboarding/departments",
-              "/onboarding/team",
-              "/onboarding/template",
-              "/onboarding/complete",
-            ];
-            const tenantStateRes = await fetch(`/api/tenants/${active.tenantId}/onboarding`);
-            const tenantStateJson = (await tenantStateRes.json()) as {
-              data?: { onboardingStep: number };
-            };
-            const step = Math.max(0, Math.min(7, tenantStateJson.data?.onboardingStep ?? 0));
-            router.push(STEP_ROUTES[step]);
-            return;
-          }
-```
-
-Also ensure `getWorkspaceTenantId` is imported (already exported from `src/components/workspace-selector.tsx`):
+In `src/app/(app)/layout.tsx`, the current first `useEffect` (~53-81) fetches `/api/auth/profile` and does three things: (a) sets userName, (b) redirects on `deletedAt`, (c) redirects on `!isOnboardingComplete`. Replace ONLY (c). Keep (a) and (b). The new version:
 
 ```typescript
-import { getWorkspaceTenantId } from "@/components/workspace-selector";
+  // Preserve: account deletion redirect + onboarding redirect (now tenant-scoped)
+  useEffect(() => {
+    async function check() {
+      try {
+        const profileRes = await fetch("/api/auth/profile");
+        const profileJson = await profileRes.json();
+        if (!profileJson.success || !profileJson.data) return;
+
+        setUserName(profileJson.data.fullName || profileJson.data.email || "User");
+
+        if (profileJson.data.deletedAt) {
+          router.push("/account-deleted");
+          return;
+        }
+
+        // Tenant-scoped onboarding check
+        const tenantsRes = await fetch("/api/tenants", { credentials: "same-origin" });
+        const tenantsJson = (await tenantsRes.json()) as {
+          success?: boolean;
+          data?: Array<{ tenantId: string; isOnboardingComplete: boolean }>;
+        };
+        const tenants = tenantsJson.data ?? [];
+
+        if (tenants.length === 0) {
+          router.push("/onboarding");
+          return;
+        }
+
+        const cookieTenantId = getWorkspaceTenantId();
+        const active = tenants.find((t) => t.tenantId === cookieTenantId) ?? tenants[0];
+
+        if (!active.isOnboardingComplete) {
+          const STEP_ROUTES = [
+            "/onboarding",
+            "/onboarding/workspace",
+            "/onboarding/chart-of-accounts",
+            "/onboarding/vendors-customers",
+            "/onboarding/departments",
+            "/onboarding/team",
+            "/onboarding/template",
+            "/onboarding/complete",
+          ];
+          const stateRes = await fetch(`/api/tenants/${active.tenantId}/onboarding`);
+          const stateJson = (await stateRes.json()) as { data?: { onboardingStep: number } };
+          const step = Math.max(0, Math.min(7, stateJson.data?.onboardingStep ?? 0));
+          router.push(STEP_ROUTES[step]);
+        }
+      } catch {
+        /* network/transient errors — allow render to continue */
+      }
+    }
+    check();
+  }, [router]);
 ```
+
+`getWorkspaceTenantId` is already imported at line 12 of the existing file — no new import needed.
 
 - [ ] **Step 3: Run type check**
 
