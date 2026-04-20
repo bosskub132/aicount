@@ -54,6 +54,7 @@ docs/superpowers/*
 .superpowers
 .serena
 .playwright-mcp
+.claude.local.md
 
 # playwright
 test-results/

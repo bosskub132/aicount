@@ -45,6 +45,7 @@ supabase/
   migrations/       # Drizzle-generated SQL migrations
 public/             # Static assets (SVGs, generated files)
 scripts/            # Utility scripts (migration, health checks, smoke tests)
+tests/e2e/          # Playwright E2E specs (testDir: ./tests in playwright.config.ts)
 ```
 
 ## Coding Conventions
@@ -63,7 +64,8 @@ scripts/            # Utility scripts (migration, health checks, smoke tests)
 - Never use `\uXXXX` escape sequences for Thai text in JSX — Turbopack may render them literally. Use actual UTF-8 characters.
 - After API mutations, `await refetch()` BEFORE clearing local state (`setEditValues({})`) — otherwise UI briefly shows stale data
 - Direction enum mapping: `"REVENUE"` = Accounts Receivable (AR), `"EXPENSE"` = Accounts Payable (AP)
-- Drizzle migrations: use `npx drizzle-kit generate` (auto-names files) — never hardcode migration filenames
+- Drizzle migrations: `npx drizzle-kit generate` is **fully interactive** (arrow-key prompt for new-vs-rename columns — can't be piped; user must run it in their terminal). No `db:push` / `db:migrate` script — apply SQL via Supabase MCP `apply_migration` or dashboard. Staging-only until explicit prod approval.
+- Test files: only ONE `vi.mock("@/lib/db", ...)` per file (hoisted). For multi-function test files, use a unified mock with shared `vi.hoisted()` state (see `src/lib/db/queries/tenants.test.ts`).
 - `DataTable<T>` generic requires `T extends Record<string, unknown>` — add `[key: string]: unknown` index signature to custom row interfaces
 - `@react-pdf/renderer` `renderToBuffer()` has a type mismatch with createElement — use `any` with `// eslint-disable-next-line @typescript-eslint/no-explicit-any` comment
 - Avoid `as const` on objects used as Drizzle defaults — creates literal types that don't match DB column types
@@ -164,7 +166,11 @@ All in `src/components/` (flat structure). Use these instead of inline markup:
 - `bankAccounts` — bank account master data (bankName, accountNumber, glAccountCode)
 - `customExportTemplates` — custom column mapping templates (name, isActive, columnMappings JSONB)
 - Onboarding: 8 steps (Welcome, Workspace, COA, Partners, Departments, Team, Template, Complete)
-- `profiles.onboardingStep` max is 10 (Zod validation in profile PATCH)
+- Onboarding state is per-tenant: `tenants.isOnboardingComplete` + `tenants.onboardingStep` (0-8). `profiles.isOnboardingComplete` / `profiles.onboardingStep` REMOVED (migration 0011).
+- `profiles.defaultTenantId` — user's preferred workspace; FK ON DELETE SET NULL. Middleware falls back: cookie → default_tenant_id → oldest assignment.
+- `tenants.tax_id` has a UNIQUE constraint (409 on duplicate create).
+- `POST /api/tenants` is open to any authenticated user (admin gate removed).
+- Onboarding step writes go to `PATCH /api/tenants/[id]/onboarding` — use tenant id in URL path, not cookie alone. Server uses `GREATEST()` to prevent race regressions.
 
 ## Database Schema (Phase 6C)
 
