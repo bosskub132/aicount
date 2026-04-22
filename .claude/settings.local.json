@@ -93,7 +93,21 @@
       "Bash(npx -y acorn-jsx)",
       "Bash(sed:*)",
       "Bash(pip install:*)",
-      "Bash(mcp list *)"
+      "Bash(mcp list *)",
+      "Bash(git -C C:/Users/bossk/Desktop/aicount add docs/superpowers/specs/2026-04-18-ui-responsiveness-server-prefetch-design.md)",
+      "Bash(git -C C:/Users/bossk/Desktop/aicount commit -m ' *)",
+      "Bash(npm test *)",
+      "Bash(npx playwright *)",
+      "Bash(PERF_RUNS=1 npx playwright test perf/ --reporter=list --timeout=120000)",
+      "Bash(git worktree *)",
+      "Bash(rm -rf test-results/)",
+      "Bash(ls test-results *)",
+      "Bash(git push *)",
+      "Bash(C:/Users/bossk/.claude/plugins/cache/claude-plugins-official/superpowers/5.0.7/skills/brainstorming/scripts/start-server.sh *)",
+      "Bash(yes \"\")",
+      "Bash(npx eslint *)",
+      "Bash(gh pr create --base develop --title 'feat\\(multi-workspace\\): create additional workspaces from UI' --body ' *)",
+      "Bash(npm view *)"
     ]
   },
   "enableAllProjectMcpServers": true,
